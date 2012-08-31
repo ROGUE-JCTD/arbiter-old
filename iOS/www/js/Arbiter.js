@@ -27,6 +27,6 @@ var Arbiter = {
 			zoom: 3
 		});
 								 
-		console.log("end");
+		console.log("Now go spartan, I shall remain here.");
     }
 };
