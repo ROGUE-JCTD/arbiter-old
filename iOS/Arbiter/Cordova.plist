@@ -24,7 +24,7 @@
 	<true/>
 	<key>ExternalHosts</key>
 	<array>
-		<string>*.tile.openstreetmap.org</string>
+		<string>*</string>
 	</array>
 	<key>Plugins</key>
 	<dict>
