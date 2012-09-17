@@ -1,5 +1,7 @@
 package lmn.dsi;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -79,7 +81,7 @@ public class PostGIS {
 					 returnJson += rsmd.getColumnName(i) + ": " + rs.getString(i);
 					 
 					if(i == NumOfCol) {
-						returnJson += "\n";
+						returnJson += ",\n";
 					}
 					else {
 						returnJson += ",\n";
@@ -99,24 +101,82 @@ public class PostGIS {
 		return returnJson;
 	}
 	
-	String doPost(String sql) {
-		return "temp";
+	static String doPost(String sql) {
+		String returnJson = "";
+		System.out.println("-------- PostgreSQL "
+				+ "JDBC Connection Testing ------------");
+ 
+		try {
+ 
+			Class.forName("org.postgresql.Driver");
+ 
+		} catch (ClassNotFoundException e) {
+ 
+			System.out.println("Where is your PostgreSQL JDBC Driver? "
+					+ "Include in your library path!");
+			e.printStackTrace();
+		}
+ 
+		System.out.println("PostgreSQL JDBC Driver Registered!");
+ 
+		Connection connection = null;
+ 
+		try {
+ 
+			connection = DriverManager.getConnection(
+					url, user, password);
+ 
+		} catch (SQLException e) {
+ 
+			System.out.println("Connection Failed! Check output console");
+			e.printStackTrace();
+		}
+ 
+		if (connection != null) {
+			System.out.println("You made it, take control your database now!");
+		} else {
+			System.out.println("Failed to make connection!");
+		}
+		
+		try {
+			st = connection.createStatement();
+			int temp = -1;
+			try {
+				temp = st.executeUpdate(URLDecoder.decode(sql, "UTF-8"));
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			returnJson += temp;
+		 
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return returnJson;
 	}
 	
 	// This method is called if TEXT_PLAIN is request
 	@GET
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public String postgisGet(@QueryParam("sql") String sql) {
+		System.out.print(sql);
 		return doGet(sql);
 	}
 
 	@POST
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public String postgisPost(String sql) {
-		return doPost(sql);
+		System.out.print(sql.substring(4));
+		return doPost(sql.substring(4));
 	}
 	
 	public static void main(String[] args) {
+		System.out.print("GET");
 		System.out.print(doGet("SELECT * FROM \"Feature\""));
+		
+		System.out.print("POST");
+		System.out.print(doPost("UPDATE \"Feature\" SET \"Name\"='TestThree' WHERE \"id\"='3'"));
 	}
 }

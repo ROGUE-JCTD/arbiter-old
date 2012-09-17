@@ -35,10 +35,12 @@ var Arbiter = {
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); //http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
+		Cordova.Initialize(this);
+		
 		//Save divs for later
-		div_Popup			= $('#popup');
-		div_Popup.live('pageshow', Arbiter.PopulatePopup);
-		div_Popup.live('pagehide', Arbiter.DestroyPopup);
+		div_Popup	= $('#popup');
+		div_Popup.live('pageshow', this.PopulatePopup);
+		div_Popup.live('pagehide', this.DestroyPopup);
 		
 		//Initialize Projections
 		WGS84 					= new OpenLayers.Projection('EPSG:4326');
@@ -66,7 +68,7 @@ var Arbiter = {
 							
 		selectControl = new OpenLayers.Control.SelectFeature(postgisLayer, {
 			autoActivate:true,
-			onSelect: Arbiter.CreatePopup
+			onSelect: this.CreatePopup
 		});
 		
 		// create map
@@ -94,7 +96,7 @@ var Arbiter = {
 			zoom: 1
 		});
 				
-		Arbiter.GetFeatures("SELECT * FROM \"Feature\"");
+		this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
     },
 	
@@ -107,16 +109,37 @@ var Arbiter = {
 			},
 			success:	function(data, status, xhr) {
 				//success.call(null, data, status, xhr);
-			 	console.log("woot");
-				Arbiter.ParseData(data);
+			 	console.log("Get Success");
+				this.ParseData(data);
 			},
 			error:	function(xhr, status, err) {
 			   //error.call(null, xhr, status, err);
-			   console.log("boo");
+			   console.log("Get Failed");
 			   console.log(xhr);
 			   console.log(status);
 			   console.log(err);
 			}
+		});
+	},
+	
+	PostFeatures: function(_sql) {
+		$.ajax({
+		   	type:		'POST',
+		   	url:		"http://localhost:8080/DRServer/rest/postgis",
+		   	data:		{
+		   		sql:	_sql
+		   	},
+		   	success:	function(data, status, xhr) {
+		   		//success.call(null, data, status, xhr);
+		   		console.log("Post Success");
+		   	},
+		   	error:	function(xhr, status, err) {
+		   		//error.call(null, xhr, status, err);
+		   		console.log("Post Failed");
+		   		console.log(xhr);
+				console.log(status);
+		   		console.log(err);
+		   	}
 		});
 	},
 	
@@ -136,7 +159,8 @@ var Arbiter = {
 					
 			var locationFeature = new OpenLayers.Feature.Vector(point, {
 					Image: "img/mobile-loc.png",
-					Name: attributes[0].substr(6,attributes[0].length)
+					Name: attributes[0].substr(6,attributes[0].length),
+					id: attributes[3].substr(5,attributes[3].length)
 			});
 			
 			postgisLayer.addFeatures([locationFeature]);
@@ -151,13 +175,20 @@ var Arbiter = {
 	},
 	
 	PopulatePopup: function(event, ui) {
-		console.log("oh shit!");
 		var li = "";
 		for(var attr in selectedFeature.attributes){
 		
 			if(attr != "Image") {
-				li += "<li><div>" + attr + ":</div><div> - "
-				+ selectedFeature.attributes[attr] + "</div></li>";
+				//li += "<li><div>" + attr + ":</div><div> - "
+				//+ selectedFeature.attributes[attr] + "</div></li>";
+				
+				li += "<li><div>";
+				li += "<label for='textinput" + selectedFeature.attributes[attr] + "'>";
+				li += attr;
+				li += "</label>";
+				li += "<input name='' id='textinput" + selectedFeature.attributes[attr] + "' placeholder='' value='";
+				li += selectedFeature.attributes[attr];
+				li += "' type='text'></div></li>";
 			}
 		}
 		
@@ -171,5 +202,58 @@ var Arbiter = {
 		console.log("destroy feature");
 		selectControl.unselect(selectedFeature);
 		selectedFeature = null;
+	},
+	
+	updateSelectedFeature: function() {
+		selectedFeature.attributes["Name"] = $("#textinput" + selectedFeature.attributes["Name"]).val();
+	},
+	
+	onClick_Submit: function() {
+		console.log("submit\n");
+		//"UPDATE \"Feature\" SET \"Name\"='TestThree' WHERE \"id\"=3'"
+		this.updateSelectedFeature();
+		
+		var sql = "UPDATE \"Feature\" SET ";
+		sql += "\"Name\"='" + selectedFeature.attributes["Name"] + "' ";
+		sql += "WHERE \"id\"='" + selectedFeature.attributes["id"] + "';";
+		
+		console.log(sql + "\n");
+		this.PostFeatures(sql);
+	},
+	
+	//Get the current bounds of the map for GET requests.
+	getCurrentExtent: function() {
+		return map.getExtent();
+	},
+	
+	//===================
+	// Cordova Callbacks
+	//===================
+	onPause: function() {
+		console.log("Arbiter: Pause");
+	},
+	
+	onResume: function() {
+		console.log("Arbiter: Resume");
+	},
+	
+	onOnline: function() {
+		console.log("Arbiter: Online");
+	},
+	
+	onOffline: function() {
+		console.log("Arbiter: Offline");
+	},
+	
+	onBatteryCritical: function(info) {
+		console.log("Arbiter: Battery Level Critical " + info.level + "%");
+	},
+	
+	onBatteryLow: function(info) {
+		console.log("Arbiter: Battery Level Low " + info.level + "%");
+	},
+	
+	onBatteryStatus: function(info) {
+		console.log("Arbiter: Battery Level " + info.level + "% isPlugged: " + info.isPlugged);
 	}
 };
