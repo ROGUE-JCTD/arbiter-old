@@ -39,18 +39,19 @@
 		<script type="text/javascript" src="js/SQLitePlugin.js"></script>
 		<script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
 		<script type="text/javascript" src="js/jquery.mobile-1.1.1.min.js"></script>
+		<script type="text/javascript" src="js/jquery.localize.js"></script>
 		<script type="text/javascript" src="OpenLayers-2.12/OpenLayers.mobile.js"></script>
 		
         <title>Hello Cordova</title>
     </head>
     <body>
-
+	
 		<!-- Map Page -->
-			<div data-role="page" class="Page" id='idMapPage'>
-				<!-- Header --
+			<div data-role="page" class="Page" id='idMapPage' data-theme="a">
+				<!-- Header -->
 				<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-					<h1>Page Title</h1>
-				</div> -->
+					<h1 data-localize="page.map">Map</h1>
+				</div>
 			
 				<!-- Content -->
 				<div data-role="content" class="MapPageContent" id='idMapPageContent'>
@@ -61,17 +62,81 @@
 				<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 					<div data-role="navbar" data-iconpos="top">
 						<ul>
-							<li><a href="#more-dialog" data-icon="back">Back</a></li>
-							<li><a href="#more-dialog" data-icon="info">Info</a></li>
-							<li><a href="#more-dialog" data-icon="search">Search</a></li>
-							<li><a href="#more-dialog" data-icon="gear">Settings</a></li>
+							<li><a href="#more-dialog" data-icon="back">	<div data-localize="page.map">Map</div></a></li>
+							<li><a href="#more-dialog" data-icon="info">	<div data-localize="page.info">Info</div></a></li>
+							<li><a href="#more-dialog" data-icon="search">	<div data-localize="page.search">Search</div></a></li>
+							<li><a href="#idSettingsPage" data-icon="gear">	<div data-localize="page.settings">Settings</div></a></li>
 						</ul>
 					</div>
 				</div>
 			</div>
 			
-		<!-- Popup -->
-		<div id="popup" data-role="dialog">
+		<!--
+		 // =======================
+		 //		 Settings Page
+		 // =======================
+		 -->
+		<div data-role="page" class="Page" id='idSettingsPage' data-theme="a">
+			<!-- Header -->
+			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
+				<a data-rel="back" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<h1 data-localize="page.settings">Settings</h1>
+			</div>
+			
+			<!-- Content -->
+			<div data-role="content" class="SettingsPageContent" id='idSettingsPageContent'>
+				
+			</div>
+			
+			<!-- Footer -->
+			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
+				<div data-role="navbar" data-iconpos="top">
+					<ul>
+						<li><a href="#idMapPage" data-icon="back">	<div data-localize="page.map">Map</div></a></li>
+						<li><a href="#more-dialog" data-icon="info">	<div data-localize="page.info">Info</div></a></li>
+						<li><a href="#more-dialog" data-icon="search">	<div data-localize="page.search">Search</div></a></li>
+						<li><a href="#" class="ui-btn-active" data-icon="gear">	<div data-localize="page.settings">Settings</div></a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		
+		<!--
+		// =====================================================================
+		//							   Helper Pages
+		// =====================================================================
+		-->
+			
+		<!--
+		 // =======================
+		 //		 Welcome Page
+		 // =======================
+		 -->
+		<div data-role="page" class="Page" id='idWelcomePage' data-theme="a">
+			<!-- Header -->
+			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
+				<h1 data-localize="page.welcome">Welcome</h1>
+			</div>
+		
+			<div id="idLogo">
+				<img src="img/tempLogo.png" alt="Arbiter" width="180" height="180"/>
+			</div>
+		
+			<div id='idLanguageListContainer'>
+				<div data-role="controlgroup" id='idLanguageList' data-mini="true">
+					<a data-role="button" id="ENGLISH" onClick="Arbiter.onClick_LanguageSubmit(this)">Use English as the main language.</a>
+					<a data-role="button" id="SPANISH" onClick="Arbiter.onClick_LanguageSubmit(this)">Utilice el español como idioma principal.</a>
+					<a data-role="button" id="PORTUGUESE" onClick="Arbiter.onClick_LanguageSubmit(this)">Uso português como língua principal.</a>
+				</div>
+			</div>
+		</div>
+			
+		<!--
+		 // =======================
+		 //		Feature Dialog
+		 // =======================
+		 -->
+		<div id="popup" data-role="dialog" data-theme="a">
             <div data-position="inline" data-role="header">
                 <h1>Details</h1>
             </div>
@@ -84,6 +149,7 @@
 			</div>
         </div>
 		
+		<!-- Scripts -->
         <script type="text/javascript">
             app.initialize();
         </script>
