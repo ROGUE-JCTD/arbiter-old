@@ -25,6 +25,13 @@ var Cordova = {
 		navigator.notification.vibrate(_milliseconds);
 	},
 	
+	//=========
+	// Storage
+	//=========
+	openDatabase: function(_name, _version, _displayName, _size) {
+		return window.openDatabase(_name, _version, _displayName, _size);
+	},
+	
 	//====================
 	// Callback Functions
 	//====================

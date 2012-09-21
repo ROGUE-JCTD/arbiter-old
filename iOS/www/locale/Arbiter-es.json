@@ -1,0 +1,21 @@
+{
+	"title": "Arbiter",
+	"hello": "Hola",
+	"page" : {
+		"language": "Language",
+		"map": "Map",
+		"back": "Previas",
+		"info": "Informacion",
+		"search": "Buscar",
+		"settings": "A Ajuste"
+	},
+	"button" : {
+		"back": "Previas",
+		"options" : "Options",
+		"more" : "More"
+	},
+	"feature": {
+		"name": "Name",
+		"location": "Location"
+	}
+}

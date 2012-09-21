@@ -1,0 +1,21 @@
+{
+	"title": "Arbiter",
+	"mainLanguage": "Use English as the main language.",
+	"page" : {
+		"welcome": "Welcome",
+		"language": "Language",
+		"map": "Map",
+		"info": "Info",
+		"search": "Search",
+		"settings": "Settings"
+	},
+	"button" : {
+		"back": "Back",
+		"options" : "Options",
+		"more" : "More"
+	},
+	"feature": {
+		"name": "Name",
+		"location": "Location"
+	}
+}

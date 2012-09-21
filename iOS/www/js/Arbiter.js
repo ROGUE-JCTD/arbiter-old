@@ -27,9 +27,26 @@ var postgisLayer;
 
 var selectControl;
 
+var div_MapPage;
+var div_SettingsPage;
+var div_WelcomePage;
 var div_Popup;
 
 var selectedFeature;
+
+var variableDatabase;
+
+/* ============================ *
+ * 			 Language
+ * ============================ */
+var LanguageType = {
+	ENGLISH:	{locale: "en", name: "English", welcome: "Welcome"},
+	SPANISH:	{locale: "es", name: "Spanish", welcome: "Bienvenido"},
+	PORTUGUESE:	{locale: "pt", name: "Portuguese", welcome: "Bem-vindo"}
+};
+
+var isFirstTime = true;
+var CurrentLanguage = LanguageType.ENGLISH;
 
 var Arbiter = {
     Initialize: function() {
@@ -37,10 +54,28 @@ var Arbiter = {
 		
 		Cordova.Initialize(this);
 		
+		variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
+		featuresDatabase = Cordova.openDatabase("features", "1.0", "Features Database", 1000000);
+		
+		//Load saved variables
+			//LanguageSelected
+			//CurrentLanguage
+
 		//Save divs for later
-		div_Popup	= $('#popup');
+		div_MapPage 		= $('#idMapPage');
+		div_SettingsPage	= $('#idSettingsPage');
+		div_WelcomePage		= $('#idWelcomePage');
+		div_Popup			= $('#popup');
+		
 		div_Popup.live('pageshow', this.PopulatePopup);
 		div_Popup.live('pagehide', this.DestroyPopup);
+		
+		//Start on the Language Select screen if this is the users first time.
+		if(isFirstTime) {
+			$.mobile.changePage(div_WelcomePage, "pop");
+		} else {
+			UpdateLocale();
+		}
 		
 		//Initialize Projections
 		WGS84 					= new OpenLayers.Projection('EPSG:4326');
@@ -99,6 +134,26 @@ var Arbiter = {
 		this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
     },
+	
+	//This function loops through all the languages that are supported and populates
+	// the list on #idLanguagePage with the options.
+	onClick_LanguageSubmit: function(_div) {
+		console.log("onClick(): " + _div.id);
+		var language = _div.id;
+		
+		if(isFirstTime) {
+			isFirstTime = false;
+		}
+		CurrentLanguage = LanguageType[language];
+		
+		console.log("Language selected: " + CurrentLanguage.name);
+		this.UpdateLocale();
+		$.mobile.changePage(div_MapPage, "pop");
+	},
+	
+	UpdateLocale: function() {
+		$("[data-localize]").localize("locale/Arbiter", { language: CurrentLanguage.locale });
+	},
 	
 	GetFeatures: function(_sql) {
 		$.ajax({
