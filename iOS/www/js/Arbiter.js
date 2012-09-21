@@ -36,6 +36,10 @@ var Arbiter = {
 		console.log("What will you have your Arbiter do?"); //http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
 		Cordova.Initialize(this);
+        
+        SQLite.Initialize(this);
+        SQLite.testSQLite(); 
+		SQLite.dumpFiles();
 		
 		//Save divs for later
 		div_Popup	= $('#popup');

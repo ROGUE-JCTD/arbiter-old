@@ -28,6 +28,8 @@
 	</array>
 	<key>Plugins</key>
 	<dict>
+		<key>SQLitePlugin</key>
+		<string>SQLitePlugin</string>
 		<key>Device</key>
 		<string>CDVDevice</string>
 		<key>Logger</key>
