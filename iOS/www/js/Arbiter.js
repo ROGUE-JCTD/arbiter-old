@@ -1,3 +1,4 @@
+
 /* ============================ *
  *   	    Projections
  * ============================ */
@@ -24,6 +25,14 @@ var postgisStyle;
  * ============================ */
 var osmLayer;
 var postgisLayer;
+
+//Zusy
+var wmsLayer; 
+var wfsLayer;
+var wfsFilter;
+var wfsFilterStrategy;
+var wmsSelectControl;
+var wfsModifyControl;
 
 var selectControl;
 
@@ -81,19 +90,19 @@ var Arbiter = {
 		WGS84 					= new OpenLayers.Projection('EPSG:4326');
 		WGS84_Google_Mercator	= new OpenLayers.Projection('EPSG:900913');
 							
-		postgisStyle =	new OpenLayers.StyleMap({
+		/*postgisStyle =	new OpenLayers.StyleMap({
 							externalGraphic: "${Image}",
 							graphicOpacity: 1.0,
 							graphicWidth: 16,
 							graphicHeight: 26,
 							graphicYOffset: -26
-						});
+						});*/
 						
 		//Initialize Layers
 		osmLayer		=	new OpenLayers.Layer.OSM('OpenStreetMap', null, {
 								transitionEffect: 'resize'
 							});
-		postgisLayer	= 	new OpenLayers.Layer.Vector('PostGIS Layer', {
+		/*postgisLayer	= 	new OpenLayers.Layer.Vector('PostGIS Layer', {
 								transitionEffect: 'resize',
 								rendererOptions: { zIndexing: true },
 								styleMap: 			postgisStyle,
@@ -104,18 +113,76 @@ var Arbiter = {
 		selectControl = new OpenLayers.Control.SelectFeature(postgisLayer, {
 			autoActivate:true,
 			onSelect: this.CreatePopup
+		});*/
+		
+		// WMS Layer for viewing the features
+		wmsLayer = new OpenLayers.Layer.WMS('Test', "http://192.168.10.187:8080/geoserver/wms", {
+											layers: 'medford:hospitals',
+											transparent: 'TRUE'
+											});
+		
+		// Filter for only getting features that the user wants to edit
+		wfsFilter = new OpenLayers.Filter.FeatureId({
+			fids: []
+													});
+		
+		wfsFilterStrategy = new OpenLayers.Strategy.Filter({
+			filter : wfsFilter
 		});
+		
+		// WFS Layer for editing features selected by the user
+		wfsLayer = new OpenLayers.Layer.Vector(
+				   "Medford Hospitals", {
+					strategies: [new OpenLayers.Strategy.Fixed(), wfsFilterStrategy],
+					projection: new OpenLayers.Projection("EPSG:4326"),
+				   protocol : new OpenLayers.Protocol.WFS({
+							version: "1.0.0",
+							  url : "http://192.168.10.187:8080/geoserver/wfs",
+							  featureNS : "http://medford.opengeo.org",
+							geometryName : "the_geom",
+							  featureType : "hospitals",
+							srsName: "EPSG:4326"
+					})
+		});
+		
+		wfsModifyControl = new OpenLayers.Control.ModifyFeature(wfsLayer);
+		// Control allowing the user to select features for editing 
+		wmsSelectControl = new OpenLayers.Control.WMSGetFeatureInfo({
+			url: 'http://192.168.10.187:8080/geoserver/wms',
+			title: 'identify features on click',
+			layers: [ wmsLayer ],
+			queryVisible: true
+		});
+		
+		wmsSelectControl.infoFormat = 'application/vnd.ogc.gml';
+		
+		// TODO: adjust the handler so that it can handle multiple features at that location
+		wmsSelectControl.events.register("getfeatureinfo", this, function(event){
+				
+				//if there are any features at the touch event, get that feature in the wfs layer for editing
+				if(event && event.features && event.features.length){
+						if(wfsFilter.fids.length)
+							wfsFilter.fids[0] = event.features[0].fid;
+						else
+							wfsFilter.fids.push(event.features[0].fid);
+										 
+						wfsFilterStrategy.setFilter(wfsFilter);
+										 
+						$("#editButton").show();
+				}
+		});
+		
 		
 		// create map
 		map = new OpenLayers.Map({
 			div: "map",
-			theme: null,
 			projection: WGS84_Google_Mercator,
-			displayProjection:	WGS84,
+			displayProjection: WGS84,
+			theme: null,
 			numZoomLevels: 18,
 			layers: [
-				osmLayer,
-				postgisLayer
+				osmLayer//,
+				//postgisLayer,
 			],
 			controls: [
 				new OpenLayers.Control.Attribution(),
@@ -125,13 +192,20 @@ var Arbiter = {
 					}
 				}),
 				new OpenLayers.Control.Zoom(),
-				selectControl
+				wmsSelectControl,
+				wfsModifyControl
 			],
 			center: new OpenLayers.LonLat(0, 0),
 			zoom: 1
 		});
-				
-		this.GetFeatures("SELECT * FROM \"Feature\"");
+		
+		// Add the layers to the map
+		map.addLayers([wmsLayer, wfsLayer]);
+		
+		// Activate the "select" feature control to ready for use
+		wmsSelectControl.activate();
+		wfsModifyControl.activate();
+		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
     },
 	
@@ -155,7 +229,7 @@ var Arbiter = {
 		$("[data-localize]").localize("locale/Arbiter", { language: CurrentLanguage.locale });
 	},
 	
-	GetFeatures: function(_sql) {
+	/*GetFeatures: function(_sql) {
 		$.ajax({
 			type:		'GET',
 			url:		"http://localhost:8080/DRServer/rest/postgis",
@@ -220,7 +294,7 @@ var Arbiter = {
 			
 			postgisLayer.addFeatures([locationFeature]);
 		}
-	},
+	},*/
 	
 	CreatePopup: function(_feature) {
 		console.log("create feature");
