@@ -27,12 +27,19 @@ var osmLayer;
 var postgisLayer;
 
 //Zusy
+var geoserverUrl = "http://192.168.10.187:8080";
 var wmsLayer; 
 var wfsLayer;
 var wfsFilter;
 var wfsFilterStrategy;
 var wmsSelectControl;
 var wfsModifyControl;
+var cqlFormatter;
+var xmlFormatter;
+var filterFormatter;
+var idFilter;
+var wfsSaveStrategy;
+var wktFormatter;
 
 var selectControl;
 
@@ -65,6 +72,16 @@ var Arbiter = {
 		
 		variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
 		featuresDatabase = Cordova.openDatabase("features", "1.0", "Features Database", 1000000);
+		
+		featuresDatabase.transaction(function(tx){ //do
+									 //set up the table with the features fid, geometry, whatever attributes the layer has
+									 tx.executeSql('CREATE TABLE IF NOT EXISTS layer1 (fid unique, geometry, name, url, featureNS, geometryName, featureType, srsName)');
+		 }, function(tx, err){ //error
+									 alert("error processing sql: " + err);
+		 },
+		 function(){ //success
+									 
+		 });
 		
 		//Load saved variables
 			//LanguageSelected
@@ -115,8 +132,17 @@ var Arbiter = {
 			onSelect: this.CreatePopup
 		});*/
 		
+		wktFormatter = new OpenLayers.Format.WKT();
+		cqlFormatter = new OpenLayers.Format.CQL();
+		xmlFormatter = new OpenLayers.Format.XML();
+		filterFormatter = new OpenLayers.Format.Filter({
+			version: "1.0.0"
+		});
+		
+		wfsSaveStrategy = new OpenLayers.Strategy.Save();
+		
 		// WMS Layer for viewing the features
-		wmsLayer = new OpenLayers.Layer.WMS('Test', "http://192.168.10.187:8080/geoserver/wms", {
+		wmsLayer = new OpenLayers.Layer.WMS('Test', geoserverUrl + "/geoserver/wms", {
 											layers: 'medford:hospitals',
 											transparent: 'TRUE'
 											});
@@ -133,11 +159,11 @@ var Arbiter = {
 		// WFS Layer for editing features selected by the user
 		wfsLayer = new OpenLayers.Layer.Vector(
 				   "Medford Hospitals", {
-					strategies: [new OpenLayers.Strategy.Fixed(), wfsFilterStrategy],
+					strategies: [new OpenLayers.Strategy.Fixed(), wfsFilterStrategy, wfsSaveStrategy],
 					projection: new OpenLayers.Projection("EPSG:4326"),
 				   protocol : new OpenLayers.Protocol.WFS({
 							version: "1.0.0",
-							  url : "http://192.168.10.187:8080/geoserver/wfs",
+							  url : geoserverUrl + "/geoserver/wfs",
 							  featureNS : "http://medford.opengeo.org",
 							geometryName : "the_geom",
 							  featureType : "hospitals",
@@ -148,9 +174,12 @@ var Arbiter = {
 		wfsModifyControl = new OpenLayers.Control.ModifyFeature(wfsLayer);
 		// Control allowing the user to select features for editing 
 		wmsSelectControl = new OpenLayers.Control.WMSGetFeatureInfo({
-			url: 'http://192.168.10.187:8080/geoserver/wms',
+			url: geoserverUrl + '/geoserver/wms',
 			title: 'identify features on click',
 			layers: [ wmsLayer ],
+			/*vendorParams : {
+				"CQL_FILTER" : cqlFormatter.write(idFilter)
+			},*/
 			queryVisible: true
 		});
 		
@@ -160,15 +189,34 @@ var Arbiter = {
 		wmsSelectControl.events.register("getfeatureinfo", this, function(event){
 				
 				//if there are any features at the touch event, get that feature in the wfs layer for editing
-				if(event && event.features && event.features.length){
-						if(wfsFilter.fids.length)
-							wfsFilter.fids[0] = event.features[0].fid;
-						else
-							wfsFilter.fids.push(event.features[0].fid);
+				if(event && event.features && event.features.length && (wfsFilter.fids.indexOf(event.features[0].fid) == -1)){
+						//if(wfsFilter.fids.length)
+					//		wfsFilter.fids[0] = event.features[0].fid;
+				//		else
+						wfsFilter.fids.push(event.features[0].fid);
 										 
 						wfsFilterStrategy.setFilter(wfsFilter);
 										 
 						$("#editButton").show();
+										 
+						wfsModifyControl.selectControl.select(wfsLayer.features[0]);
+										 
+										 featuresDatabase.transaction(function(tx){ //do
+										  //set up the table with the features fid, geometry, whatever attributes the layer has
+												  var protocol = wfsLayer.features[0].layer.protocol;
+												  
+												  var sql = 'INSERT INTO layer1 (fid, geometry, name, url, featureNS, geometryName, featureType, srsName) VALUES ("' + wfsLayer.features[0].fid + '", "' + wktFormatter.write(wfsLayer.features[0]) + '", "'
+												  + wfsLayer.features[0].attributes.name + '", "' + protocol.url + '", "' + protocol.featureNS + '", "' +
+												  protocol.geometryName + '", "' + protocol.featureType + '", "' + protocol.srsName + '")';
+												  
+												  console.log("sql: " + sql);
+												tx.executeSql(sql);
+										  }, function(tx, err){ //error
+										  alert("error processing sql: " + err);
+										  },
+										  function(){ //success
+										  
+										  });
 				}
 		});
 		
@@ -205,6 +253,26 @@ var Arbiter = {
 		// Activate the "select" feature control to ready for use
 		wmsSelectControl.activate();
 		wfsModifyControl.activate();
+		
+		wfsLayer.events.register("featuremodified", null, function(event){
+				//if the feature hasn't been added to the wms filter, add it
+			//	if(!wfsFilter.fids.contains(event.feature.fid)){
+					
+			//	}
+		});
+		
+		wfsSaveStrategy.events.register("success", '', function(){
+			wmsLayer.mergeNewParams({
+				'ver' : Math.random() // override browser caching
+			});
+			
+			wmsLayer.redraw(true);
+		});
+		
+		$("#editButton").mouseup(function(event){
+			wfsSaveStrategy.save();
+		});
+		
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
     },
