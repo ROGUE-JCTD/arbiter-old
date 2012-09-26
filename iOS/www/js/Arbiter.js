@@ -72,6 +72,10 @@ var Arbiter = {
 		console.log("What will you have your Arbiter do?"); //http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
 		Cordova.Initialize(this);
+        
+        SQLite.Initialize(this);
+        SQLite.testSQLite(); 
+		SQLite.dumpFiles();
 		
 		this.variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
 		this.serversDatabase = Cordova.openDatabase("servers", "1.0", "Server Database", 1000000);
