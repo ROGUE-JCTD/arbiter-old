@@ -27,7 +27,7 @@ var osmLayer;
 var postgisLayer;
 
 //Zusy
-var geoserverUrl = "http://192.168.10.187:8080";
+var geoserverUrl = "http://192.168.10.194:8080";
 var wmsLayer; 
 var wfsLayer;
 var wfsFilter;
@@ -50,8 +50,6 @@ var div_Popup;
 
 var selectedFeature;
 
-var variableDatabase;
-
 /* ============================ *
  * 			 Language
  * ============================ */
@@ -65,23 +63,18 @@ var isFirstTime = true;
 var CurrentLanguage = LanguageType.ENGLISH;
 
 var Arbiter = {
+	variableDatabase: null,
+	
+	serversDatabase: null,
+	
+	
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); //http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
 		Cordova.Initialize(this);
 		
-		variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
-		featuresDatabase = Cordova.openDatabase("features", "1.0", "Features Database", 1000000);
-		
-		featuresDatabase.transaction(function(tx){ //do
-									 //set up the table with the features fid, geometry, whatever attributes the layer has
-									 tx.executeSql('CREATE TABLE IF NOT EXISTS layer1 (fid unique, geometry, name, url, featureNS, geometryName, featureType, srsName)');
-		 }, function(tx, err){ //error
-									 alert("error processing sql: " + err);
-		 },
-		 function(){ //success
-									 
-		 });
+		this.variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
+		this.serversDatabase = Cordova.openDatabase("servers", "1.0", "Server Database", 1000000);
 		
 		//Load saved variables
 			//LanguageSelected
@@ -106,31 +99,11 @@ var Arbiter = {
 		//Initialize Projections
 		WGS84 					= new OpenLayers.Projection('EPSG:4326');
 		WGS84_Google_Mercator	= new OpenLayers.Projection('EPSG:900913');
-							
-		/*postgisStyle =	new OpenLayers.StyleMap({
-							externalGraphic: "${Image}",
-							graphicOpacity: 1.0,
-							graphicWidth: 16,
-							graphicHeight: 26,
-							graphicYOffset: -26
-						});*/
 						
 		//Initialize Layers
 		osmLayer		=	new OpenLayers.Layer.OSM('OpenStreetMap', null, {
 								transitionEffect: 'resize'
 							});
-		/*postgisLayer	= 	new OpenLayers.Layer.Vector('PostGIS Layer', {
-								transitionEffect: 'resize',
-								rendererOptions: { zIndexing: true },
-								styleMap: 			postgisStyle,
-								displayProjection:	WGS84,
-								projection: 		WGS84_Google_Mercator
-							});
-							
-		selectControl = new OpenLayers.Control.SelectFeature(postgisLayer, {
-			autoActivate:true,
-			onSelect: this.CreatePopup
-		});*/
 		
 		wktFormatter = new OpenLayers.Format.WKT();
 		cqlFormatter = new OpenLayers.Format.CQL();
@@ -159,7 +132,7 @@ var Arbiter = {
 		// WFS Layer for editing features selected by the user
 		wfsLayer = new OpenLayers.Layer.Vector(
 				   "Medford Hospitals", {
-					strategies: [new OpenLayers.Strategy.Fixed(), wfsFilterStrategy, wfsSaveStrategy],
+					strategies: [wfsSaveStrategy],
 					projection: new OpenLayers.Projection("EPSG:4326"),
 				   protocol : new OpenLayers.Protocol.WFS({
 							version: "1.0.0",
@@ -190,33 +163,17 @@ var Arbiter = {
 				
 				//if there are any features at the touch event, get that feature in the wfs layer for editing
 				if(event && event.features && event.features.length && (wfsFilter.fids.indexOf(event.features[0].fid) == -1)){
-						//if(wfsFilter.fids.length)
-					//		wfsFilter.fids[0] = event.features[0].fid;
-				//		else
-						wfsFilter.fids.push(event.features[0].fid);
-										 
-						wfsFilterStrategy.setFilter(wfsFilter);
 										 
 						$("#editButton").show();
-										 
-						wfsModifyControl.selectControl.select(wfsLayer.features[0]);
-										 
-										 featuresDatabase.transaction(function(tx){ //do
-										  //set up the table with the features fid, geometry, whatever attributes the layer has
-												  var protocol = wfsLayer.features[0].layer.protocol;
-												  
-												  var sql = 'INSERT INTO layer1 (fid, geometry, name, url, featureNS, geometryName, featureType, srsName) VALUES ("' + wfsLayer.features[0].fid + '", "' + wktFormatter.write(wfsLayer.features[0]) + '", "'
-												  + wfsLayer.features[0].attributes.name + '", "' + protocol.url + '", "' + protocol.featureNS + '", "' +
-												  protocol.geometryName + '", "' + protocol.featureType + '", "' + protocol.srsName + '")';
-												  
-												  console.log("sql: " + sql);
-												tx.executeSql(sql);
-										  }, function(tx, err){ //error
-										  alert("error processing sql: " + err);
-										  },
-										  function(){ //success
-										  
-										  });
+							
+						var geom = event.features[0].geometry.clone().transform(WGS84, WGS84_Google_Mercator);
+						var attributes = event.features[0].attributes;
+						var newFeature = new OpenLayers.Feature.Vector(geom, attributes);
+						newFeature.fid = event.features[0].fid;
+						wfsLayer.addFeatures([newFeature]);
+						
+						wfsModifyControl.selectControl.select(newFeature);
+						this.StoreFeature(newFeature);
 				}
 		});
 		
@@ -229,8 +186,7 @@ var Arbiter = {
 			theme: null,
 			numZoomLevels: 18,
 			layers: [
-				osmLayer//,
-				//postgisLayer,
+				osmLayer
 			],
 			controls: [
 				new OpenLayers.Control.Attribution(),
@@ -255,13 +211,12 @@ var Arbiter = {
 		wfsModifyControl.activate();
 		
 		wfsLayer.events.register("featuremodified", null, function(event){
-				//if the feature hasn't been added to the wms filter, add it
-			//	if(!wfsFilter.fids.contains(event.feature.fid)){
-					
-			//	}
+				
 		});
 		
 		wfsSaveStrategy.events.register("success", '', function(){
+			
+			//Update the wmsLayer with the save
 			wmsLayer.mergeNewParams({
 				'ver' : Math.random() // override browser caching
 			});
@@ -297,72 +252,90 @@ var Arbiter = {
 		$("[data-localize]").localize("locale/Arbiter", { language: CurrentLanguage.locale });
 	},
 	
-	/*GetFeatures: function(_sql) {
-		$.ajax({
-			type:		'GET',
-			url:		"http://localhost:8080/DRServer/rest/postgis",
-			data:		{
-				sql:	_sql
-			},
-			success:	function(data, status, xhr) {
-				//success.call(null, data, status, xhr);
-			 	console.log("Get Success");
-				this.ParseData(data);
-			},
-			error:	function(xhr, status, err) {
-			   //error.call(null, xhr, status, err);
-			   console.log("Get Failed");
-			   console.log(xhr);
-			   console.log(status);
-			   console.log(err);
-			}
-		});
+	errorSql: function(e){
+		navigator.notification.alert('Error processing SQL: ' + e.code + ' in function ' + arguments.callee.caller.toString());
 	},
 	
-	PostFeatures: function(_sql) {
-		$.ajax({
-		   	type:		'POST',
-		   	url:		"http://localhost:8080/DRServer/rest/postgis",
-		   	data:		{
-		   		sql:	_sql
-		   	},
-		   	success:	function(data, status, xhr) {
-		   		//success.call(null, data, status, xhr);
-		   		console.log("Post Success");
-		   	},
-		   	error:	function(xhr, status, err) {
-		   		//error.call(null, xhr, status, err);
-		   		console.log("Post Failed");
-		   		console.log(xhr);
-				console.log(status);
-		   		console.log(err);
-		   	}
-		});
-	},
-	
-	ParseData: function(_data) {
-		console.log("ParseData: " + _data);
+	// create the features and properties tables for the server
+	createServerTables: function(db, _serverName, _attributes){
 		
-		var features = $.trim(_data).split("Feature: {");
+		//create a list of attributes
+		var attributeList = '';
 		
-		//Loop through each feature
-		for(var i = 1; i < features.length; i++) {
-		
-			var attributes = $.trim(features[i]).split(",");
-			
-			var point = new OpenLayers.Geometry.Point(
-					attributes[1].substr(3,attributes[1].length),
-					attributes[2].substr(3,attributes[2].length));
-					
-			var locationFeature = new OpenLayers.Feature.Vector(point, {
-					Image: "img/mobile-loc.png",
-					Name: attributes[0].substr(6,attributes[0].length),
-					id: attributes[3].substr(5,attributes[3].length)
-			});
-			
-			postgisLayer.addFeatures([locationFeature]);
+		for(var x in _attributes){
+			attributeList += x + ' TEXT, ';
 		}
-	},*/
+		
+		var create = function(tx){
+			var featureSql = 'CREATE TABLE IF NOT EXISTS ' + _serverName + '_features (fid unique, geometry TEXT NOT NULL, ' +
+			attributeList + 'modified INTEGER DEFAULT 0, pid INTEGER);';
+			
+			var propertiesSql = 'CREATE TABLE IF NOT EXISTS ' + _serverName + '_properties (id INTEGER PRIMARY KEY, geomName TEXT NOT NULL, ' +
+			'featureNS TEXT NOT NULL, srsName TEXT NOT NULL, featureType TEXT NOT NULL);';
+			
+			tx.executeSql(featureSql);
+			tx.executeSql(propertiesSql);
+		};
+		
+		
+		db.transaction(create, this.errorSql);
+	},
+	
+	// check to see if the layer is in the servers property table already
+	isLayerInDB: function(db, _serverName, _featureType, _featureNS){
+		
+	},
+	
+	insertFeatureIntoTable: function(db, _feature, _serverName){
+		var protocol = _feature.protocol;
+		
+		console.log(protocol);
+		//check to see if the layer is already in the db
+		// check against namespace and featureType
+		var query = function (tx) {
+			tx.executeSql("SELECT * FROM " + _serverName + "_properties WHERE featureNS='" + protocol.featureNS + "' AND featureType='" + protocol.featureType + "';", [], function(tx, results) {
+				if(!results.rows.length){
+						  console.log(protocol);
+						  console.log(_serverName);
+					  tx.executeSql("INSERT INTO " + _serverName + "_properties (geomName, featureNS, srsName, featureType) VALUES ('" +
+						protocol.geometryName + "', '" + protocol.featureNS + "', '" + protocol.srsName + "', '" + protocol.featureNS + "');"); 
+				}
+			});
+		};
+				  
+		db.transaction(query, this.errorSql);
+	},
+	
+	//Store the feature in the local features db
+	StoreFeature: function(_feature) {
+		
+		//check to see if a table already exists for the layer, if not create one
+		this.createServerTables(this.serversDatabase, "hospitals", _feature.attributes);
+		
+		this.insertFeatureIntoTable(this.serversDatabase, _feature, "hospitals");
+		//check to see if the feature is in there
+		
+			//if it is, and the feature was modified, update it
+		
+			//if is isn't, add it
+		
+		/*featuresDatabase.transaction(function(tx){ //do
+			 //set up the table with the features fid, geometry, whatever attributes the layer has
+			 var protocol = wfsLayer.features[0].layer.protocol;
+			 
+			 var sql = 'INSERT INTO layer1 (fid, geometry, name, url, featureNS, geometryName, featureType, srsName) VALUES ("' + wfsLayer.features[0].fid + '", "' + wktFormatter.write(wfsLayer.features[0]) + '", "'
+			 + wfsLayer.features[0].attributes.name + '", "' + protocol.url + '", "' + protocol.featureNS + '", "' +
+			 protocol.geometryName + '", "' + protocol.featureType + '", "' + protocol.srsName + '")';
+			 
+			 console.log("sql: " + sql);
+			 tx.executeSql(sql);
+		 }, function(tx, err){ //error
+		 alert("error processing sql: " + err);
+		 },
+		 function(){ //success
+		 
+		 });*/
+	},
 	
 	CreatePopup: function(_feature) {
 		console.log("create feature");
