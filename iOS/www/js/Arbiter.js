@@ -27,7 +27,7 @@ var osmLayer;
 var postgisLayer;
 
 //Zusy
-var geoserverUrl = "http://192.168.10.194:8080";
+var geoserverUrl = "http://192.168.10.187:8080";
 var wmsLayer; 
 var wfsLayer;
 var wfsFilter;
@@ -71,12 +71,12 @@ var Arbiter = {
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); //http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
-		Cordova.Initialize(this);
         
         SQLite.Initialize(this);
         SQLite.testSQLite(); 
 		SQLite.dumpFiles();
 		
+		Cordova.Initialize(this);
 		this.variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
 		this.serversDatabase = Cordova.openDatabase("servers", "1.0", "Server Database", 1000000);
 		
@@ -312,33 +312,17 @@ var Arbiter = {
 	
 	//Store the feature in the local features db
 	StoreFeature: function(_feature) {
-		
+		console.log("create server tables");
 		//check to see if a table already exists for the layer, if not create one
 		this.createServerTables(this.serversDatabase, "hospitals", _feature.attributes);
 		
+		console.log("insert feature");
 		this.insertFeatureIntoTable(this.serversDatabase, _feature, "hospitals");
-		//check to see if the feature is in there
 		
-			//if it is, and the feature was modified, update it
+		console.log("dump files");
+		SQLite.dumpFiles();
+		console.log("end");
 		
-			//if is isn't, add it
-		
-		/*featuresDatabase.transaction(function(tx){ //do
-			 //set up the table with the features fid, geometry, whatever attributes the layer has
-			 var protocol = wfsLayer.features[0].layer.protocol;
-			 
-			 var sql = 'INSERT INTO layer1 (fid, geometry, name, url, featureNS, geometryName, featureType, srsName) VALUES ("' + wfsLayer.features[0].fid + '", "' + wktFormatter.write(wfsLayer.features[0]) + '", "'
-			 + wfsLayer.features[0].attributes.name + '", "' + protocol.url + '", "' + protocol.featureNS + '", "' +
-			 protocol.geometryName + '", "' + protocol.featureType + '", "' + protocol.srsName + '")';
-			 
-			 console.log("sql: " + sql);
-			 tx.executeSql(sql);
-		 }, function(tx, err){ //error
-		 alert("error processing sql: " + err);
-		 },
-		 function(){ //success
-		 
-		 });*/
 	},
 	
 	CreatePopup: function(_feature) {

@@ -29,7 +29,7 @@ var Cordova = {
 	// Storage
 	//=========
 	openDatabase: function(_name, _version, _displayName, _size) {
-		return window.openDatabase(_name, _version, _displayName, _size);
+		return window.sqlitePlugin.openDatabase(_name, _version, _displayName, _size);
 	},
 	
 	//====================
