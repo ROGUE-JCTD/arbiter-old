@@ -512,7 +512,7 @@
 				GCC_PREFIX_HEADER = "Arbiter/Arbiter-Prefix.pch";
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INFOPLIST_FILE = "Arbiter/Arbiter-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
 				PRODUCT_NAME = Arbiter;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -527,7 +527,7 @@
 				GCC_PREFIX_HEADER = "Arbiter/Arbiter-Prefix.pch";
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INFOPLIST_FILE = "Arbiter/Arbiter-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 4.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
 				PRODUCT_NAME = Arbiter;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

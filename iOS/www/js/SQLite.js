@@ -25,10 +25,11 @@ testSQLite: function() {
 				tx.executeSql("select count(id) as cnt from test_table;", [], function(tx, res) {
 					console.log("res.rows.length: " + res.rows.length + " -- should be 1");
 					console.log("res.rows.item(0).cnt: " + res.rows.item(0).cnt + " -- should be 1");
+					alert("res.rows.item(0).cnt: " + res.rows.item(0).cnt + " -- should be 1");
 				});
 			});
 		}, function(e) {
-			console.log("ERROR: " + e.message);
+			console.log("====>> ERROR: " + e.message);
 		});
 	});
 },
