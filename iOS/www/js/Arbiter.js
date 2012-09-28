@@ -61,20 +61,20 @@ var LanguageType = {
 
 var isFirstTime = true;
 var CurrentLanguage = LanguageType.ENGLISH;
+var globalresult;
 
 var Arbiter = {
 	variableDatabase: null,
 	
 	serversDatabase: null,
 	
-	
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); //http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
         
         SQLite.Initialize(this);
-        SQLite.testSQLite(); 
-		SQLite.dumpFiles();
+       // SQLite.testSQLite(); 
+	//	SQLite.dumpFiles();
 		
 		Cordova.Initialize(this);
 		this.variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
@@ -203,8 +203,8 @@ var Arbiter = {
 				wmsSelectControl,
 				wfsModifyControl
 			],
-			center: new OpenLayers.LonLat(0, 0),
-			zoom: 1
+			center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
+			zoom: 15
 		});
 		
 		// Add the layers to the map
@@ -256,55 +256,125 @@ var Arbiter = {
 		$("[data-localize]").localize("locale/Arbiter", { language: CurrentLanguage.locale });
 	},
 	
-	errorSql: function(e){
-		navigator.notification.alert('Error processing SQL: ' + e.code + ' in function ' + arguments.callee.caller.toString());
+	errorSql: function(err){
+		console.log('Error processing SQL: ' + err);
+	},
+	
+	squote: function(str){
+		return "'" + str + "'";
+	},
+	
+	// returns an object with 2 lists like the following:
+	// "prop1, prop2, prop3" and "val1, val2, val3"
+	getCommaDelimitedListsWithType: function(object){
+		var lists = {
+			properties: '',
+			values: ''
+		};
+		
+		var addComma = false;
+		
+		for(var x in object){
+			if(addComma){
+				lists.properties += ', ' + x + ' TEXT';
+				lists.values += ', ' + this.squote(object[x]);
+				
+			}else{
+				lists.properties += x + ' TEXT';
+				lists.values += this.squote(object[x]);
+				addComma = true;
+			}
+		}
+		
+		return lists;
+	},
+
+	getCommaDelimitedLists: function(object){
+		var lists = {
+		properties: '',
+		values: ''
+		};
+		
+		var addComma = false;
+		
+		for(var x in object){
+			if(addComma){
+				lists.properties += ', ' + x;
+				lists.values += ', ' + this.squote(object[x]);
+				
+			}else{
+				lists.properties += x;
+				lists.values += this.squote(object[x]);
+				addComma = true;
+			}
+		}
+		
+		return lists;
 	},
 	
 	// create the features and properties tables for the server
-	createServerTables: function(db, _serverName, _attributes){
+	createServerTables: function(db, _layerName, _attributes){
 		
 		//create a list of attributes
-		var attributeList = '';
-		
-		for(var x in _attributes){
-			attributeList += x + ' TEXT, ';
-		}
-		
+		var lists = this.getCommaDelimitedListsWithType(_attributes);
+		console.log(lists);
 		var create = function(tx){
-			var featureSql = 'CREATE TABLE IF NOT EXISTS ' + _serverName + '_features (fid unique, geometry TEXT NOT NULL, ' +
+			
+			var featureSql = 'CREATE TABLE IF NOT EXISTS ' + _layerName + ' (id integer primary key, geometry TEXT NOT NULL, ' +
+			lists.properties + ');';
+			
+			/*var featureSql = 'CREATE TABLE IF NOT EXISTS ' + _layerName + ' (fid unique, geometry TEXT NOT NULL, ' +
 			attributeList + 'modified INTEGER DEFAULT 0, pid INTEGER);';
 			
-			var propertiesSql = 'CREATE TABLE IF NOT EXISTS ' + _serverName + '_properties (id INTEGER PRIMARY KEY, geomName TEXT NOT NULL, ' +
-			'featureNS TEXT NOT NULL, srsName TEXT NOT NULL, featureType TEXT NOT NULL);';
+			/*var propertiesSql = 'CREATE TABLE IF NOT EXISTS ' + _serverName + '_properties (id INTEGER PRIMARY KEY, geomName TEXT NOT NULL, ' +
+			'featureNS TEXT NOT NULL, srsName TEXT NOT NULL, featureType TEXT NOT NULL);';*/
 			
 			tx.executeSql(featureSql);
-			tx.executeSql(propertiesSql);
+			//tx.executeSql(propertiesSql);
 		};
 		
 		
 		db.transaction(create, this.errorSql);
 	},
 	
-	// check to see if the layer is in the servers property table already
-	isLayerInDB: function(db, _serverName, _featureType, _featureNS){
+	readLayerFromDb: function(_layerName){
 		
 	},
 	
-	insertFeatureIntoTable: function(db, _feature, _serverName){
-		var protocol = _feature.protocol;
+	insertFeatureIntoTable: function(db, _feature, _layerName){
+		var lists = this.getCommaDelimitedLists(_feature.attributes);
 		
-		console.log(protocol);
+		var clonedfeature = _feature.clone();
+		clonedfeature.geometry.transform(WGS84_Google_Mercator, WGS84);
+		var geom = this.squote(wktFormatter.write(clonedfeature));
+		//var protocol = _feature.layer.protocol;
+		
 		//check to see if the layer is already in the db
 		// check against namespace and featureType
+		
 		var query = function (tx) {
-			tx.executeSql("SELECT * FROM " + _serverName + "_properties WHERE featureNS='" + protocol.featureNS + "' AND featureType='" + protocol.featureType + "';", [], function(tx, results) {
+			console.log("insert");
+			var insertsql = "INSERT INTO " + _layerName + " (geometry, " + lists.properties + ") VALUES (" + geom + ", " + lists.values + ");";
+			console.log(insertsql);
+			tx.executeSql(insertsql, [], function(_tx, _res){
+						  console.log("insertid: " + _res.insertId);
+						 // console.log(_tx);
+						  //console.log(res);
+						 // console.log(res.rows.item(0));
+						  var selectsql = "select * from hospitals;";
+						  _tx.executeSql(selectsql, [], function(t, res){
+										 for(var i = 0; i < res.rows.length; i++)
+										 {
+										 console.log(res.rows.item(i));
+										 }
+						});
+			});
+			/*tx.executeSql("SELECT * FROM " + _serverName + "_properties WHERE featureNS='" + protocol.featureNS + "' AND featureType='" + protocol.featureType + "';", [], function(tx, results) {
 				if(!results.rows.length){
-						  console.log(protocol);
-						  console.log(_serverName);
 					  tx.executeSql("INSERT INTO " + _serverName + "_properties (geomName, featureNS, srsName, featureType) VALUES ('" +
 						protocol.geometryName + "', '" + protocol.featureNS + "', '" + protocol.srsName + "', '" + protocol.featureNS + "');"); 
 				}
-			});
+			});*/
 		};
 				  
 		db.transaction(query, this.errorSql);
@@ -312,17 +382,10 @@ var Arbiter = {
 	
 	//Store the feature in the local features db
 	StoreFeature: function(_feature) {
-		console.log("create server tables");
 		//check to see if a table already exists for the layer, if not create one
 		this.createServerTables(this.serversDatabase, "hospitals", _feature.attributes);
 		
-		console.log("insert feature");
 		this.insertFeatureIntoTable(this.serversDatabase, _feature, "hospitals");
-		
-		console.log("dump files");
-		SQLite.dumpFiles();
-		console.log("end");
-		
 	},
 	
 	CreatePopup: function(_feature) {
