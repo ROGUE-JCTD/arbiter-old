@@ -30,13 +30,8 @@ var postgisLayer;
 var geoserverUrl = "http://192.168.10.187:8080";
 var wmsLayer; 
 var wfsLayer;
-var wfsFilter;
-var wfsFilterStrategy;
 var wmsSelectControl;
 var wfsModifyControl;
-var cqlFormatter;
-var xmlFormatter;
-var filterFormatter;
 var idFilter;
 var wfsSaveStrategy;
 var wktFormatter;
@@ -77,8 +72,8 @@ var Arbiter = {
 	//	SQLite.dumpFiles();
 		
 		Cordova.Initialize(this);
-		this.variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
-		this.serversDatabase = Cordova.openDatabase("servers", "1.0", "Server Database", 1000000);
+		this.variableDatabase = window.openDatabase("variables", "1.0", "Variable Database", 1000000);
+		this.serversDatabase = window.openDatabase("servers", "1.0", "Server Database", 1000000);
 		
 		//Load saved variables
 			//LanguageSelected
@@ -110,11 +105,6 @@ var Arbiter = {
 							});
 		
 		wktFormatter = new OpenLayers.Format.WKT();
-		cqlFormatter = new OpenLayers.Format.CQL();
-		xmlFormatter = new OpenLayers.Format.XML();
-		filterFormatter = new OpenLayers.Format.Filter({
-			version: "1.0.0"
-		});
 		
 		wfsSaveStrategy = new OpenLayers.Strategy.Save();
 		
@@ -123,15 +113,6 @@ var Arbiter = {
 											layers: 'medford:hospitals',
 											transparent: 'TRUE'
 											});
-		
-		// Filter for only getting features that the user wants to edit
-		wfsFilter = new OpenLayers.Filter.FeatureId({
-			fids: []
-													});
-		
-		wfsFilterStrategy = new OpenLayers.Strategy.Filter({
-			filter : wfsFilter
-		});
 		
 		// WFS Layer for editing features selected by the user
 		wfsLayer = new OpenLayers.Layer.Vector(
@@ -154,9 +135,6 @@ var Arbiter = {
 			url: geoserverUrl + '/geoserver/wms',
 			title: 'identify features on click',
 			layers: [ wmsLayer ],
-			/*vendorParams : {
-				"CQL_FILTER" : cqlFormatter.write(idFilter)
-			},*/
 			queryVisible: true
 		});
 		
@@ -166,7 +144,7 @@ var Arbiter = {
 		wmsSelectControl.events.register("getfeatureinfo", this, function(event){
 				
 				//if there are any features at the touch event, get that feature in the wfs layer for editing
-				if(event && event.features && event.features.length && (wfsFilter.fids.indexOf(event.features[0].fid) == -1)){
+				if(event && event.features && event.features.length && (!wfsLayer.getFeatureByFid(event.features[0].fid))){
 										 
 						$("#editButton").show();
 							
@@ -177,7 +155,7 @@ var Arbiter = {
 						wfsLayer.addFeatures([newFeature]);
 						
 						wfsModifyControl.selectControl.select(newFeature);
-						this.StoreFeature(newFeature);
+						this.insertFeaturesIntoTable(this.serversDatabase, [event.feature], "hospitals");
 				}
 		});
 		
@@ -214,8 +192,9 @@ var Arbiter = {
 		wmsSelectControl.activate();
 		wfsModifyControl.activate();
 		
+		var arbiter = this;
 		wfsLayer.events.register("featuremodified", null, function(event){
-				
+				arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [event.feature], "hospitals");
 		});
 		
 		wfsSaveStrategy.events.register("success", '', function(){
@@ -232,6 +211,55 @@ var Arbiter = {
 			wfsSaveStrategy.save();
 		});
 		
+		$("#pullFeatures").mouseup(function(event){
+				var currentBounds = map.calculateBounds().transform(WGS84_Google_Mercator, WGS84);
+				
+				var featureType = 'medford:hospitals';
+				var postData = '<wfs:GetFeature service="WFS" version="1.0.0" outputFormat="GML2" ' +
+							'xmlns:usa="http://usa.opengeo.org" xmlns:wfs="http://www.opengis.net/wfs" ' +
+							'xmlns:ogc="http://www.opengis.net/ogc" xmlns:gml="http://www.opengis.net/gml" ' +
+							'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wfs ' +
+							'http://schemas.opengis.net/wfs/1.0.0/WFS-basic.xsd"> ' +
+								'<wfs:Query typeName="' + featureType + '">' +
+									   '<ogc:Filter>' +
+											'<ogc:BBOX>' +
+												'<ogc:PropertyName>the_geom</ogc:PropertyName>' +
+													'<gml:Box srsName="http://www.opengis.net/gml/srs/epsg.xml#4326">' +
+														'<gml:coordinates>' + currentBounds.left + ',' + currentBounds.bottom +
+														' ' + currentBounds.right + ',' + currentBounds.top + '</gml:coordinates>' +
+													'</gml:Box>' +
+											'</ogc:BBOX>' +
+									   '</ogc:Filter>' +
+								'</wfs:Query>' +
+							'</wfs:GetFeature>';
+								   
+			   var request = new OpenLayers.Request.POST({
+					url: geoserverUrl + '/geoserver/wfs',
+					data: postData,
+					headers: {
+						'Content-Type': 'text/xml;charset=utf-8'
+					},
+					callback: function(response){
+						var gmlReader = new OpenLayers.Format.GML({
+							extractAttributes: true
+						});
+														 
+						 var features = gmlReader.read(response.responseText);
+						
+						 for(var i = 0; i < features.length; i++){
+							arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [features[i]], "hospitals");
+						 	features[i].geometry.transform(WGS84, WGS84_Google_Mercator);
+						 }
+														 
+						wfsLayer.addFeatures(features);
+					},
+					failure: function(response){
+						console.log('something went wrong');
+					}
+			   });
+		});
+		
+		this.readLayerFromDb(this.serversDatabase, "hospitals");
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
     },
@@ -257,7 +285,7 @@ var Arbiter = {
 	},
 	
 	errorSql: function(err){
-		console.log('Error processing SQL: ' + err);
+		console.log('Error processing SQL: ' + console.log(err));
 	},
 	
 	squote: function(str){
@@ -266,9 +294,10 @@ var Arbiter = {
 	
 	// returns an object with 2 lists like the following:
 	// "prop1, prop2, prop3" and "val1, val2, val3"
-	getCommaDelimitedListsWithType: function(object){
+	getCommaDelimitedLists: function(object){
 		var lists = {
 			properties: '',
+			propertiesWithType: '', 
 			values: ''
 		};
 		
@@ -276,33 +305,12 @@ var Arbiter = {
 		
 		for(var x in object){
 			if(addComma){
-				lists.properties += ', ' + x + ' TEXT';
-				lists.values += ', ' + this.squote(object[x]);
-				
-			}else{
-				lists.properties += x + ' TEXT';
-				lists.values += this.squote(object[x]);
-				addComma = true;
-			}
-		}
-		
-		return lists;
-	},
-
-	getCommaDelimitedLists: function(object){
-		var lists = {
-		properties: '',
-		values: ''
-		};
-		
-		var addComma = false;
-		
-		for(var x in object){
-			if(addComma){
+				lists.propertiesWithType += ', ' + x + ' TEXT';
 				lists.properties += ', ' + x;
 				lists.values += ', ' + this.squote(object[x]);
 				
 			}else{
+				lists.propertiesWithType += x + ' TEXT';
 				lists.properties += x;
 				lists.values += this.squote(object[x]);
 				addComma = true;
@@ -312,80 +320,114 @@ var Arbiter = {
 		return lists;
 	},
 	
-	// create the features and properties tables for the server
-	createServerTables: function(db, _layerName, _attributes){
+	//return a feature
+	createFeature: function(obj){
+		var feature = wktFormatter.read(obj.geometry);
 		
-		//create a list of attributes
-		var lists = this.getCommaDelimitedListsWithType(_attributes);
-		console.log(lists);
-		var create = function(tx){
+		// TODO: somehow get the srid from the table instead of assuming it'll be epsg:4326
+		feature.geometry.transform(WGS84, WGS84_Google_Mercator);
+		
+		for(var x in obj){
+			if(x != "geometry" && x != "id"){
+				if(x == "fid")
+					feature.fid = obj[x];
+				else
+					feature.attributes[x] = obj[x];
+			}
+		}
+
+		return feature;
+	},
+		
+	readLayerFromDb: function(_db, _layerName, _spatialFilter){
+		if(_layerName){
+			var arbiter = this;
+			var query = function(tx){
+				var sql = "select * from " + _layerName + ";";
+				
+				var success = function(tx, res){
+					var layer = new OpenLayers.Layer.Vector(_layerName, {
+						projection:	WGS84  										
+					});
+					
+					var features = [];
+					for(var i = 0; i < res.rows.length; i++){
+						features.push(arbiter.createFeature(res.rows.item(i)));
+					}
+					
+					layer.addFeatures(features);
+					layer.events.register("featuremodified", null, function(event){
+						arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [event.feature], "hospitals");
+					});
+					
+					map.addLayer(layer);
+					var modcontrol = new OpenLayers.Control.ModifyFeature(layer);
+					map.addControl(modcontrol);
+					modcontrol.activate();
+				};
+									
+				tx.executeSql(sql, [], success);
+			};
+									
+			_db.transaction(query, this.errorSql, function(){});
+		}
+	},
+	
+	insertFeaturesIntoTable: function(db, features, layerName){
+		var arbiter = this;
+		var query = function(tx){
+			var lists = arbiter.getCommaDelimitedLists(features[0].attributes); // Need to check to make sure the attributes are in there even if not set
 			
-			var featureSql = 'CREATE TABLE IF NOT EXISTS ' + _layerName + ' (id integer primary key, geometry TEXT NOT NULL, ' +
-			lists.properties + ');';
+			tx.executeSql("CREATE TABLE IF NOT EXISTS " + layerName + " (id integer primary key, fid unique, geometry TEXT NOT NULL, " +
+						  lists.propertiesWithType + ");");
 			
-			/*var featureSql = 'CREATE TABLE IF NOT EXISTS ' + _layerName + ' (fid unique, geometry TEXT NOT NULL, ' +
-			attributeList + 'modified INTEGER DEFAULT 0, pid INTEGER);';
-			
-			/*var propertiesSql = 'CREATE TABLE IF NOT EXISTS ' + _serverName + '_properties (id INTEGER PRIMARY KEY, geomName TEXT NOT NULL, ' +
-			'featureNS TEXT NOT NULL, srsName TEXT NOT NULL, featureType TEXT NOT NULL);';*/
-			
-			tx.executeSql(featureSql);
-			//tx.executeSql(propertiesSql);
+			for(var i = 0; i < features.length; i++){
+				var attributeLists = arbiter.getCommaDelimitedLists(features[i].attributes);
+				
+				var clonedfeature = features[i].clone();
+				clonedfeature.geometry.transform(WGS84_Google_Mercator, WGS84);
+				var fid = features[i].fid;
+				var geom = arbiter.squote(wktFormatter.write(clonedfeature));
+				var selectsql = "SELECT * FROM " + layerName + " WHERE fid='" + features[i].fid + "';";
+				
+				tx.executeSql(selectsql, [], function(tx, res){
+						
+						var exists = true;
+							  
+						try{
+							  res.rows.item(0);
+						}catch(err){
+							  exists = false;
+						}
+							  
+						if(exists){
+							db.transaction(function(tx){
+								var updatesql = "UPDATE " + layerName + " SET geometry=" + geom;
+										   
+								for(var x in clonedfeature.attributes){
+									if(x != "fid")
+										updatesql += ", " + x + "='" + clonedfeature.attributes[x] + "'";    
+								}
+								
+								updatesql += " WHERE id=" + res.rows.item(0).id + ";";
+										 
+								tx.executeSql(updatesql);  				 
+							}, arbiter.errorSql, function(){});
+						}else{
+							  var insertsql = "INSERT INTO " + layerName + " (fid, geometry, " + lists.properties 
+							  + ") VALUES ('" + fid + "', " + geom + ", " + attributeLists.values + ");";
+							  
+							db.transaction(function(tx){
+								
+								tx.executeSql(insertsql);					 
+							}, arbiter.errorSql, function(){});
+						}
+				});
+			}
+				
 		};
 		
-		
-		db.transaction(create, this.errorSql);
-	},
-	
-	readLayerFromDb: function(_layerName){
-		
-	},
-	
-	insertFeatureIntoTable: function(db, _feature, _layerName){
-		var lists = this.getCommaDelimitedLists(_feature.attributes);
-		
-		var clonedfeature = _feature.clone();
-		clonedfeature.geometry.transform(WGS84_Google_Mercator, WGS84);
-		var geom = this.squote(wktFormatter.write(clonedfeature));
-		//var protocol = _feature.layer.protocol;
-		
-		//check to see if the layer is already in the db
-		// check against namespace and featureType
-		
-		var query = function (tx) {
-			console.log("insert");
-			var insertsql = "INSERT INTO " + _layerName + " (geometry, " + lists.properties + ") VALUES (" + geom + ", " + lists.values + ");";
-			console.log(insertsql);
-			tx.executeSql(insertsql, [], function(_tx, _res){
-						  console.log("insertid: " + _res.insertId);
-						 // console.log(_tx);
-						  //console.log(res);
-						 // console.log(res.rows.item(0));
-						  var selectsql = "select * from hospitals;";
-						  _tx.executeSql(selectsql, [], function(t, res){
-										 for(var i = 0; i < res.rows.length; i++)
-										 {
-										 console.log(res.rows.item(i));
-										 }
-						});
-			});
-			/*tx.executeSql("SELECT * FROM " + _serverName + "_properties WHERE featureNS='" + protocol.featureNS + "' AND featureType='" + protocol.featureType + "';", [], function(tx, results) {
-				if(!results.rows.length){
-					  tx.executeSql("INSERT INTO " + _serverName + "_properties (geomName, featureNS, srsName, featureType) VALUES ('" +
-						protocol.geometryName + "', '" + protocol.featureNS + "', '" + protocol.srsName + "', '" + protocol.featureNS + "');"); 
-				}
-			});*/
-		};
-				  
-		db.transaction(query, this.errorSql);
-	},
-	
-	//Store the feature in the local features db
-	StoreFeature: function(_feature) {
-		//check to see if a table already exists for the layer, if not create one
-		this.createServerTables(this.serversDatabase, "hospitals", _feature.attributes);
-		
-		this.insertFeatureIntoTable(this.serversDatabase, _feature, "hospitals");
+		db.transaction(query, this.errorSql, function(){});
 	},
 	
 	CreatePopup: function(_feature) {
