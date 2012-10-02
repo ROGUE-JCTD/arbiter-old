@@ -52,14 +52,15 @@
 			<div data-role="page" class="Page" id='idMapPage' data-theme="a">
 				<!-- Header -->
 				<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
+					<a id="saveButton" data-icon="check"  class="ui-btn-left">Save</a>
 					<h1 data-localize="page.map">Map</h1>
-					<a href="#" id="editButton" data-icon="gear" class="ui-btn-right" style="display:none">Save</a>
+					<a id="attributesButton" data-icon="gear" class="ui-btn-right">Info</a>
 				</div>
 			
 				<!-- Content -->
 				<div data-role="content" class="MapPageContent" id='idMapPageContent'>
 					<div id="map" style="position:relative">
-						<div id="pullFeatures" style="position:absolute;z-index:1005;right:8px;top:8px;width:40px;height:40px;background-color:blue;border-radius:4px 4px;opacity:0.4;"></div>
+						<div id="pullFeatures"></div>
 					</div>
 				</div>
 		
@@ -67,8 +68,8 @@
 				<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 					<div data-role="navbar" data-iconpos="top">
 						<ul>
-							<li><a href="#more-dialog" data-icon="back">	<div data-localize="page.map">Map</div></a></li>
-							<li><a href="#more-dialog" data-icon="info">	<div data-localize="page.info">Info</div></a></li>
+							<li><a href="#more-dialog" data-icon="back" class="ui-btn-active">	<div data-localize="page.map">Map</div></a></li>
+							<li><a href="#layerPage" data-icon="info">	<div data-localize="page.layers">Layers</div></a></li>
 							<li><a href="#more-dialog" data-icon="search">	<div data-localize="page.search">Search</div></a></li>
 							<li><a href="#idSettingsPage" data-icon="gear">	<div data-localize="page.settings">Settings</div></a></li>
 						</ul>
@@ -76,6 +77,33 @@
 				</div>
 			</div>
 			
+		<!--
+		 // =======================
+		 //		Layer Page
+		 // =======================
+		 -->
+		<div id="layerPage" data-role="page" data-theme="a" class="Page">
+			<div data-position="inline" data-role="header">
+				<h1>Layers</h1>
+				<a id="addLayerBtn" data-icon="plus" data-iconpos="notext" class="ui-btn-right"></a>
+			</div>
+			<div data-role="content">
+				<ul id="layer-list" data-role="listview">
+				</ul>
+			</div>
+			<!-- Footer -->
+			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
+				<div data-role="navbar" data-iconpos="top">
+					<ul>
+						<li><a href="#idMapPage" data-icon="back">	<div data-localize="page.map">Map</div></a></li>
+						<li><a href="#" data-icon="info" class="ui-btn-active">	<div data-localize="page.layers">Layers</div></a></li>
+						<li><a href="#more-dialog" data-icon="search">	<div data-localize="page.search">Search</div></a></li>
+						<li><a href="#idSettingsPage" data-icon="gear">	<div data-localize="page.settings">Settings</div></a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		
 		<!--
 		 // =======================
 		 //		 Settings Page
@@ -98,7 +126,7 @@
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
 						<li><a href="#idMapPage" data-icon="back">	<div data-localize="page.map">Map</div></a></li>
-						<li><a href="#more-dialog" data-icon="info">	<div data-localize="page.info">Info</div></a></li>
+						<li><a href="#layerPage" data-icon="info">	<div data-localize="page.layers">Layers</div></a></li>
 						<li><a href="#more-dialog" data-icon="search">	<div data-localize="page.search">Search</div></a></li>
 						<li><a href="#" class="ui-btn-active" data-icon="gear">	<div data-localize="page.settings">Settings</div></a></li>
 					</ul>
@@ -150,7 +178,41 @@
                 </ul>
             </div>
 			<div data-role="content" style="padding: 15px">
-				<input type="submit" value="Submit" data-mini="true" onClick="Arbiter.onClick_Submit()">
+				<input type="submit" value="Commit" data-mini="true" onClick="Arbiter.SubmitAttributes()">
+			</div>
+        </div>
+		
+		<!--
+		 // =======================
+		 //		Add Layer Dialog
+		 // =======================
+		 -->
+		<div id="addLayerDialog" data-role="dialog" data-theme="a">
+            <div data-position="inline" data-role="header">
+                <h1>Add Layer</h1>
+            </div>
+            <div  data-role="content">
+                <form action="#" method="get">
+					<div data-role="fieldcontain" class="ui-hide-label">
+						<label for="layerurl">URL</label>
+						<input type="url" name="layerurl" id="layerurl" value="" placeholder="URL to GeoServer *" />
+					</div>
+					<div data-role="fieldcontain" class="ui-hide-label">
+						<label for="featureType">Feature Type</label>
+						<input type="text" name="featureType" id="featureType" value="" placeholder="Name of the feature type *" />
+					</div>
+					<div data-role="fieldcontain" class="ui-hide-label">
+						<label for="featureNS">Layer NS</label>
+						<input type="url" name="featureNS" id="featureNS" value="" placeholder="Layer Namespace *" />
+					</div>
+					<div data-role="fieldcontain" class="ui-hide-label">
+						<label for="layernickname">Layer Nickname</label>
+						<input type="text" name="layernickname" id="layernickname" value="" placeholder="Layer Nickname *" />
+					</div>
+				</form>
+            </div>
+			<div data-role="content" style="padding: 15px">
+				<input type="submit" id="addLayerSubmit" value="Add Layer" data-mini="true">
 			</div>
         </div>
 		
