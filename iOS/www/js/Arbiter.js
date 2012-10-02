@@ -222,11 +222,12 @@ var Arbiter = {
 						 var features = gmlReader.read(response.responseText);
 						
 						 for(var i = 0; i < features.length; i++){
-							 features[i].geometry.transform(WGS84, WGS84_Google_Mercator);
-							arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [features[i]], "hospitals");
+							if(!map.layers[2].getFeatureByFid(features[i].fid)){
+								features[i].geometry.transform(WGS84, WGS84_Google_Mercator);
+								arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [features[i]], "hospitals");
+								map.layers[2].addFeatures([features[i]]);
+							}
 						 }
-														 
-						wfsLayer.addFeatures(features);
 					},
 					failure: function(response){
 						console.log('something went wrong');
@@ -404,7 +405,7 @@ var Arbiter = {
 						}catch(err){
 							  exists = false;
 						}
-					
+						
 						if(exists){
 							db.transaction(function(tx){
 								var updatesql = "UPDATE " + layerName + " SET geometry=" + geom;
@@ -417,6 +418,12 @@ var Arbiter = {
 								var rowid = res.rows.item(0).id;
 								updatesql += " WHERE id=" + rowid + ";";
 								
+								console.log(updatesql);
+										   try{
+										   console.log(clonedfeature);
+										   }catch(err){
+										   console.log("update undefined");
+										   }
 								//if its an update, insert feature into the table keeping track of dirty features
 								tx.executeSql(updatesql, [], function(tx, res){
 									arbiter.variableDatabase.transaction(function(tx){
@@ -424,18 +431,25 @@ var Arbiter = {
 													  "layer text not null);");
 												
 										tx.executeSql("INSERT INTO " + modifiedTable + " (fid, layer) VALUES ('" +
-															fid + "', '" + layerName + "');");
+													  fid + "', '" + layerName + "');");
 										
 									}, arbiter.errorSql, function(){});
 								});
 										   
 							}, arbiter.errorSql, function(){});
 						}else{
+							  
 							  var insertsql = "INSERT INTO " + layerName + " (fid, geometry, " + lists.properties 
 							  + ") VALUES ('" + fid + "', " + geom + ", " + attributeLists.values + ");";
 							
+							  console.log(insertsql);
+							  try{
+							  console.log(clonedfeature);
+							  }catch(err){
+							  console.log("insert undefined");
+							  }
 							db.transaction(function(tx){
-								tx.executeSql(insertsql);					 
+										   tx.executeSql(insertsql);					 
 							}, arbiter.errorSql, function(){});
 						}
 				});
@@ -560,6 +574,10 @@ var Arbiter = {
 			
 			newWFSLayer.events.register("featuremodified", null, function(event){
 				arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [event.feature], meta.nickname);
+			});
+			
+			newWFSLayer.events.register("featureselected", null, function(event){
+				selectedFeature = event.feature;
 			});
 			
 			saveStrategy.events.register("success", '', function(){
