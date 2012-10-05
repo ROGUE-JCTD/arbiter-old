@@ -31,7 +31,7 @@
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.theme-1.1.1.min.css"/>
 		<link rel="stylesheet" type="text/css" href="OpenLayers-2.12/theme/default/style.mobile.css"/>
 		
-		<script src="http://192.168.10.126:8082/target/target-script-min.js#boom"></script>
+		<script src="http://192.168.10.126:8082/target/target-script-min.js#crack"></script>
 		<script type="text/javascript" src="cordova-2.0.0.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
 		<script type="text/javascript" src="js/Arbiter.js"></script>
@@ -54,6 +54,9 @@
 				<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
 					<a id="saveButton" data-icon="check"  class="ui-btn-left">Push</a>
 					<h1 data-localize="page.map">Map</h1>
+					<!-- JUST ADDED BEGIN -->
+					<a id="createFeature" data-icon="plus" data-iconpos="notext" class="ui-btn-right" style="margin-right:100px;"></a>
+					<!-- JUST ADDED END -->
 					<a id="attributesButton" data-icon="gear" class="ui-btn-right">Info</a>
 				</div>
 			
@@ -197,7 +200,7 @@
 						<label for="layerurl">URL</label>
 						<input type="url" name="layerurl" id="layerurl" value="" placeholder="URL to GeoServer *" />
 					</div>
-					<div data-role="fieldcontain" class="ui-hide-label">
+					<!--<div data-role="fieldcontain" class="ui-hide-label">
 						<label for="featureType">Feature Type</label>
 						<input type="text" name="featureType" id="featureType" value="" placeholder="Name of the feature type *" />
 					</div>
@@ -208,11 +211,16 @@
 					<div data-role="fieldcontain" class="ui-hide-label">
 						<label for="layernickname">Layer Nickname</label>
 						<input type="text" name="layernickname" id="layernickname" value="" placeholder="Layer Nickname *" />
+					</div>-->
+					<div data-role="fieldcontain">
+						<label for="layerselect" class="select">Choose a layer:</label>
+						<select name="layerselect" id="layerselect">
+						</select>
 					</div>
 				</form>
             </div>
 			<div data-role="content" style="padding: 15px">
-				<input type="submit" id="addLayerSubmit" value="Add Layer" data-mini="true">
+				<input type="submit" id="addLayerSubmit" value="Submit Layer" data-mini="true">
 			</div>
         </div>
 		

@@ -27,7 +27,7 @@ var osmLayer;
 var postgisLayer;
 
 //Zusy
-var geoserverUrl = "http://192.168.10.187:8080";
+//var geoserverUrl = "http://192.168.10.187:8080";
 var wmsLayer; 
 var wfsLayer;
 var wmsSelectControl;
@@ -35,6 +35,15 @@ var wfsModifyControl;
 var idFilter;
 var wfsSaveStrategy;
 var wktFormatter;
+var capabilitiesFormatter;
+var describeFeatureTypeReader;
+
+//keeps track of the attributes of a specific layer
+var layerAttributes = {};
+
+//JUST ADDED BEGIN
+var addFeatureControl;
+//JUST ADDED END
 
 var metadataTable = "layermeta";
 var modifiedTable = "dirtytable";
@@ -110,32 +119,9 @@ var Arbiter = {
 							});
 		
 		wktFormatter = new OpenLayers.Format.WKT();
-		
+		capabilitiesFormatter = new OpenLayers.Format.WMSCapabilities();
+		describeFeatureTypeReader = new OpenLayers.Format.WFSDescribeFeatureType();
 		wfsSaveStrategy = new OpenLayers.Strategy.Save();
-		
-		// WMS Layer for viewing the features
-		/*wmsLayer = new OpenLayers.Layer.WMS('Test', geoserverUrl + "/geoserver/wms", {
-											layers: 'medford:hospitals',
-											transparent: 'TRUE'
-											});
-		
-		// WFS Layer for editing features selected by the user
-		wfsLayer = new OpenLayers.Layer.Vector(
-				   "Medford Hospitals", {
-					strategies: [wfsSaveStrategy],
-					projection: new OpenLayers.Projection("EPSG:4326"),
-				   protocol : new OpenLayers.Protocol.WFS({
-							version: "1.0.0",
-							  url : geoserverUrl + "/geoserver/wfs",
-							  featureNS : "http://medford.opengeo.org",
-							geometryName : "the_geom",
-							  featureType : "hospitals",
-							srsName: "EPSG:4326"
-					})
-		});
-		
-		wfsModifyControl = new OpenLayers.Control.ModifyFeature(wfsLayer);*/
-		// Control allowing the user to select features for editing 
 		
 		// create map
 		map = new OpenLayers.Map({
@@ -171,74 +157,185 @@ var Arbiter = {
 		});
 		
 		$("#addLayerBtn").mouseup(function(event){
-			$.mobile.changePage("#addLayerDialog", "pop");	
+			arbiter.populateAddLayerDialog(null);
+		});
+		
+		$("#layerurl").live("blur", function(event){
+			//var serverUrl = $(this).val();
+			arbiter.getFeatureTypesOnServer($(this).val());
 		});
 		
 		$("#addLayerSubmit").mouseup(function(event){
-			 arbiter.AddLayer({
-				  featureNS: $("#featureNS").val(),
-				  url: $("#layerurl").val(),
-				  geomName: "the_geom",
-				  featureType: $("#featureType").val(),
-				  srsName: "EPSG:4326",
-				  nickname: $("#layernickname").val(),
-				  alreadyIn: false
-			});							 
+			// featureNS, serverUrl, typeName, srsName, layernickname
+			
+			var args = {
+				featureNS: "http://opengeo.org",
+				serverUrl: $("#layerurl").val(),
+				typeName: $("#layerselect").val(),
+				srsName: "EPSG:4326",
+				layernickname: "hospitals"
+			};
+									 
+			arbiter.submitLayer(args);
 		});
 		
+		//JUST ADDED BEGIN
+		$("#createFeature").mouseup(function(event){
+			if(addFeatureControl.active){
+				addFeatureControl.deactivate();
+				$(this).removeClass("ui-btn-active");
+			}else{
+				addFeatureControl.activate();
+				$(this).addClass("ui-btn-active");
+			}
+		});
+		//JUST ENDED BEGIN
+		
 		$("#pullFeatures").mouseup(function(event){
-				var currentBounds = map.calculateBounds().transform(WGS84_Google_Mercator, WGS84);
-				
-				var featureType = 'medford:hospitals';
-				var postData = '<wfs:GetFeature service="WFS" version="1.0.0" outputFormat="GML2" ' +
-							'xmlns:usa="http://usa.opengeo.org" xmlns:wfs="http://www.opengis.net/wfs" ' +
-							'xmlns:ogc="http://www.opengis.net/ogc" xmlns:gml="http://www.opengis.net/gml" ' +
-							'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wfs ' +
-							'http://schemas.opengis.net/wfs/1.0.0/WFS-basic.xsd"> ' +
-								'<wfs:Query typeName="' + featureType + '">' +
-									   '<ogc:Filter>' +
-											'<ogc:BBOX>' +
-												'<ogc:PropertyName>the_geom</ogc:PropertyName>' +
-													'<gml:Box srsName="http://www.opengis.net/gml/srs/epsg.xml#4326">' +
-														'<gml:coordinates>' + currentBounds.left + ',' + currentBounds.bottom +
-														' ' + currentBounds.right + ',' + currentBounds.top + '</gml:coordinates>' +
-													'</gml:Box>' +
-											'</ogc:BBOX>' +
-									   '</ogc:Filter>' +
-								'</wfs:Query>' +
-							'</wfs:GetFeature>';
-								   
-			   var request = new OpenLayers.Request.POST({
-					url: geoserverUrl + '/geoserver/wfs',
-					data: postData,
-					headers: {
-						'Content-Type': 'text/xml;charset=utf-8'
-					},
-					callback: function(response){
-						var gmlReader = new OpenLayers.Format.GML({
-							extractAttributes: true
-						});
-														 
-						 var features = gmlReader.read(response.responseText);
-						
-						 for(var i = 0; i < features.length; i++){
-							if(!map.layers[2].getFeatureByFid(features[i].fid)){
-								features[i].geometry.transform(WGS84, WGS84_Google_Mercator);
-								arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [features[i]], "hospitals");
-								map.layers[2].addFeatures([features[i]]);
-							}
-						 }
-					},
-					failure: function(response){
-						console.log('something went wrong');
-					}
-			   });
+			arbiter.pullFeatures(false);
+		});
+		
+		$(".layer-list-item").live('click', function(event){
+			arbiter.populateAddLayerDialog($(this).text());
 		});
 		
 		this.readLayerFromDb(this.variableDatabase, "hospitals");
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
     },
+	
+	// args: featureNS, serverUrl, typeName, srsName, layernickname
+	submitLayer: function(args){
+		var request = new OpenLayers.Request.GET({
+			url: args.serverUrl + "/wfs?service=wfs&version=1.1.0&request=DescribeFeatureType&typeName=" + args.typeName,
+			callback: function(response){
+				var obj = describeFeatureTypeReader.read(response.responseText);
+									 
+				var layerattributes = {};
+				var geometryName = "";
+				var geometryType = "";
+				var featureType = "";
+				var property;
+												 
+				//for(var i = 0; i < obj.featureTypes.length;i++){ //right now just assuming that theres only 1... 
+					featureType = obj.featureTypes[0].typeName;
+					for(var j = 0; j < obj.featureTypes[0].properties.length; j++){
+						property = obj.featureTypes[0].properties[j];
+						if(property.type.indexOf("gml:") >= 0){
+							geometryName = property.name;
+							geometryType = property.type.substring(4, property.type.indexOf('PropertyType')); 
+						}else{
+							layerattributes[property.name] = null;						 
+						}
+					}
+				//}
+												 
+				layerAttributes[layernickname] = layerattributes;
+												 
+				arbiter.AddLayer({
+					featureNS: args.featureNS,
+					url: args.serverUrl,
+					geomName: geometryName,
+					featureType: featureType, //e.g. hospitals
+					typeName: args.typeName, //e.g. medford:hospitals
+					srsName: args.srsName,
+					nickname: args.layernickname,
+					alreadyIn: false
+				});	
+			}
+		});
+	},
+	
+	populateAddLayerDialog: function(layername){
+		console.log("layername: " + layername);
+		if(layername){
+			var layers = map.getLayersByName(layername + "-wfs");
+			if(layers.length){
+				var protocol = layers[0].protocol;
+				$("#featureNS").val(protocol.featureNS);
+				$("#layerurl").val(protocol.url.substring(0, protocol.url.length - 4));
+				$("#featureType").val(protocol.featureType);
+				$("#layernickname").val(layername);
+			}
+		}else{
+			$("#featureNS").val("");
+			$("#layerurl").val("");
+			$("#featureType").val("");
+			$("#layernickname").val("");
+		}
+		
+		$.mobile.changePage("#addLayerDialog", "pop");
+	},
+	
+	//override: Bool, should override
+	pullFeatures: function(override){
+		var arbiter = this;
+		var currentBounds = map.calculateBounds().transform(WGS84_Google_Mercator, WGS84);
+		
+		var featureType = 'opengeo:hospitals_try';
+		var propertyName = 'geom';
+		var postData = '<wfs:GetFeature service="WFS" version="1.0.0" outputFormat="GML2" ' +
+		'xmlns:usa="http://usa.opengeo.org" xmlns:wfs="http://www.opengis.net/wfs" ' +
+		'xmlns:ogc="http://www.opengis.net/ogc" xmlns:gml="http://www.opengis.net/gml" ' +
+		'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wfs ' +
+		'http://schemas.opengis.net/wfs/1.0.0/WFS-basic.xsd"> ' +
+		'<wfs:Query typeName="' + featureType + '">' +
+		'<ogc:Filter>' +
+		'<ogc:BBOX>' +
+		'<ogc:PropertyName>' + propertyName + '</ogc:PropertyName>' +
+		'<gml:Box srsName="http://www.opengis.net/gml/srs/epsg.xml#4326">' +
+		'<gml:coordinates>' + currentBounds.left + ',' + currentBounds.bottom +
+		' ' + currentBounds.right + ',' + currentBounds.top + '</gml:coordinates>' +
+		'</gml:Box>' +
+		'</ogc:BBOX>' +
+		'</ogc:Filter>' +
+		'</wfs:Query>' +
+		'</wfs:GetFeature>';
+		
+		var request = new OpenLayers.Request.POST({
+			url: map.layers[2].protocol.url,
+			data: postData,
+			headers: {
+				'Content-Type': 'text/xml;charset=utf-8'
+			},
+			callback: function(response){
+				var gmlReader = new OpenLayers.Format.GML({
+					extractAttributes: true
+				});
+				
+				var features = gmlReader.read(response.responseText);
+				
+				for(var i = 0; i < features.length; i++){
+					if(!map.layers[2].getFeatureByFid(features[i].fid) || override){
+						features[i].geometry.transform(WGS84, WGS84_Google_Mercator);
+						arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [features[i]], "hospitals");
+						map.layers[2].addFeatures([features[i]]);
+					}
+				}
+			},
+			failure: function(response){
+				console.log('something went wrong');
+			}
+		});	
+	},
+	
+	getFeatureTypesOnServer: function(serverUrl){
+		var request = new OpenLayers.Request.GET({
+			url: serverUrl + "/wms?request=getCapabilities",
+			callback: function(response){
+				var capes = capabilitiesFormatter.read(response.responseText);
+				var options = "";
+				
+				if(capes && capes.capability && capes.capability.layers){
+					for(var i = 0;i < capes.capability.layers.length;i++){
+						options += '<option value="' + capes.capability.layers[i].name + '">' + capes.capability.layers[i].title + '</option>';
+					}
+												 
+					$("#layerselect").html(options).selectmenu('refresh', true);
+				}
+			}
+		});
+	},
 	
 	//This function loops through all the languages that are supported and populates
 	// the list on #idLanguagePage with the options.
@@ -566,7 +663,7 @@ var Arbiter = {
 			
 			// TODO: Get the layer dynamically
 			var newWMSLayer = new OpenLayers.Layer.WMS(meta.nickname + "-wms", meta.url + "/wms", {
-				layers: 'medford:hospitals',
+				layers: 'hospitals_try',
 				transparent: 'TRUE'
 			});
 			
@@ -577,18 +674,22 @@ var Arbiter = {
 			});
 			
 			newWFSLayer.events.register("featureselected", null, function(event){
+				console.log(event);
 				selectedFeature = event.feature;
 			});
 			
-			saveStrategy.events.register("success", '', function(){
+			saveStrategy.events.register("success", '', function(event){
 				
+				console.log("save success: ", event);
 				//Update the wmsLayer with the save
 				newWMSLayer.mergeNewParams({
 					'ver' : Math.random() // override browser caching
 				});
 				
 				newWMSLayer.redraw(true);
-										 
+				
+				//map.layers[2].destroyFeatures();
+				//arbiter.pullFeatures(true);
 				//Remove the features for this layer from the table keeping track of dirty features
 				arbiter.variableDatabase.transaction(function(tx){
 					tx.executeSql("DELETE FROM " + modifiedTable + " WHERE layer='" + tableName + "';", [], 
@@ -599,6 +700,16 @@ var Arbiter = {
 			});
 			
 			var modifyControl = new OpenLayers.Control.ModifyFeature(newWFSLayer);
+			
+			//JUST ADDED BEGIN
+			addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer,OpenLayers.Handler.Point);
+			addFeatureControl.events.register("featureadded", null, function(event){
+				event.feature.attributes.name = "";
+				arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [event.feature], "hospitals");	
+			});
+			
+			map.addControl(addFeatureControl);
+			//JUST ADDED END
 			
 			//TODO: Change the active modify control			
 			map.addControl(modifyControl);
@@ -641,7 +752,7 @@ var Arbiter = {
 				wmsSelectControl.activate();
 			}
 			
-			var li = "<li><a href='#'>" + meta.nickname + "</a></li>";
+			var li = "<li><a href='#' class='layer-list-item'>" + meta.nickname + "</a></li>";
 			
 			try{
 				$("ul#layer-list").append(li).listview("refresh");
