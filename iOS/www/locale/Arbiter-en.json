@@ -3,16 +3,34 @@
 	"mainLanguage": "Use English as the main language.",
 	"page" : {
 		"welcome": "Welcome",
-		"language": "Language",
-		"map": "Map",
-		"info": "Info",
-		"search": "Search",
-		"settings": "Settings"
+		"projects": "Projects",
+		"newProject": "New Project",
+		"servers": "Server",
+		"newServer": "New Server",
+		"layers": "Layers",
+		"newLayer": "New Layer",
+		"area": "Area of Interest"
 	},
 	"button" : {
 		"back": "Back",
-		"options" : "Options",
-		"more" : "More"
+		"settings": "Settings",
+		"more" : "More",
+		"edit": "Edit",
+		"add" : "Add"
+	},
+	"footer" : {
+		"createNewProject" : "Create a new project.",
+		"previous": "Previous",
+		"next": "Next",
+		"newServer": "Add a new server.",
+		"addServer": "Add Server",
+		"newLayer": "Add a new layer.",
+		"finish": "Finish",
+		"arbiter" : "Arbiter",
+		"project" : "Project",
+		"servers" : "Servers",
+		"layers" : "Layers",
+		"area" : "Area"
 	},
 	"feature": {
 		"name": "Name",

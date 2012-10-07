@@ -51,8 +51,15 @@ var modifiedTable = "dirtytable";
 var selectControl;
 
 var div_MapPage;
-var div_SettingsPage;
+
 var div_WelcomePage;
+var div_ProjectsPage;
+var div_NewProjectPage;
+var div_ServersPage;
+var div_LayersPage;
+
+var div_ArbiterSettingsPage;
+var div_ProjectSettingsPage;
 var div_Popup;
 
 var selectedFeature;
@@ -81,9 +88,9 @@ var Arbiter = {
 		console.log("What will you have your Arbiter do?"); //http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
         
-        SQLite.Initialize(this);
-       // SQLite.testSQLite(); 
-	//	SQLite.dumpFiles();
+        //SQLite.Initialize(this);
+		// SQLite.testSQLite(); 
+		//SQLite.dumpFiles();
 		
 		Cordova.Initialize(this);
 		this.variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
@@ -95,18 +102,28 @@ var Arbiter = {
 
 		//Save divs for later
 		div_MapPage 		= $('#idMapPage');
-		div_SettingsPage	= $('#idSettingsPage');
 		div_WelcomePage		= $('#idWelcomePage');
+		div_ProjectsPage	= $('#idProjectsPage');
+		div_NewProjectPage	= $('#idNewProjectPage');
+		div_ServersPage		= $('#idServersPage');
+		div_LayersPage		= $('#idLayersPage');
+		
+		div_ArbiterSettingsPage	= $('#idArbiterSettingsPage');
+		div_ProjectSettingsPage	= $('#idProjectSettingsPage');
 		div_Popup			= $('#popup');
 		
 		div_Popup.live('pageshow', this.PopulatePopup);
 		//div_Popup.live('pagehide', this.DestroyPopup);
 		
+		div_ProjectsPage.live('pageshow', this.PopulateProjectsList);
+		div_ServersPage.live('pageshow', this.PopulateServersList);
+		div_LayersPage.live('pageshow', this.PopulateLayersList);
+		
 		//Start on the Language Select screen if this is the users first time.
-		if(isFirstTime) {
-			$.mobile.changePage(div_WelcomePage, "pop");
-		} else {
+		//Otherwise move to the Projects page.
+		if(!isFirstTime) {
 			UpdateLocale();
+			this.changePage_Pop(div_ProjectsPage);
 		}
 		
 		//Initialize Projections
@@ -203,6 +220,74 @@ var Arbiter = {
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
     },
+	
+	PopulateProjectsList: function() {
+		//Fill the projects list (id=idProjectsList) with the ones that are available.
+		// - Make the div's id = to ProjectID number;
+		// Example: <a data-role="button" id="1" onClick="Arbiter.onClick_OpenProject(this)">TempProject</a>
+		console.log("PopulateProjectsList");
+		
+		//TODO: Load projects that are available
+		// - add them to the ProjectsList
+	},
+	
+	onClick_EditProjects: function() {
+		//TODO: Make the Projects List editable
+		console.log("User wants to edit his/her projects.");
+	},
+	
+	PopulateServersList: function() {
+		//Fill the servers list (id=idServersList) with the ones that are available.
+		// - Make the div's id = to ServerID number;
+		console.log("PopulateServersList");
+		
+		//TODO: Load servers that are available
+		// - add them to the ServersList
+	},
+	
+	onClick_EditServers: function() {
+		//TODO: Make the servers List editable
+		console.log("User wants to edit his/her servers.");
+	},
+	
+	onClick_AddServer: function() {
+		//TODO: Add the new server to the server list
+		console.log("User wants to submit a new servers.");
+	},
+	
+	PopulateLayersList: function() {
+		//Fill the servers list (id=idLayersList) with the ones that are available.
+		// - Make the div's id = to some number...idk;
+		console.log("PopulateLayersList");
+	
+		//TODO: Load layers that are available
+		// - add them to the LayersList
+	},
+	
+	onClick_EditLayers: function() {
+		//TODO: Make the servers List editable
+		console.log("User wants to edit his/her layers.");
+	},
+	
+	onClick_AddLayer: function() {
+		//TODO: Add the new layer to the layers list
+		console.log("User wants to submit a new layer.");
+	},
+	
+	onClick_AddProject: function() {
+		//TODO: Create the new project with the settings set!
+		console.log("Project added!");
+		this.changePage_Pop(div_ProjectsPage);
+	},
+	
+	onClick_OpenProject: function(_div) {
+		console.log("OpenProject: " + _div.id);
+		var projectID = _div.id;
+
+		//TODO: Load project information from click!
+		
+		this.changePage_Pop(div_MapPage);
+	},
 	
 	// args: featureNS, serverUrl, typeName, srsName, layernickname
 	submitLayer: function(args){
@@ -350,7 +435,7 @@ var Arbiter = {
 		
 		console.log("Language selected: " + CurrentLanguage.name);
 		this.UpdateLocale();
-		$.mobile.changePage(div_MapPage, "pop");
+		this.changePage_Pop(div_ProjectsPage);
 	},
 	
 	UpdateLocale: function() {
@@ -779,6 +864,10 @@ var Arbiter = {
 	//Get the current bounds of the map for GET requests.
 	getCurrentExtent: function() {
 		return map.getExtent();
+	},
+	
+	changePage_Pop: function(_div) {
+		$.mobile.changePage(_div, "pop")
 	},
 	
 	//===================
