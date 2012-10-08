@@ -137,6 +137,10 @@
 			<!-- Content -->
 			<div data-role="content" class="NewProjectPageContent" id='idNewProjectPageContent'>
 				<p>Name yo project fool!</p>
+				<div data-role="fieldcontain" class="ui-hide-label">
+					<label for="newProjectName">Project Name</label>
+					<input type="text" name="newProjectName" id="newProjectName" value="" placeholder="Name your Project *" />
+				</div>
 			</div>
 			
 			<!-- Footer -->
@@ -382,6 +386,18 @@
 			<!-- Content -->
 			<div data-role="content" class="AddServerContent" id='idAddServerPageContent'>
 				<p>Put server stuff in here. User name, password, SSN, URL, etc.</p>
+				<div data-role="fieldcontain" class="ui-hide-label">
+					<label for="newServerURL">URL</label>
+					<input type="url" name="newServerURL" id="newServerURL" value="" placeholder="Server URL *" />
+				</div>
+				<div data-role="fieldcontain" class="ui-hide-label">
+					<label for="newUsername">Username</label>
+					<input type="text" name="newUsername" id="newUsername" value="" placeholder="Username *" />
+				</div>
+				<div data-role="fieldcontain" class="ui-hide-label">
+					<label for="newPassword">Password</label>
+					<input type="password" name="newPassword" id="newPassword" value="" placeholder="Password *" />
+				</div>
 			</div>
 			
 			<!-- Footer -->

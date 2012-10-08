@@ -41,9 +41,7 @@ var describeFeatureTypeReader;
 //keeps track of the attributes of a specific layer
 var layerAttributes = {};
 
-//JUST ADDED BEGIN
 var addFeatureControl;
-//JUST ADDED END
 
 var metadataTable = "layermeta";
 var modifiedTable = "dirtytable";
@@ -140,27 +138,32 @@ var Arbiter = {
 		describeFeatureTypeReader = new OpenLayers.Format.WFSDescribeFeatureType();
 		wfsSaveStrategy = new OpenLayers.Strategy.Save();
 		
-		// create map
-		map = new OpenLayers.Map({
-			div: "map",
-			projection: WGS84_Google_Mercator,
-			displayProjection: WGS84,
-			theme: null,
-			numZoomLevels: 18,
-			layers: [
-				osmLayer
-			],
-			controls: [
-				new OpenLayers.Control.Attribution(),
-				new OpenLayers.Control.TouchNavigation({
-					dragPanOptions: {
-						enableKinetic: true
-					}
-				}),
-				new OpenLayers.Control.Zoom()
-			],
-			center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
-			zoom: 15
+		div_MapPage.live('pageshow', function(){
+			if(!map){
+				console.log("map init");
+				// create map
+				map = new OpenLayers.Map({
+					div: "map",
+					projection: WGS84_Google_Mercator,
+					displayProjection: WGS84,
+					theme: null,
+					numZoomLevels: 18,
+					layers: [
+					osmLayer
+					],
+					controls: [
+					new OpenLayers.Control.Attribution(),
+					new OpenLayers.Control.TouchNavigation({
+						dragPanOptions: {
+							enableKinetic: true
+						}
+					}),
+					new OpenLayers.Control.Zoom()
+					],
+					center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
+					zoom: 15
+				});
+			}
 		});
 		
 		var arbiter = this;
@@ -196,7 +199,6 @@ var Arbiter = {
 			arbiter.submitLayer(args);
 		});
 		
-		//JUST ADDED BEGIN
 		$("#createFeature").mouseup(function(event){
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
@@ -206,7 +208,6 @@ var Arbiter = {
 				$(this).addClass("ui-btn-active");
 			}
 		});
-		//JUST ENDED BEGIN
 		
 		$("#pullFeatures").mouseup(function(event){
 			arbiter.pullFeatures(false);
@@ -786,7 +787,6 @@ var Arbiter = {
 			
 			var modifyControl = new OpenLayers.Control.ModifyFeature(newWFSLayer);
 			
-			//JUST ADDED BEGIN
 			addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer,OpenLayers.Handler.Point);
 			addFeatureControl.events.register("featureadded", null, function(event){
 				event.feature.attributes.name = "";
@@ -794,7 +794,6 @@ var Arbiter = {
 			});
 			
 			map.addControl(addFeatureControl);
-			//JUST ADDED END
 			
 			//TODO: Change the active modify control			
 			map.addControl(modifyControl);
