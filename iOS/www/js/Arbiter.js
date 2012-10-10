@@ -57,6 +57,7 @@ var div_Popup;
 
 var selectedFeature;
 
+var fileSystem = null;
 /* ============================ *
  * 			 Language
  * ============================ */
@@ -82,8 +83,9 @@ var Arbiter = {
 		
         
         SQLite.Initialize(this);
-       // SQLite.testSQLite(); 
-	//	SQLite.dumpFiles();
+        
+        FileUtil.Initialize(this);
+        FileUtil.dumpFiles();
 		
 		Cordova.Initialize(this);
 		this.variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
@@ -115,8 +117,86 @@ var Arbiter = {
 						
 		//Initialize Layers
 		osmLayer		=	new OpenLayers.Layer.OSM('OpenStreetMap', null, {
-								transitionEffect: 'resize'
-							});
+				transitionEffect : 'resize',
+				singleTile : false,
+				ratio : 1.3671875,
+				isBaseLayer : true,
+				visibility : true,
+				getURL : function(bounds) {
+					
+			        var xyz = this.getXYZ(bounds);
+			        var url = this.url;
+			        if (OpenLayers.Util.isArray(url)) {
+			            var s = '' + xyz.x + xyz.y + xyz.z;
+			            url = this.selectUrl(s, url);
+			        }
+			        
+			        var finalUrl = OpenLayers.String.format(url, xyz);
+			        console.log("url: " + url);
+			        console.log("xyz: " + xyz);
+			        console.log("finalUrl: " + finalUrl);
+//			        return OpenLayers.String.format(url, xyz);
+			        
+					var success = function(filename){
+						console.log("savetile call back filename: " + filename);
+/*						
+						if (typeof (localStorage[filename]) != 'undefined') {
+							console.log('########## cached');
+							return localStorage[filename];
+						} else {
+							console.log('########## not cache. TODO cache');
+							
+							var fileTransfer = new FileTransfer();
+							var uri = encodeURI(finalUrl);
+
+							fileTransfer.download(
+							    uri,
+							    "/downloaded3.png",
+							    function(entry) {
+							        console.log("download complete: " + entry.fullPath);
+							        FileUtil.dumpFiles();
+							    },
+							    function(error) {
+							        console.log("download error source " + error.source);
+							        console.log("download error target " + error.target);
+							        console.log("upload error code" + error.code);
+							    }
+							);																	
+
+							return url;
+						}
+						*/
+						
+						console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");					
+					}
+					
+					console.log("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+					// might not have been written yet!
+					FileUtil.saveTile(finalUrl, "osm", xyz.z, xyz.x, xyz.y, success);
+					console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");					
+					
+					//TODO: hardcoded ext for now. also file might not be ready yet!
+					var returnUrl = fileSystem.root.fullPath + "/osm/" + xyz.z + "/" + xyz.x + "/" + xyz.y + ".png";
+					console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> returnUrl " + returnUrl);
+					
+					return returnUrl;
+					
+//					var url = this.getFullRequestString({
+//															bbox : bounds.toBBOX(),
+//															height : this.tileSize.h,
+//															width : this.tileSize.w
+//														}, '');
+//					console.log(url);
+//					var filename = "YOYO";//mm.encrypt('md5', url);
+
+				}
+			}			
+		);
+		
+		
+//		{
+//						transitionEffect: 'resize'
+//					}		
 		
 		wktFormatter = new OpenLayers.Format.WKT();
 		capabilitiesFormatter = new OpenLayers.Format.WMSCapabilities();
@@ -662,10 +742,61 @@ var Arbiter = {
 			});
 			
 			// TODO: Get the layer dynamically
-			var newWMSLayer = new OpenLayers.Layer.WMS(meta.nickname + "-wms", meta.url + "/wms", {
-				layers: 'hospitals_try',
-				transparent: 'TRUE'
-			});
+			var newWMSLayer = new OpenLayers.Layer.WMS(	meta.nickname + "-wms", 
+														meta.url + "/wms", 
+														{
+															layers: 'hospitals',
+															transparent: 'TRUE'
+														}
+/* 														,{
+															transitionEffect : 'resize',
+															singleTile : false,
+															ratio : 1.3671875,
+															isBaseLayer : false,
+															visibility : (meta.layers != ''),
+															getURL : function(bounds) {
+																console.log("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+																var url = this.getFullRequestString({
+																										bbox : bounds.toBBOX(),
+																										height : this.tileSize.h,
+																										width : this.tileSize.w
+																									}, '');
+																console.log(url);
+																var filename = "YOYO";//mm.encrypt('md5', url);
+																if (typeof (localStorage[filename]) != 'undefined') {
+																	console.log('########## cached');
+																	return localStorage[filename];
+																} else {
+																	console.log('########## not cache. TODO cache');
+																	
+																	var fakeUrl = "https://github.com/PierceCountyWA/openlayers/blob/cache/lib/OpenLayers/Control/Cache/SessionStorage.js";
+																	
+																	var fileTransfer = new FileTransfer();
+																	var uri = encodeURI(fakeUrl);
+
+																	fileTransfer.download(
+																	    uri,
+																	    "/downloaded2.file",
+																	    function(entry) {
+																	        console.log("download complete: " + entry.fullPath);
+																	        FileUtil.dumpFiles();
+																	    },
+																	    function(error) {
+																	        console.log("download error source " + error.source);
+																	        console.log("download error target " + error.target);
+																	        console.log("upload error code" + error.code);
+																	    }
+																	);																	
+//																	window.plugins.fileDownload.downloadFile(url, '/' + mm.encrypt('sha1', url) + '.png', function(fp) {
+//																		localStorage[filename] = fp
+//																	}, function() {
+	//																});
+																	return url;
+																}
+																console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
+															}
+														}*/
+			);
 			
 			map.addLayers([newWMSLayer, newWFSLayer]);
 			
