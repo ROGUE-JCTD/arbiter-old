@@ -80,6 +80,8 @@ var Arbiter = {
 	
 	serversDatabase: null,
 	
+	serverList: [],
+	
 	isOnline: false,
 	
     Initialize: function() {
@@ -140,7 +142,6 @@ var Arbiter = {
 		
 		div_MapPage.live('pageshow', function(){
 			if(!map){
-				console.log("map init");
 				// create map
 				map = new OpenLayers.Map({
 					div: "map",
@@ -254,6 +255,20 @@ var Arbiter = {
 	onClick_AddServer: function() {
 		//TODO: Add the new server to the server list
 		console.log("User wants to submit a new servers.");
+		var name = $("#newNickname").val();
+		var url = $("#newServerURL").val();
+		var username = $("#newUsername").val();
+		var password = $("#newPassword").val();
+		
+		var newServer = {
+			name: name,
+			url: url,
+			username: username,
+			password: password
+		};
+		
+		console.log(newServer);
+		this.serverList.push(newServer);
 	},
 	
 	PopulateLayersList: function() {
