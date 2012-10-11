@@ -80,7 +80,7 @@ var Arbiter = {
 	
 	serversDatabase: null,
 	
-	serverList: [],
+	serverList: {},
 	
 	isOnline: false,
 	
@@ -218,6 +218,10 @@ var Arbiter = {
 			arbiter.populateAddLayerDialog($(this).text());
 		});
 		
+		$(".server-list-item").live('click', function(event){
+			arbiter.populateAddServerDialog($(this).text());
+		});
+		
 		this.readLayerFromDb(this.variableDatabase, "hospitals");
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
@@ -252,23 +256,83 @@ var Arbiter = {
 		console.log("User wants to edit his/her servers.");
 	},
 	
+	validateAddServerFields: function(){
+		var username = $("#newUsername").val();
+		var password = $("#newPassword").val();
+		var nickname = $("#newNickname").val();
+		var url = $("#newServerURL").val();
+		var valid = true;
+		
+		if(!username){
+			$("#newUsername").addClass('invalid-field');
+			valid = false;
+		}else
+			$("#newUsername").removeClass('invalid-field');
+		
+		if(!password){
+			$("#newPassword").addClass('invalid-field');
+			valid = false;
+		}else
+			$("#newPassword").removeClass('invalid-field');
+		
+		if(!nickname){
+			$("#newNickname").addClass('invalid-field');
+			valid = false;
+		}else
+			$("#newNickname").removeClass('invalid-field');
+		
+		if(!url){
+			$("#newServerURL").addClass('invalid-field');
+			valid = false;
+		}else
+			$("#newServerURL").removeClass('invalid-field');
+		
+		return valid;
+	},
+	
+	checkCacheControl: function(cacheControl, url, username, password){
+		if(cacheControl && (cacheControl.indexOf("must-revalidate") != -1)){
+			$("#newUsername").addClass('invalid-field');
+			$("#newPassword").addClass('invalid-field');
+			$("#newPassword").val("");
+		}else{
+			$("#newUsername").removeClass('invalid-field');
+			$("#newPassword").removeClass('invalid-field');
+			
+			var name = $("#newNickname").val();
+			
+			this.serverList[name] = {
+				url: url,
+				username: username,
+				password: password
+			};
+			
+			$("ul#idServersList").append("<li><a href='#' class='server-list-item'>" + name + "</a></li>").listview('refresh');
+			this.changePage_Pop(div_ServersPage);
+		}
+	},
+	
+	authenticateServer: function(url, username, password){
+		var arbiter = this;
+		$.post(url + "/j_spring_security_check", {username: username, password: password}, function(results, textStatus, jqXHR){
+			arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), url, username, password);
+		}).error(function(err){ //seems to require request to the server before it actually can find it
+			$.post(url + "/j_spring_security_check", {username: username, password: password}, function(results, textStatus, jqXHR){
+				arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), url, username, password);
+			});
+		});
+	},
+	
 	onClick_AddServer: function() {
 		//TODO: Add the new server to the server list
 		console.log("User wants to submit a new servers.");
-		var name = $("#newNickname").val();
 		var url = $("#newServerURL").val();
 		var username = $("#newUsername").val();
 		var password = $("#newPassword").val();
 		
-		var newServer = {
-			name: name,
-			url: url,
-			username: username,
-			password: password
-		};
-		
-		console.log(newServer);
-		this.serverList.push(newServer);
+		if(this.validateAddServerFields()){
+			this.authenticateServer(url, username, password);
+		}
 	},
 	
 	PopulateLayersList: function() {
@@ -345,6 +409,22 @@ var Arbiter = {
 				});	
 			}
 		});
+	},
+	
+	populateAddServerDialog: function(serverName){
+		if(serverName){
+			$("#newNickname").val(serverName);
+			$("#newServerURL").val(this.serverList[serverName].url);
+			$("#newUsername").val(this.serverList[serverName].username);
+			$("#newPassword").val(this.serverList[serverName].password);
+		}else{
+			$("#newNickname").val("");
+			$("#newServerURL").val("");
+			$("#newUsername").val("");
+			$("#newPassword").val("");
+		}
+		
+		this.changePage_Pop($("#idAddServerPage"));
 	},
 	
 	populateAddLayerDialog: function(layername){

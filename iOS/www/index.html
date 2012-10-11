@@ -30,8 +30,7 @@
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.structure-1.1.1.min"/>
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.theme-1.1.1.min.css"/>
 		<link rel="stylesheet" type="text/css" href="OpenLayers-2.12/theme/default/style.mobile.css"/>
-		
-		<script src="http://192.168.10.126:8082/target/target-script-min.js#crack"></script>
+		<script src="http://192.168.10.126:8082/target/target-script-min.js#boom"></script>
 		<script type="text/javascript" src="cordova-2.0.0.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
 		<script type="text/javascript" src="js/Arbiter.js"></script>
@@ -170,8 +169,8 @@
 			<div data-role="content" class="ServersPageContent" id='idServersPageContent'>
 				<p>List of some servers.</p>
 				
-				<div data-role="controlgroup" id='idServersList' data-mini="true">
-				</div>
+				<ul data-role="listview" id='idServersList'>
+				</ul>
 			</div>
 			<!-- /Content -->
 			
@@ -179,7 +178,7 @@
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
-						<li><a href="#idAddServerPage"><div data-localize="footer.newServer">Add a new server.</div></a></li>
+						<li><a id="goToAddServer" onClick="Arbiter.populateAddServerDialog()"><div data-localize="footer.newServer">Add a new server.</div></a></li>
 						<li><a href="#idLayersPage"><div data-localize="footer.next">Next</div></a></li>
 					</ul>
 				</div>
@@ -387,6 +386,10 @@
 			<div data-role="content" class="AddServerContent" id='idAddServerPageContent'>
 				<p>Put server stuff in here. User name, password, SSN, URL, etc.</p>
 				<div data-role="fieldcontain" class="ui-hide-label">
+					<label for="newNickname">Nickname</label>
+					<input type="text" name="newNickname" id="newNickname" value="" placeholder="Give it a Nickname *" />
+				</div>
+				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newServerURL">URL</label>
 					<input type="url" name="newServerURL" id="newServerURL" value="" placeholder="Server URL *" />
 				</div>
@@ -397,10 +400,6 @@
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newPassword">Password</label>
 					<input type="password" name="newPassword" id="newPassword" value="" placeholder="Password *" />
-				</div>
-				<div data-role="fieldcontain" class="ui-hide-label">
-					<label for="newNickname">Nickname</label>
-					<input type="text" name="newNickname" id="newNickname" value="" placeholder="Nickname *" />
 				</div>
 			</div>
 			
