@@ -8,8 +8,6 @@ var TileUtil = {
 	// SQLite
 	//=======
 Initialize: function(_app) {
-    window.alert("chk1.5");
-
 	if(_app) {
         application = _app;
     }
@@ -86,7 +84,7 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 	console.log("---- TileUtil.saveTile. tileset: " + tileset + ", z: " + z + ", x: " + x + ", y: " + y + ", url: " + fileUrl);
 
 	var extention = fileUrl.substr(fileUrl.lastIndexOf("."));
-	console.log("---- TileUtil.saveTile.extention: " + extention);
+	//console.log("---- TileUtil.saveTile.extention: " + extention);
 
 	fileSystem.root.getDirectory(tileset, {create: true}, 
 		function(tilesetDirEntry){
@@ -112,7 +110,7 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 									//TileUtil.dumpDirectory(xDirEntry);
 				
 									if (successCallback){
-										successCallback(filePath);
+										successCallback(fileUrl, filePath);
 									}
 								},
 								function(error) {
@@ -121,7 +119,7 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 									console.log("upload error code" + error.code);
 									
 									if (errorCallback){
-										errorCallback(error);
+										errorCallback(fileUrl, filePath, error);
 									}
 								}
 							);

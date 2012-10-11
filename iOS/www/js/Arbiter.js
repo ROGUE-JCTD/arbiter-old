@@ -84,11 +84,8 @@ var Arbiter = {
         
         SQLite.Initialize(this);
         
-        window.alert("chk1");
         TileUtil.Initialize(this);
-        window.alert("chk2");
         TileUtil.dumpFiles();
-        window.alert("chk3");
 		
 		Cordova.Initialize(this);
 		this.variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
@@ -135,59 +132,29 @@ var Arbiter = {
 			        }
 			        
 			        var finalUrl = OpenLayers.String.format(url, xyz);
-			        console.log("url: " + url);
-			        console.log("xyz: " + xyz);
-			        console.log("finalUrl: " + finalUrl);
 			        
-			        var tilePath = null;
+			        var tilePath = window.localStorage.getItem("tile_" + finalUrl);
 			        
-					var saveTileSuccess = function(filename){
-						console.log("$$$$$$$$$$$$$$ saveTileSuccess filename: " + filename);
-						
-						tilePath = filename;
-/*						
-						if (typeof (localStorage[filename]) != 'undefined') {
-							console.log('########## cached');
-							return localStorage[filename];
-						} else {
-							console.log('########## not cache. TODO cache');
-							
-							var fileTransfer = new FileTransfer();
-							var uri = encodeURI(finalUrl);
-
-							fileTransfer.download(
-							    uri,
-							    "/downloaded3.png",
-							    function(entry) {
-							        console.log("download complete: " + entry.fullPath);
-							        TileUtil.dumpFiles();
-							    },
-							    function(error) {
-							        console.log("download error source " + error.source);
-							        console.log("download error target " + error.target);
-							        console.log("upload error code" + error.code);
-							    }
-							);																	
-
-							return url;
+			        if (tilePath) {
+			        	console.log("<<<<<<<< ++++++ founed cached tile: " + tilePath + " for " + finalUrl);
+			        } else {
+			        	
+						var saveTileSuccess = function(url, filename){
 						}
-						*/
-					}
-					
-					tilePath = TileUtil.saveTile(finalUrl, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, null);
+						
+						var saveTileError = function(url, filename, error){
+							console.log("========>> saveTileError filename: " + url + ", filename: " + filename);
+							// if save failed, remove it. 
+							window.localStorage.removeItem("tile_" + url);
+						}
+						
+						tilePath = TileUtil.saveTile(finalUrl, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, saveTileError);
 
-					//TODO: catch error case! 
-					// block until the tile is written. 
-					//console.log("@@@@@@@@@@@@@@@@@@ {{{{{{{{{{{{{{{{{{{{{{{{{");
-					//var waitCounter = 0;
-					//while(tileSaved == false) {
-					//	waitCounter += 1;
-					//	console.log("@@@@ waitCounter: " + waitCounter + " for: " + finalUrl);
-					//	//window.alert("waiting");
-					//}
-					//console.log("@@@@@@@@@@@@@@@@@@@@@}}}}}}}}}}}}}}}}}}}}}}}}}}}}");
-					
-					console.log(">>>>>>>>>>>>>>>>>>>> tilePath " + tilePath);
+						console.log("<<<<<<<< ------ cach tile: " + finalUrl + " to: " + tilePath);
+
+			        	//Add it immediately before we have confirmation that it has saved so that we do not download it multiple times
+						window.localStorage.setItem("tile_" + finalUrl, tilePath);			        	
+					}
 					
 					return tilePath;
 				}
