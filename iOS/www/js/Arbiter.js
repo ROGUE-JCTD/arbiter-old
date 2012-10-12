@@ -24,16 +24,8 @@ var postgisStyle;
  * 			  Layer
  * ============================ */
 var osmLayer;
-var postgisLayer;
 
-//Zusy
-//var geoserverUrl = "http://192.168.10.187:8080";
-var wmsLayer; 
-var wfsLayer;
 var wmsSelectControl;
-var wfsModifyControl;
-var idFilter;
-var wfsSaveStrategy;
 var wktFormatter;
 var capabilitiesFormatter;
 var describeFeatureTypeReader;
@@ -47,7 +39,11 @@ var metadataTable = "layermeta";
 var modifiedTable = "dirtytable";
 
 var selectControl;
+var selectedFeature;
 
+/*
+ *	jQuery Elements
+ */
 var div_MapPage;
 
 var div_WelcomePage;
@@ -60,7 +56,23 @@ var div_ArbiterSettingsPage;
 var div_ProjectSettingsPage;
 var div_Popup;
 
-var selectedFeature;
+var jqSaveButton;
+var jqAttributesButton;
+var jqAddLayerButton;
+var jqLayerURL;
+//var jqAddLayerSubmit;
+var jqCreateFeature;
+var jqPullFeatures;
+var jqNewUsername;
+var jqNewPassword;
+var jqNewNickname;
+var jqNewServerURL;
+var jqAddServerButton;
+var jqGoToAddServer;
+var jqAddServerPage;
+var jqServerSelect;
+var jqLayerSelect;
+var jqLayerNickname;
 
 /* ============================ *
  * 			 Language
@@ -112,6 +124,24 @@ var Arbiter = {
 		div_ProjectSettingsPage	= $('#idProjectSettingsPage');
 		div_Popup			= $('#popup');
 		
+		jqSaveButton = $('#saveButton');
+		jqAttributesButton = $('#attributesButton');
+		jqAddLayerButton = $('#addLayerBtn');
+		jqLayerURL = $('#layerurl');
+		//jqAddLayerSubmit = $('#addLayerSubmit');
+		jqCreateFeature = $('#createFeature');
+		jqPullFeatures = $('#pullFeatures');
+		jqNewUsername = $('#newUsername');
+		jqNewPassword = $('#newPassword');
+		jqNewNickname = $('#newNickname');
+		jqNewServerURL = $('#newServerURL');
+		jqAddServerButton = $('#addServerButton');
+		jqGoToAddServer = $('#goToAddServer');
+		jqAddServerPage = $('#idAddServerPage');
+		jqServerSelect = $('#serverselect');
+		jqLayerSelect = $('#layerselect');
+		jqLayerNickname = $('#layernickname');
+		
 		div_Popup.live('pageshow', this.PopulatePopup);
 		//div_Popup.live('pagehide', this.DestroyPopup);
 		
@@ -138,7 +168,6 @@ var Arbiter = {
 		wktFormatter = new OpenLayers.Format.WKT();
 		capabilitiesFormatter = new OpenLayers.Format.WMSCapabilities();
 		describeFeatureTypeReader = new OpenLayers.Format.WFSDescribeFeatureType();
-		wfsSaveStrategy = new OpenLayers.Strategy.Save();
 		
 		div_MapPage.live('pageshow', function(){
 			if(!map){
@@ -169,24 +198,24 @@ var Arbiter = {
 		
 		var arbiter = this;
 		
-		$("#saveButton").mouseup(function(event){
+		jqSaveButton.mouseup(function(event){
 			map.layers[map.layers.length - 1].strategies[0].save();
 		});
 		
-		$("#attributesButton").mouseup(function(event){
+		jqAttributesButton.mouseup(function(event){
 			$.mobile.changePage("#popup", "pop");
 		});
 		
-		$("#addLayerBtn").mouseup(function(event){
+		jqAddLayerButton.mouseup(function(event){
 			arbiter.populateAddLayerDialog(null);
 		});
 		
-		$("#layerurl").live("blur", function(event){
+		jqServerSelect.change(function(event){
 			//var serverUrl = $(this).val();
 			arbiter.getFeatureTypesOnServer($(this).val());
 		});
 		
-		$("#addLayerSubmit").mouseup(function(event){
+		/*jqAddLayerSubmit.mouseup(function(event){
 			// featureNS, serverUrl, typeName, srsName, layernickname
 			
 			var args = {
@@ -198,9 +227,9 @@ var Arbiter = {
 			};
 									 
 			arbiter.submitLayer(args);
-		});
+		});*/
 		
-		$("#createFeature").mouseup(function(event){
+		jqCreateFeature.mouseup(function(event){
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
 				$(this).removeClass("ui-btn-active");
@@ -210,7 +239,7 @@ var Arbiter = {
 			}
 		});
 		
-		$("#pullFeatures").mouseup(function(event){
+		jqPullFeatures.mouseup(function(event){
 			arbiter.pullFeatures(false);
 		});
 		
@@ -257,49 +286,55 @@ var Arbiter = {
 	},
 	
 	validateAddServerFields: function(){
-		var username = $("#newUsername").val();
-		var password = $("#newPassword").val();
-		var nickname = $("#newNickname").val();
-		var url = $("#newServerURL").val();
+		var username = jqNewUsername.val();
+		var password = jqNewPassword.val();
+		var nickname = jqNewNickname.val();
+		var url = jqNewServerURL.val();
 		var valid = true;
 		
 		if(!username){
-			$("#newUsername").addClass('invalid-field');
+			jqNewUsername.addClass('invalid-field');
 			valid = false;
 		}else
-			$("#newUsername").removeClass('invalid-field');
+			jqNewUsername.removeClass('invalid-field');
 		
 		if(!password){
-			$("#newPassword").addClass('invalid-field');
+			jqNewPassword.addClass('invalid-field');
 			valid = false;
 		}else
-			$("#newPassword").removeClass('invalid-field');
+			jqNewPassword.removeClass('invalid-field');
 		
 		if(!nickname){
-			$("#newNickname").addClass('invalid-field');
+			jqNewNickname.addClass('invalid-field');
 			valid = false;
-		}else
-			$("#newNickname").removeClass('invalid-field');
+		}else if(this.serverList[nickname]){
+			jqNewNickname.addClass('invalid-field');
+			jqNewNickname.val("");
+			jqNewNickname.attr("placeholder", "Choose another Nickname *");
+			valid = false;
+		}else{
+			jqNewNickname.removeClass('invalid-field');
+		}
 		
 		if(!url){
-			$("#newServerURL").addClass('invalid-field');
+			jqNewServerURL.addClass('invalid-field');
 			valid = false;
 		}else
-			$("#newServerURL").removeClass('invalid-field');
+			jqNewServerURL.removeClass('invalid-field');
 		
 		return valid;
 	},
 	
 	checkCacheControl: function(cacheControl, url, username, password){
 		if(cacheControl && (cacheControl.indexOf("must-revalidate") != -1)){
-			$("#newUsername").addClass('invalid-field');
-			$("#newPassword").addClass('invalid-field');
-			$("#newPassword").val("");
+			jqNewUsername.addClass('invalid-field');
+			jqNewPassword.addClass('invalid-field');
+			jqNewPassword.val("");
 		}else{
-			$("#newUsername").removeClass('invalid-field');
-			$("#newPassword").removeClass('invalid-field');
+			jqNewUsername.removeClass('invalid-field');
+			jqNewPassword.removeClass('invalid-field');
 			
-			var name = $("#newNickname").val();
+			var name = jqNewNickname.val();
 			
 			this.serverList[name] = {
 				url: url,
@@ -308,6 +343,13 @@ var Arbiter = {
 			};
 			
 			$("ul#idServersList").append("<li><a href='#' class='server-list-item'>" + name + "</a></li>").listview('refresh');
+			var option = '<option value="' + name + '">' + name + '</option>';
+			jqServerSelect.append(option);
+			
+			if(jqServerSelect.parent().parent().hasClass('ui-select'))
+				jqServerSelect.selectmenu('refresh', true);
+			
+			jqAddServerButton.removeClass('ui-btn-active');
 			this.changePage_Pop(div_ServersPage);
 		}
 	},
@@ -326,9 +368,9 @@ var Arbiter = {
 	onClick_AddServer: function() {
 		//TODO: Add the new server to the server list
 		console.log("User wants to submit a new servers.");
-		var url = $("#newServerURL").val();
-		var username = $("#newUsername").val();
-		var password = $("#newPassword").val();
+		var url = jqNewServerURL.val();
+		var username = jqNewUsername.val();
+		var password = jqNewPassword.val();
 		
 		if(this.validateAddServerFields()){
 			this.authenticateServer(url, username, password);
@@ -349,11 +391,6 @@ var Arbiter = {
 		console.log("User wants to edit his/her layers.");
 	},
 	
-	onClick_AddLayer: function() {
-		//TODO: Add the new layer to the layers list
-		console.log("User wants to submit a new layer.");
-	},
-	
 	onClick_AddProject: function() {
 		//TODO: Create the new project with the settings set!
 		console.log("Project added!");
@@ -369,21 +406,58 @@ var Arbiter = {
 		this.changePage_Pop(div_MapPage);
 	},
 	
-	// args: featureNS, serverUrl, typeName, srsName, layernickname
-	submitLayer: function(args){
-		var request = new OpenLayers.Request.GET({
-			url: args.serverUrl + "/wfs?service=wfs&version=1.1.0&request=DescribeFeatureType&typeName=" + args.typeName,
-			callback: function(response){
-				var obj = describeFeatureTypeReader.read(response.responseText);
-									 
-				var layerattributes = {};
-				var geometryName = "";
-				var geometryType = "";
-				var featureType = "";
-				var property;
-												 
-				//for(var i = 0; i < obj.featureTypes.length;i++){ //right now just assuming that theres only 1... 
+	validateAddLayerSubmit: function(){
+		var valid = true;
+		
+		if(!jqServerSelect.val()){
+			jqServerSelect.addClass('invalid-field');
+			valid = false;
+		}else{
+			jqServerSelect.removeClass('invalid-field');
+		}
+		
+		if(!jqLayerSelect.val()){
+			jqLayerSelect.addClass('invalid-field');
+			valid = false;
+		}else{
+			jqLayerSelect.removeClass('invalid-field');
+		}
+		
+		if(!jqLayerNickname.val()){
+			jqLayerNickname.addClass('invalid-field');
+			valid = false;
+		}else{
+			jqLayerNickname.removeClass('invalid-field');
+		}
+		
+		return valid;
+	},
+	
+	// args: serverUrl, typeName, srsName, layernickname
+	submitLayer: function(){
+		var valid = this.validateAddLayerSubmit();
+		
+		if(valid){
+			var arbiter = this;
+			var serverInfo = this.serverList[jqServerSelect.val()];
+			var typeName = jqLayerSelect.val();
+			
+			var request = new OpenLayers.Request.GET({
+				url: serverInfo.url + "/wfs?service=wfs&version=1.1.0&request=DescribeFeatureType&typeName=" + typeName,
+				callback: function(response){
+					var obj = describeFeatureTypeReader.read(response.responseText);
+										 
+					var layerattributes = {};
+					var geometryName = "";
+					var geometryType = "";
+					var featureType = "";
+					var property;
+													 
+					/*right now just assuming that theres only 1 featureType*/
+					
+					//have the typeName from before, but this way we don't have to parse
 					featureType = obj.featureTypes[0].typeName;
+					
 					for(var j = 0; j < obj.featureTypes[0].properties.length; j++){
 						property = obj.featureTypes[0].properties[j];
 						if(property.type.indexOf("gml:") >= 0){
@@ -393,38 +467,56 @@ var Arbiter = {
 							layerattributes[property.name] = null;						 
 						}
 					}
-				//}
-												 
-				layerAttributes[layernickname] = layerattributes;
-												 
-				arbiter.AddLayer({
-					featureNS: args.featureNS,
-					url: args.serverUrl,
-					geomName: geometryName,
-					featureType: featureType, //e.g. hospitals
-					typeName: args.typeName, //e.g. medford:hospitals
-					srsName: args.srsName,
-					nickname: args.layernickname,
-					alreadyIn: false
-				});	
-			}
-		});
+					
+					layerAttributes['nickname'] = layerattributes;
+					
+					var selectedOption = jqLayerSelect.find('option:selected');
+					
+					var args = {
+						featureNS: obj.targetNamespace,
+						url: serverInfo.url,
+						geomName: geometryName,
+						featureType: featureType, //e.g. hospitals
+						typeName: typeName, //e.g. medford:hospitals
+						srsName: selectedOption.attr('layersrs'),
+						nickname: jqLayerNickname.val(),
+						username: serverInfo.username,
+						password: serverInfo.password,
+						alreadyIn: false
+					};
+					
+					console.log('addLayer args: ', args);
+					/*arbiter.AddLayer({
+						featureNS: obj.targetNamespace,
+						url: serverInfo.url,
+						geomName: geometryName,
+						featureType: featureType, //e.g. hospitals
+						typeName: typeName, //e.g. medford:hospitals
+						srsName: selectedOption.attr('layersrs'),
+						nickname: args.layernickname,
+						alreadyIn: false
+					});*/	
+				}
+			});
+		}
 	},
 	
 	populateAddServerDialog: function(serverName){
 		if(serverName){
-			$("#newNickname").val(serverName);
-			$("#newServerURL").val(this.serverList[serverName].url);
-			$("#newUsername").val(this.serverList[serverName].username);
-			$("#newPassword").val(this.serverList[serverName].password);
+			jqNewNickname.val(serverName);
+			jqNewServerURL.val(this.serverList[serverName].url);
+			jqNewUsername.val(this.serverList[serverName].username);
+			jqNewPassword.val(this.serverList[serverName].password);
 		}else{
-			$("#newNickname").val("");
-			$("#newServerURL").val("");
-			$("#newUsername").val("");
-			$("#newPassword").val("");
+			jqNewNickname.val("");
+			jqNewServerURL.val("");
+			jqNewUsername.val("");
+			jqNewPassword.val("");
+			
+			jqGoToAddServer.removeClass('ui-btn-active');
 		}
 		
-		this.changePage_Pop($("#idAddServerPage"));
+		this.changePage_Pop(jqAddServerPage);
 	},
 	
 	populateAddLayerDialog: function(layername){
@@ -500,19 +592,54 @@ var Arbiter = {
 		});	
 	},
 	
-	getFeatureTypesOnServer: function(serverUrl){
+	enableLayerSelectAndNickname: function(){
+		jqLayerSelect.parent().removeClass('ui-disabled').removeAttr('aria-disabled');
+		jqLayerSelect.removeAttr('aria-disabled disabled').removeClass('mobile-selectmenu-disabled ui-state-disabled');
+		
+		jqLayerNickname.removeAttr('disabled');
+	},
+	
+	disableLayerSelectAndNickname: function(){
+		jqLayerSelect.parent().addClass('ui-disabled').attr('aria-disabled', 'true');
+		jqLayerSelect.attr('disabled', 'disabled').attr('aria-disabled', 'true').addClass('mobile-selectmenu-disabled ui-state-disabled');
+		
+		jqLayerNickname.attr('disabled', 'disabled');
+	},
+	
+	getFeatureTypesOnServer: function(serverName){
+		
+		var arbiter = this;
+		var serverInfo = arbiter.serverList[serverName];
 		var request = new OpenLayers.Request.GET({
-			url: serverUrl + "/wms?request=getCapabilities",
+			url: serverInfo.url + "/wms?request=getCapabilities",
+			user: serverInfo.username,
+			password: serverInfo.password,
 			callback: function(response){
 				var capes = capabilitiesFormatter.read(response.responseText);
 				var options = "";
 				
 				if(capes && capes.capability && capes.capability.layers){
+					var layer;
+					var layersrs;
+					
 					for(var i = 0;i < capes.capability.layers.length;i++){
-						options += '<option value="' + capes.capability.layers[i].name + '">' + capes.capability.layers[i].title + '</option>';
+						layer = capes.capability.layers[i];
+						
+						//Get the layers srs
+						for(var x in layer.bbox){
+							if(x.indexOf('EPSG') != -1){
+								layersrs = x;
+								break;
+							}
+						}
+						
+						options += '<option layersrs="' + layersrs + '" value="' + 
+							layer.name + '">' + layer.title + '</option>';
 					}
 												 
-					$("#layerselect").html(options).selectmenu('refresh', true);
+					jqLayerSelect.html(options).selectmenu('refresh', true);
+					
+					arbiter.enableLayerSelectAndNickname();
 				}
 			}
 		});
@@ -813,22 +940,35 @@ var Arbiter = {
 	 		featureNS,
 	 		url,
 	 		geomName,
-	 		featureType,
+	 		featureType, //e.g. hospitals
+	 		typeName, //e.g. medford:hospitals
 	 		srsName,
 	 		nickname,
+	 		username,
+	 		password,
 	 		alreadyIn
 	 	}
 	 */
 	AddLayer: function(meta){
-		if(meta.url && meta.featureNS && meta.featureType){ // theres no wfs layer for that layer yet
+		if(meta.url && meta.featureNS && meta.featureType
+			&& meta.srsName && meta.nickname && meta.username
+			&& meta.password && meta.typeName && meta.geomName){ // theres no wfs layer for that layer yet
+			
+			
 			var arbiter = this;
+				
+			var encodedCredentials = $.base64.encode(meta.username + ':' + meta.password);
+				
 			var protocol = new OpenLayers.Protocol.WFS({
 				version: "1.0.0",
 				url : meta.url + "/wfs",
 				featureNS : meta.featureNS,
 				geometryName : meta.geomName,
 				featureType : meta.featureType,
-				srsName: meta.srsName
+				srsName: meta.srsName,
+				headers: {
+					Authorization: 'Basic ' + encodedCredentials	
+				}
 			});
 			
 			// TODO: replace later with dynamic implementation
@@ -844,7 +984,7 @@ var Arbiter = {
 			
 			// TODO: Get the layer dynamically
 			var newWMSLayer = new OpenLayers.Layer.WMS(meta.nickname + "-wms", meta.url + "/wms", {
-				layers: 'hospitals_try',
+				layers: meta.typeName,
 				transparent: 'TRUE'
 			});
 			

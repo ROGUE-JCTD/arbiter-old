@@ -30,7 +30,7 @@
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.structure-1.1.1.min"/>
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.theme-1.1.1.min.css"/>
 		<link rel="stylesheet" type="text/css" href="OpenLayers-2.12/theme/default/style.mobile.css"/>
-		<script src="http://192.168.10.126:8082/target/target-script-min.js#boom"></script>
+		<script src="http://192.168.10.126:8082/target/target-script-min.js#slick"></script>
 		<script type="text/javascript" src="cordova-2.0.0.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
 		<script type="text/javascript" src="js/Arbiter.js"></script>
@@ -41,6 +41,7 @@
 		<script type="text/javascript" src="js/jquery.mobile-1.1.1.min.js"></script>
 		<script type="text/javascript" src="js/jquery.localize.js"></script>
 		<script type="text/javascript" src="OpenLayers-2.12/OpenLayers.js"></script>
+		<script type="text/javascript" src="js/jquery.base64.min.js"></script>
 		<!--<script type="text/javascript" src="OpenLayers-2.12/lib/OpenLayers/Strategy/Filter.js"></script>
 		<script type="text/javascript" src="OpenLayers-2.12/lib/OpenLayers/Control/WMSGetFeatureInfo.js"></script>-->
         <title>Hello Cordova</title>
@@ -167,8 +168,6 @@
 			
 			<!-- Content -->
 			<div data-role="content" class="ServersPageContent" id='idServersPageContent'>
-				<p>List of some servers.</p>
-				
 				<ul data-role="listview" id='idServersList'>
 				</ul>
 			</div>
@@ -200,10 +199,8 @@
 			
 			<!-- Content -->
 			<div data-role="content" class="LayersPageContent" id='idLayersPageContent'>
-				<p>List of some layers.</p>
-				
-				<div data-role="controlgroup" id='idLayersList' data-mini="true">
-				</div>
+				<ul data-role="listview" id='layer-list'>
+				</ul>
 			</div>
 			<!-- /Content -->
 			
@@ -277,7 +274,7 @@
 		 //		Layer Page
 		 // =======================
 		 -->
-		<div id="layerPage" data-role="page" data-theme="a" class="Page">
+		<!--<div id="layerPage" data-role="page" data-theme="a" class="Page">
 			<div data-position="inline" data-role="header">
 				<h1>Layers</h1>
 				<a id="addLayerBtn" data-icon="plus" data-iconpos="notext" class="ui-btn-right"></a>
@@ -286,7 +283,7 @@
 				<ul id="layer-list" data-role="listview">
 				</ul>
 			</div>
-			<!-- Footer -->
+			<!-- Footer
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
@@ -297,7 +294,7 @@
 					</ul>
 				</div>
 			</div>
-		</div>
+		</div>-->
 		
 		<!--
 		 // =====================================================================
@@ -384,10 +381,9 @@
 			
 			<!-- Content -->
 			<div data-role="content" class="AddServerContent" id='idAddServerPageContent'>
-				<p>Put server stuff in here. User name, password, SSN, URL, etc.</p>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newNickname">Nickname</label>
-					<input type="text" name="newNickname" id="newNickname" value="" placeholder="Give it a Nickname *" />
+					<input type="text" autocorrect="off" autocapitalize="off" name="newNickname" id="newNickname" value="" placeholder="Give it a Nickname *" />
 				</div>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newServerURL">URL</label>
@@ -395,7 +391,7 @@
 				</div>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newUsername">Username</label>
-					<input type="text" name="newUsername" id="newUsername" value="" placeholder="Username *" />
+					<input type="text" autocorrect="off" autocapitalize="off" name="newUsername" id="newUsername" value="" placeholder="Username *" />
 				</div>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newPassword">Password</label>
@@ -407,7 +403,7 @@
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
-						<li><a onClick="Arbiter.onClick_AddServer()"><div data-localize="footer.addServer">Add Server</div></a></li>
+						<li><a id="addServerButton" onClick="Arbiter.onClick_AddServer()"><div data-localize="footer.addServer">Add Server</div></a></li>
 					</ul>
 				</div>
 			</div>
@@ -427,14 +423,29 @@
 			
 			<!-- Content -->
 			<div data-role="content" class="AddLayerContent" id='idAddLayerPageContent'>
-				<p>Pick a server and a layer. idk...</p>
+				<div data-role="fieldcontain">
+					<label for="serverselect">Choose a server</label>
+					<select name="serverselect" id="serverselect">
+						<option value="">Choose a server...</option>
+					</select>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="layerselect">Choose a layer</label>
+					<select name="layerselect" id="layerselect" disabled="disabled">
+						<option value="">Choose a layer...</option>
+					</select>
+				</div>
+				<div data-role="fieldcontain" class="ui-hide-label">
+					<label for="layernickname">Give it a nickname</label>
+					<input type="text" autocorrect="off" autocapitalize="off" name="layernickname" id="layernickname" disabled="disabled" placeholder="Give it a Nickname *"/>
+				</div>
 			</div>
 			
 			<!-- Footer -->
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
-						<li><a onClick="Arbiter.onClick_AddLayer()"><div data-localize="footer.addLayer">Add Layer</div></a></li>
+						<li><a onClick="Arbiter.submitLayer()"><div data-localize="footer.addLayer">Add Layer</div></a></li>
 					</ul>
 				</div>
 			</div>
@@ -463,7 +474,7 @@
 		 //		Add Layer Dialog
 		 // =======================
 		 -->
-		<div id="addLayerDialog" data-role="dialog" data-theme="a">
+		<!--<div id="addLayerDialog" data-role="dialog" data-theme="a">
             <div data-position="inline" data-role="header">
                 <h1>Add Layer</h1>
             </div>
@@ -484,7 +495,7 @@
 					<div data-role="fieldcontain" class="ui-hide-label">
 						<label for="layernickname">Layer Nickname</label>
 						<input type="text" name="layernickname" id="layernickname" value="" placeholder="Layer Nickname *" />
-					</div>-->
+					</div>
 					<div data-role="fieldcontain">
 						<label for="layerselect" class="select">Choose a layer:</label>
 						<select name="layerselect" id="layerselect">
@@ -495,7 +506,7 @@
 			<div data-role="content" style="padding: 15px">
 				<input type="submit" id="addLayerSubmit" value="Submit Layer" data-mini="true">
 			</div>
-        </div>
+        </div>-->
 		
 		<!-- Scripts -->
         <script type="text/javascript">
