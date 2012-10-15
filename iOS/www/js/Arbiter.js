@@ -30,9 +30,6 @@ var wktFormatter;
 var capabilitiesFormatter;
 var describeFeatureTypeReader;
 
-//keeps track of the attributes of a specific layer
-var layerAttributes = {};
-
 var addFeatureControl;
 
 var metadataTable = "layermeta";
@@ -73,6 +70,7 @@ var jqAddServerPage;
 var jqServerSelect;
 var jqLayerSelect;
 var jqLayerNickname;
+var jqLayerSubmit;
 
 /* ============================ *
  * 			 Language
@@ -141,6 +139,7 @@ var Arbiter = {
 		jqServerSelect = $('#serverselect');
 		jqLayerSelect = $('#layerselect');
 		jqLayerNickname = $('#layernickname');
+		jqLayerSubmit = $('#addLayerSubmit');
 		
 		div_Popup.live('pageshow', this.PopulatePopup);
 		//div_Popup.live('pagehide', this.DestroyPopup);
@@ -339,7 +338,8 @@ var Arbiter = {
 			this.serverList[name] = {
 				url: url,
 				username: username,
-				password: password
+				password: password,
+				layers: {}
 			};
 			
 			$("ul#idServersList").append("<li><a href='#' class='server-list-item'>" + name + "</a></li>").listview('refresh');
@@ -350,7 +350,8 @@ var Arbiter = {
 				jqServerSelect.selectmenu('refresh', true);
 			
 			jqAddServerButton.removeClass('ui-btn-active');
-			this.changePage_Pop(div_ServersPage);
+			//this.changePage_Pop(div_ServersPage);
+			window.history.back();
 		}
 	},
 	
@@ -433,7 +434,6 @@ var Arbiter = {
 		return valid;
 	},
 	
-	// args: serverUrl, typeName, srsName, layernickname
 	submitLayer: function(){
 		var valid = this.validateAddLayerSubmit();
 		
@@ -447,7 +447,7 @@ var Arbiter = {
 				callback: function(response){
 					var obj = describeFeatureTypeReader.read(response.responseText);
 										 
-					var layerattributes = {};
+					var layerattributes = [];
 					var geometryName = "";
 					var geometryType = "";
 					var featureType = "";
@@ -464,38 +464,28 @@ var Arbiter = {
 							geometryName = property.name;
 							geometryType = property.type.substring(4, property.type.indexOf('PropertyType')); 
 						}else{
-							layerattributes[property.name] = null;						 
+							layerattributes.push(property.name);						 
 						}
 					}
 					
-					layerAttributes['nickname'] = layerattributes;
-					
 					var selectedOption = jqLayerSelect.find('option:selected');
 					
-					var args = {
+					var layernickname = jqLayerNickname.val();
+					serverInfo.layers[layernickname] = {
 						featureNS: obj.targetNamespace,
-						url: serverInfo.url,
 						geomName: geometryName,
-						featureType: featureType, //e.g. hospitals
-						typeName: typeName, //e.g. medford:hospitals
+						featureType: featureType,
+						typeName: typeName,
 						srsName: selectedOption.attr('layersrs'),
-						nickname: jqLayerNickname.val(),
-						username: serverInfo.username,
-						password: serverInfo.password,
-						alreadyIn: false
+						attributes: layerattributes
 					};
-					
-					console.log('addLayer args: ', args);
-					/*arbiter.AddLayer({
-						featureNS: obj.targetNamespace,
-						url: serverInfo.url,
-						geomName: geometryName,
-						featureType: featureType, //e.g. hospitals
-						typeName: typeName, //e.g. medford:hospitals
-						srsName: selectedOption.attr('layersrs'),
-						nickname: args.layernickname,
-						alreadyIn: false
-					});*/	
+						
+					var li = "<li><a href='#' class='layer-list-item'>" + layernickname + "</a></li>";
+													 
+					$("ul#layer-list").append(li).listview("refresh");
+													 
+					jqLayerSubmit.removeClass('ui-btn-active');
+					window.history.back();
 				}
 			});
 		}
