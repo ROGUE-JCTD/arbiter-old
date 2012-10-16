@@ -423,8 +423,11 @@ var Arbiter = {
 	},
 	
 	onClick_AddProject: function() {
-		//TODO: Create the new project with the settings set!
-		console.log("Project added!");
+		//Create the metadata tables for keeping track of servers and layer meta
+		
+		/*For each layer that the user added, create a feature table in the data db and
+		 add a row to the 
+		*/
 		this.changePage_Pop(div_ProjectsPage);
 	},
 	
