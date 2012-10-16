@@ -55,6 +55,20 @@ html, body {
 	height   : 100%;
 }
 
+#idAreaOfInterestPage{
+	margin		: 0;
+	padding		: 0;
+	width		: 100%;
+	height		: 70%;	
+}
+
+#idAreaOfInterestContent{
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+}
+
 #map {
 	width    : 100%;
 	height   : 100%;
