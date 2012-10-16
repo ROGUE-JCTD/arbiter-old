@@ -139,7 +139,7 @@
 				<p>Name yo project fool!</p>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newProjectName">Project Name</label>
-					<input type="text" name="newProjectName" id="newProjectName" value="" placeholder="Name your Project *" />
+					<input type="text" name="newProjectName" id="newProjectName" value="" placeholder="Name your Project *" data-localize="lable.name"/>
 				</div>
 			</div>
 			
@@ -258,7 +258,7 @@
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
 				<a data-rel="back" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
-				<h1 data-localize="page.map">Map</h1>
+				<h1 id="projectName">Map</h1>
 			</div>
 			
 			<!-- Content -->
@@ -383,19 +383,19 @@
 			<div data-role="content" class="AddServerContent" id='idAddServerPageContent'>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newNickname">Nickname</label>
-					<input type="text" autocorrect="off" autocapitalize="off" name="newNickname" id="newNickname" value="" placeholder="Give it a Nickname *" />
+					<input type="text" autocorrect="off" autocapitalize="off" name="newNickname" id="newNickname" value="" placeholder="Give it a Nickname *" data-localize="lable.nickname"/>
 				</div>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newServerURL">URL</label>
-					<input type="url" name="newServerURL" id="newServerURL" value="" placeholder="Server URL *" />
+					<input type="url" name="newServerURL" id="newServerURL" value="" placeholder="Server URL *" data-localize="lable.serverURL"/>
 				</div>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newUsername">Username</label>
-					<input type="text" autocorrect="off" autocapitalize="off" name="newUsername" id="newUsername" value="" placeholder="Username *" />
+					<input type="text" autocorrect="off" autocapitalize="off" name="newUsername" id="newUsername" value="" placeholder="Username *" data-localize="lable.username"/>
 				</div>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newPassword">Password</label>
-					<input type="password" name="newPassword" id="newPassword" value="" placeholder="Password *" />
+					<input type="password" name="newPassword" id="newPassword" value="" placeholder="Password *" data-localize="lable.password"/>
 				</div>
 			</div>
 			
@@ -426,18 +426,18 @@
 				<div data-role="fieldcontain">
 					<label for="serverselect">Choose a server</label>
 					<select name="serverselect" id="serverselect">
-						<option value="">Choose a server...</option>
+						<option value="" data-localize="lable.chooseAServer">Choose a server...</option>
 					</select>
 				</div>
 				<div data-role="fieldcontain">
 					<label for="layerselect">Choose a layer</label>
 					<select name="layerselect" id="layerselect" disabled="disabled">
-						<option value="">Choose a layer...</option>
+						<option value="" data-localize="lable.chooseALayer">Choose a layer...</option>
 					</select>
 				</div>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="layernickname">Give it a nickname</label>
-					<input type="text" autocorrect="off" autocapitalize="off" name="layernickname" id="layernickname" disabled="disabled" placeholder="Give it a Nickname *"/>
+					<input type="text" autocorrect="off" autocapitalize="off" name="layernickname" id="layernickname" disabled="disabled" placeholder="Give it a Nickname *" data-localize="lable.nickname"/>
 				</div>
 			</div>
 			

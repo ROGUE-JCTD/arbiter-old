@@ -1,21 +1,49 @@
 {
-	"title": "Arbiter",
-	"hello": "Hola",
+	"title": "Spanish Arbiter",
+	"mainLanguage": "Spanish Use English as the main language.",
 	"page" : {
-		"language": "Language",
-		"map": "Map",
-		"back": "Previas",
-		"info": "Informacion",
-		"search": "Buscar",
-		"settings": "A Ajuste"
+		"welcome": "Spanish Welcome",
+		"projects": "Spanish Projects",
+		"newProject": "Spanish New Project",
+		"servers": "Spanish Server",
+		"newServer": "Spanish New Server",
+		"layers": "Spanish Layers",
+		"newLayer": "Spanish New Layer",
+		"area": "Spanish Area of Interest"
 	},
 	"button" : {
-		"back": "Previas",
-		"options" : "Options",
-		"more" : "More"
+		"back": "Spanish Back",
+		"settings": "Spanish Settings",
+		"more" : "Spanish More",
+		"edit": "Spanish Edit",
+		"add" : "Spanish Add"
+	},
+	"lable" : {
+		"name": "Spanish Name your Project *",
+		"nickname": "Spanish Give it a Nickname *",
+		"serverURL": "Spanish Server URL *",
+		"username": "Spanish Username *",
+		"password": "Spanish Password *",
+		"chooseAServer": "Spanish Choose a server...",
+		"chooseALayer": "Spanish Choose a layer..."
+	},
+	"footer" : {
+		"createNewProject" : "Spanish Create a new project.",
+		"previous": "Spanish Previous",
+		"next": "Spanish Next",
+		"newServer": "Spanish Add a new server.",
+		"addServer": "Spanish Add Server",
+		"newLayer": "Spanish Add a new layer.",
+		"addLayer": "Spanish Add Layer",
+		"finish": "Spanish Finish",
+		"arbiter" : "Spanish Arbiter",
+		"project" : "Spanish Project",
+		"servers" : "Spanish Servers",
+		"layers" : "Spanish Layers",
+		"area" : "Spanish Area"
 	},
 	"feature": {
-		"name": "Name",
-		"location": "Location"
+		"name": "Spanish Name",
+		"location": "Spanish Location"
 	}
 }
