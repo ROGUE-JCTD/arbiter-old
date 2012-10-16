@@ -426,6 +426,8 @@ var Arbiter = {
 		//TODO: Create the new project with the settings set!
 		console.log("Project added!");
 		this.changePage_Pop(div_ProjectsPage);
+		
+		var projectAreaOfIntrest = aoiMap.getExtent();
 	},
 	
 	onClick_OpenProject: function(_div) {
