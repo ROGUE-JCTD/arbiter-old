@@ -18,6 +18,15 @@
 		"edit": "Edit",
 		"add" : "Add"
 	},
+	"lable" : {
+		"name": "Name your Project *",
+		"nickname": "Give it a Nickname *",
+		"serverURL": "Server URL *",
+		"username": "Username *",
+		"password": "Password *",
+		"chooseAServer": "Choose a server...",
+		"chooseALayer": "Choose a layer..."
+	},
 	"footer" : {
 		"createNewProject" : "Create a new project.",
 		"previous": "Previous",
@@ -25,6 +34,7 @@
 		"newServer": "Add a new server.",
 		"addServer": "Add Server",
 		"newLayer": "Add a new layer.",
+		"addLayer": "Add Layer",
 		"finish": "Finish",
 		"arbiter" : "Arbiter",
 		"project" : "Project",
