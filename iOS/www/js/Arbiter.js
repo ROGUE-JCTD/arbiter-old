@@ -429,6 +429,8 @@ var Arbiter = {
 		 add a row to the 
 		*/
 		this.changePage_Pop(div_ProjectsPage);
+		
+		var projectAreaOfIntrest = aoiMap.getExtent();
 	},
 	
 	onClick_OpenProject: function(_div) {
