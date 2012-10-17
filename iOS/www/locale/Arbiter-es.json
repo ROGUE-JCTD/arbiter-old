@@ -18,14 +18,16 @@
 		"edit": "Spanish Edit",
 		"add" : "Spanish Add"
 	},
-	"lable" : {
+	"label" : {
 		"name": "Spanish Name your Project *",
 		"nickname": "Spanish Give it a Nickname *",
 		"serverURL": "Spanish Server URL *",
 		"username": "Spanish Username *",
 		"password": "Spanish Password *",
 		"chooseAServer": "Spanish Choose a server...",
-		"chooseALayer": "Spanish Choose a layer..."
+		"chooseALayer": "Spanish Choose a layer...",
+		"noProjects": "Spanish There are currently no projects. You can created a new project by clicking the button at the bottom of the page.",
+		"selectAOI": "Spanish Pinch and Drag the map to show the area that you want to work in."
 	},
 	"footer" : {
 		"createNewProject" : "Spanish Create a new project.",

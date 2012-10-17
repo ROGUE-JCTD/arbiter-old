@@ -92,7 +92,11 @@ var Arbiter = {
 	
 	serversDatabase: null,
 	
-	serverList: {},
+	currentProject: {
+		name: "default",
+		aoi: null,
+		serverList: {}
+	},
 	
 	isOnline: false,
 	
@@ -285,6 +289,15 @@ var Arbiter = {
 		console.log("Now go spartan, I shall remain here.");
     },
 	
+	//This function is called when the user presses Next on the New Project page.
+	onClick_NewProjectNamed: function(_nextButton) {
+		//Save the Project Name
+		this.currentProject.name = $("#newProjectName").val();
+
+		//Change to idServerPage
+		this.changePage_Pop(div_ServersPage);
+	},
+	
 	PopulateProjectsList: function() {
 		//Fill the projects list (id=idProjectsList) with the ones that are available.
 		// - Make the div's id = to ProjectID number;
@@ -336,7 +349,7 @@ var Arbiter = {
 		if(!nickname){
 			jqNewNickname.addClass('invalid-field');
 			valid = false;
-		}else if(this.serverList[nickname]){
+		}else if(this.currentProject.serverList[nickname]){
 			jqNewNickname.addClass('invalid-field');
 			jqNewNickname.val("");
 			jqNewNickname.attr("placeholder", "Choose another Nickname *");
@@ -365,7 +378,7 @@ var Arbiter = {
 			
 			var name = jqNewNickname.val();
 			
-			this.serverList[name] = {
+			this.currentProject.serverList[name] = {
 				url: url,
 				username: username,
 				password: password,
@@ -425,9 +438,13 @@ var Arbiter = {
 	onClick_AddProject: function() {
 		//TODO: Create the new project with the settings set!
 		console.log("Project added!");
-		this.changePage_Pop(div_ProjectsPage);
 		
-		var projectAreaOfIntrest = aoiMap.getExtent();
+		this.currentProject.aoi = aoiMap.getExtent();
+		console.log(this.currentProject);
+		
+		//TODO: Add project details to database
+		
+		this.changePage_Pop(div_ProjectsPage);
 	},
 	
 	onClick_OpenProject: function(_div) {
@@ -471,7 +488,7 @@ var Arbiter = {
 		
 		if(valid){
 			var arbiter = this;
-			var serverInfo = this.serverList[jqServerSelect.val()];
+			var serverInfo = this.currentProject.serverList[jqServerSelect.val()];
 			var typeName = jqLayerSelect.val();
 			
 			var request = new OpenLayers.Request.GET({
@@ -526,9 +543,9 @@ var Arbiter = {
 	populateAddServerDialog: function(serverName){
 		if(serverName){
 			jqNewNickname.val(serverName);
-			jqNewServerURL.val(this.serverList[serverName].url);
-			jqNewUsername.val(this.serverList[serverName].username);
-			jqNewPassword.val(this.serverList[serverName].password);
+			jqNewServerURL.val(this.currentProject.serverList[serverName].url);
+			jqNewUsername.val(this.currentProject.serverList[serverName].username);
+			jqNewPassword.val(this.currentProject.serverList[serverName].password);
 		}else{
 			jqNewNickname.val("");
 			jqNewServerURL.val("");
@@ -631,7 +648,7 @@ var Arbiter = {
 	getFeatureTypesOnServer: function(serverName){
 		
 		var arbiter = this;
-		var serverInfo = arbiter.serverList[serverName];
+		var serverInfo = arbiter.currentProject.serverList[serverName];
 		var request = new OpenLayers.Request.GET({
 			url: serverInfo.url + "/wms?request=getCapabilities",
 			user: serverInfo.username,
@@ -1123,7 +1140,7 @@ var Arbiter = {
 	},
 	
 	changePage_Pop: function(_div) {
-		$.mobile.changePage(_div, "pop")
+		$.mobile.changePage(_div, "pop");
 	},
 	
 	//===================
