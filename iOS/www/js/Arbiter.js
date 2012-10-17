@@ -216,6 +216,8 @@ var Arbiter = {
 					center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
 					zoom: 15
 				});
+				
+				arbiter.OpenEditorMenu();
 			}
 		});
 		
@@ -250,7 +252,7 @@ var Arbiter = {
 		});
 		
 		jqAttributesButton.mouseup(function(event){
-			$.mobile.changePage("#popup", "pop");
+			this.changePage($("#popup"));
 		});
 		
 		jqToServersButton.mouseup(function(event){
@@ -360,6 +362,15 @@ var Arbiter = {
 			"PRIMARY KEY(f_table_name, f_geometry_column));";
 		
 		tx.executeSql(createGeometryColumnsSql);
+	},
+	
+	OpenEditorMenu: function() {
+		$("#idEditorMenu").animate({ "left": "30%" }, 1000);
+		this.CloseEditorMenu();
+	},
+	
+	CloseEditorMenu:function() {
+		$("#idEditorMenu").animate({ "left": "100%" }, 1000);
 	},
 	
 	InitializeDatabases: function(){
