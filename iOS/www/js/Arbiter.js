@@ -259,7 +259,9 @@ var Arbiter = {
 			//Fail if the project already exists
 			var projectAlreadyExists = function(dir){
 				console.log("directory exists: " + dir.name);
-				jqToServersButton.val("Project: " + dir.name + " already exists! *");
+				jqNewProjectName.attr('placeholder', 'Project: "' + dir.name + '" already exists! *');
+				jqNewProjectName.val('');
+				jqNewProjectName.addClass('invalid-field');
 				jqToServersButton.removeClass('ui-btn-active');
 			};
 								  
@@ -269,6 +271,8 @@ var Arbiter = {
 				if(error.code == FileError.NOT_FOUND_ERR){
 					arbiter.currentProject.name = newName;
 					arbiter.changePage_Pop(div_ServersPage);
+					jqNewProjectName.removeClass('invalid-field');
+					jqNewProjectName.attr('placeholder', 'Name your Project *');
 					jqToServersButton.removeClass('ui-btn-active');
 				}else{
 					console.log("file system error: " + error.code);				  
@@ -511,12 +515,19 @@ var Arbiter = {
 		//Create a database for the data and a database for the metadata
 		
 		//Write the project to the databases
-
-		//TODO: Create the new project with the settings set!
-		console.log("Project added!");
 		
 		this.currentProject.aoi = aoiMap.getExtent();
 		console.log(this.currentProject);
+		
+		var writeToDatabases = function(dir){
+			console.log("writeToDatabases");
+		};
+		
+		var error = function(error){
+			console.log("error creating directory");
+		};
+		
+		this.fileSystem.root.getDirectory(this.currentProject.name, {create: true, exclusive: false}, writeToDatabases, error);
 		
 		this.changePage_Pop(div_ProjectsPage);
 	},
