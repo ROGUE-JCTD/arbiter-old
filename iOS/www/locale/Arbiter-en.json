@@ -18,14 +18,16 @@
 		"edit": "Edit",
 		"add" : "Add"
 	},
-	"lable" : {
+	"label" : {
 		"name": "Name your Project *",
 		"nickname": "Give it a Nickname *",
 		"serverURL": "Server URL *",
 		"username": "Username *",
 		"password": "Password *",
 		"chooseAServer": "Choose a server...",
-		"chooseALayer": "Choose a layer..."
+		"chooseALayer": "Choose a layer...",
+		"noProjects": "There are currently no projects. You can created a new project by clicking the button at the bottom of the page.",
+		"selectAOI": "Pinch and Drag the map to show the area that you want to work in."
 	},
 	"footer" : {
 		"createNewProject" : "Create a new project.",

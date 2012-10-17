@@ -97,7 +97,11 @@ var Arbiter = {
 	
 	serversDatabase: null,
 	
-	serverList: {},
+	currentProject: {
+		name: "default",
+		aoi: null,
+		serverList: {}
+	},
 	
 	isOnline: false,
 	
@@ -250,7 +254,8 @@ var Arbiter = {
 		});
 		
 		jqToServersButton.mouseup(function(event){
-								
+			var newName = jqNewProjectName.val();
+			
 			//Fail if the project already exists
 			var projectAlreadyExists = function(dir){
 				console.log("directory exists: " + dir.name);
@@ -262,6 +267,7 @@ var Arbiter = {
 			var projectDoesntExist = function(error){
 				//Keep going when the file wasn't found
 				if(error.code == FileError.NOT_FOUND_ERR){
+					arbiter.currentProject.name = newName;
 					arbiter.changePage_Pop(div_ServersPage);
 					jqToServersButton.removeClass('ui-btn-active');
 				}else{
@@ -269,7 +275,6 @@ var Arbiter = {
 				}
 		  	};
 			
-			var newName = jqNewProjectName.val();
 			if(newName)
 				arbiter.fileSystem.root.getDirectory(jqNewProjectName.val(), null, projectAlreadyExists, projectDoesntExist);
 			else{
@@ -413,7 +418,7 @@ var Arbiter = {
 		if(!nickname){
 			jqNewNickname.addClass('invalid-field');
 			valid = false;
-		}else if(this.serverList[nickname]){
+		}else if(this.currentProject.serverList[nickname]){
 			jqNewNickname.addClass('invalid-field');
 			jqNewNickname.val("");
 			jqNewNickname.attr("placeholder", "Choose another Nickname *");
@@ -442,7 +447,7 @@ var Arbiter = {
 			
 			var name = jqNewNickname.val();
 			
-			this.serverList[name] = {
+			this.currentProject.serverList[name] = {
 				url: url,
 				username: username,
 				password: password,
@@ -500,19 +505,18 @@ var Arbiter = {
 	},
 	
 	onClick_AddProject: function() {
-		//Create the metadata tables for keeping track of servers and layer meta
-		
-		/*For each layer that the user added, create a feature table in the data db and
-		 add a row to the 
-		*/
-		
-		var projectAreaOfIntrest = aoiMap.getExtent();
 		
 		//Create a directory for the project
 		
 		//Create a database for the data and a database for the metadata
 		
 		//Write the project to the databases
+
+		//TODO: Create the new project with the settings set!
+		console.log("Project added!");
+		
+		this.currentProject.aoi = aoiMap.getExtent();
+		console.log(this.currentProject);
 		
 		this.changePage_Pop(div_ProjectsPage);
 	},
@@ -558,7 +562,7 @@ var Arbiter = {
 		
 		if(valid){
 			var arbiter = this;
-			var serverInfo = this.serverList[jqServerSelect.val()];
+			var serverInfo = this.currentProject.serverList[jqServerSelect.val()];
 			var typeName = jqLayerSelect.val();
 			
 			var request = new OpenLayers.Request.GET({
@@ -613,9 +617,9 @@ var Arbiter = {
 	populateAddServerDialog: function(serverName){
 		if(serverName){
 			jqNewNickname.val(serverName);
-			jqNewServerURL.val(this.serverList[serverName].url);
-			jqNewUsername.val(this.serverList[serverName].username);
-			jqNewPassword.val(this.serverList[serverName].password);
+			jqNewServerURL.val(this.currentProject.serverList[serverName].url);
+			jqNewUsername.val(this.currentProject.serverList[serverName].username);
+			jqNewPassword.val(this.currentProject.serverList[serverName].password);
 		}else{
 			jqNewNickname.val("");
 			jqNewServerURL.val("");
@@ -718,7 +722,7 @@ var Arbiter = {
 	getFeatureTypesOnServer: function(serverName){
 		
 		var arbiter = this;
-		var serverInfo = arbiter.serverList[serverName];
+		var serverInfo = arbiter.currentProject.serverList[serverName];
 		var request = new OpenLayers.Request.GET({
 			url: serverInfo.url + "/wms?request=getCapabilities",
 			user: serverInfo.username,
@@ -1210,7 +1214,7 @@ var Arbiter = {
 	},
 	
 	changePage_Pop: function(_div) {
-		$.mobile.changePage(_div, "pop")
+		$.mobile.changePage(_div, "pop");
 	},
 	
 	//===================

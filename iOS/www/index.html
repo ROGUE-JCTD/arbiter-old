@@ -95,9 +95,9 @@
 			
 			<!-- Content -->
 			<div data-role="content" class="SettingsPageContent" id='idSettingsPageContent'>
-				<p>There are currently no projects. You can created a new project by clicking
+				<div data-localize="label.noProjects">There are currently no projects. You can created a new project by clicking
 				the button at the bottom of the page.
-				</p>
+				</div>
 				
 				<div data-role="controlgroup" id='idProjectsList' data-mini="true">
 					<a data-role="button" id="1" onClick="Arbiter.onClick_OpenProject(this)">TempProject</a>
@@ -139,7 +139,7 @@
 				<p>Name yo project fool!</p>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newProjectName">Project Name</label>
-					<input type="text" name="newProjectName" id="newProjectName" value="" placeholder="Name your Project *" data-localize="lable.name"/>
+					<input type="text" name="newProjectName" id="newProjectName" value="" placeholder="Name your Project *" data-localize="label.name"/>
 				</div>
 			</div>
 			
@@ -229,9 +229,8 @@
 			
 			<!-- Content -->
 			<div data-role="content" id='idAreaOfInterestContent'>
-				<div style="width:90%;left:5%;position:fixed;">Pinch and Drag the map to show the area that you are going to be working in.</div>
-				<div id="aoiMap" style="position:relative;height:100%;width:100%;">	
-				</div>
+				<div style="width:90%;top:10%;left:5%;position:fixed;" data-localize="label.selectAOI">Pinch and Drag the map to show the area that you want to work in.</div>
+				<div id="aoiMap" style="position:absolute;width:80%;height:60%;top:20%;left:10%;"></div>
 			</div>
 			<!-- /Content -->
 			
@@ -385,19 +384,19 @@
 			<div data-role="content" class="AddServerContent" id='idAddServerPageContent'>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newNickname">Nickname</label>
-					<input type="text" autocorrect="off" autocapitalize="off" name="newNickname" id="newNickname" value="" placeholder="Give it a Nickname *" data-localize="lable.nickname"/>
+					<input type="text" autocorrect="off" autocapitalize="off" name="newNickname" id="newNickname" value="" placeholder="Give it a Nickname *" data-localize="label.nickname"/>
 				</div>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newServerURL">URL</label>
-					<input type="url" name="newServerURL" id="newServerURL" value="" placeholder="Server URL *" data-localize="lable.serverURL"/>
+					<input type="url" name="newServerURL" id="newServerURL" value="" placeholder="Server URL *" data-localize="label.serverURL"/>
 				</div>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newUsername">Username</label>
-					<input type="text" autocorrect="off" autocapitalize="off" name="newUsername" id="newUsername" value="" placeholder="Username *" data-localize="lable.username"/>
+					<input type="text" autocorrect="off" autocapitalize="off" name="newUsername" id="newUsername" value="" placeholder="Username *" data-localize="label.username"/>
 				</div>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="newPassword">Password</label>
-					<input type="password" name="newPassword" id="newPassword" value="" placeholder="Password *" data-localize="lable.password"/>
+					<input type="password" name="newPassword" id="newPassword" value="" placeholder="Password *" data-localize="label.password"/>
 				</div>
 			</div>
 			
@@ -428,18 +427,18 @@
 				<div data-role="fieldcontain">
 					<label for="serverselect">Choose a server</label>
 					<select name="serverselect" id="serverselect">
-						<option value="" data-localize="lable.chooseAServer">Choose a server...</option>
+						<option value="" data-localize="label.chooseAServer">Choose a server...</option>
 					</select>
 				</div>
 				<div data-role="fieldcontain">
 					<label for="layerselect">Choose a layer</label>
 					<select name="layerselect" id="layerselect" disabled="disabled">
-						<option value="" data-localize="lable.chooseALayer">Choose a layer...</option>
+						<option value="" data-localize="label.chooseALayer">Choose a layer...</option>
 					</select>
 				</div>
 				<div data-role="fieldcontain" class="ui-hide-label">
 					<label for="layernickname">Give it a nickname</label>
-					<input type="text" autocorrect="off" autocapitalize="off" name="layernickname" id="layernickname" disabled="disabled" placeholder="Give it a Nickname *" data-localize="lable.nickname"/>
+					<input type="text" autocorrect="off" autocapitalize="off" name="layernickname" id="layernickname" disabled="disabled" placeholder="Give it a Nickname *" data-localize="label.nickname"/>
 				</div>
 			</div>
 			
