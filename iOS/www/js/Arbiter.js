@@ -215,6 +215,8 @@ var Arbiter = {
 					center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
 					zoom: 15
 				});
+				
+				arbiter.OpenEditorMenu();
 			}
 		});
 		
@@ -249,7 +251,7 @@ var Arbiter = {
 		});
 		
 		jqAttributesButton.mouseup(function(event){
-			$.mobile.changePage("#popup", "pop");
+			this.changePage($("#popup"));
 		});
 		
 		jqToServersButton.mouseup(function(event){
@@ -335,6 +337,15 @@ var Arbiter = {
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
     },
+	
+	OpenEditorMenu: function() {
+		$("#idEditorMenu").animate({ "left": "30%" }, 1000);
+		this.CloseEditorMenu();
+	},
+	
+	CloseEditorMenu:function() {
+		$("#idEditorMenu").animate({ "left": "100%" }, 1000);
+	},
 	
 	PopulateProjectsList: function() {
 		//Fill the projects list (id=idProjectsList) with the ones that are available.

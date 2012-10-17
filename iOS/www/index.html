@@ -260,10 +260,13 @@
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
 				<a data-rel="back" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
 				<h1 id="projectName">Map</h1>
+				<a href="#idProjectSettingsPage" class="ui-btn-right" data-icon="gear" data-localize="button.settings">Settings</a>
 			</div>
 			
 			<!-- Content -->
-			<div data-role="content" class="MapPageContent" id='idMapPageContent'>
+			<div data-role="content" style="position:relative" class="MapPageContent" id='idMapPageContent'>
+				<div id="idEditorMenu" style="position:absolute;z-index:2000;">Test</div>
+			
 				<div id="map" style="position:relative">
 					<div id="pullFeatures"></div>
 				</div>
