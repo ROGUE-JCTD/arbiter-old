@@ -114,7 +114,6 @@ var Arbiter = {
 		//SQLite.dumpFiles();
 		
 		Cordova.Initialize(this);
-		this.InitializeDatabases();
 		
 		var arbiter = this;
 		
@@ -337,40 +336,6 @@ var Arbiter = {
 		console.log("Now go spartan, I shall remain here.");
     },
 	
-	createMetaTables: function(tx){
-		var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key, name text not null, url text not null, " +
-		"username text not null, password text not null);";
-		
-		var createDirtyTableSql = "CREATE TABLE IF NOT EXISTS dirty_table (id integer primary key, f_table_name text not null, fid text not null);";
-		
-		var createSettingsTableSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null, aoi_left text not null, " +
-			"aoi_bottom text not null, aoi_right text not null, aoi_top text not null);"
-		
-		tx.executeSql(createServersSql);
-		
-		tx.executeSql(createDirtyTableSql);
-		
-		tx.executeSql(createSettingsTableSql);
-	},
-	
-	createDataTables: function(tx){
-		
-		var createGeometryColumnsSql = "CREATE TABLE IF NOT EXISTS geometry_columns (f_table_name text not null, " +
-			"f_geometry_column text not null, geometry_type text not null, srid text not null, " +
-			"PRIMARY KEY(f_table_name, f_geometry_column));";
-		
-		tx.executeSql(createGeometryColumnsSql);
-	},
-	
-	InitializeDatabases: function(){
-		this.variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
-		this.serversDatabase = Cordova.openDatabase("servers", "1.0", "Server Database", 1000000);
-		
-		this.variableDatabase.transaction(this.createMetaTables, this.errorSql, function(){});
-		
-		this.serversDatabase.transaction(this.createDataTables, this.errorSql, function(){});
-	},
-	
 	PopulateProjectsList: function() {
 		//Fill the projects list (id=idProjectsList) with the ones that are available.
 		// - Make the div's id = to ProjectID number;
@@ -508,6 +473,31 @@ var Arbiter = {
 		console.log("User wants to edit his/her layers.");
 	},
 	
+	createMetaTables: function(tx){
+		var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key, name text not null, url text not null, " +
+		"username text not null, password text not null);";
+		
+		var createDirtyTableSql = "CREATE TABLE IF NOT EXISTS dirty_table (id integer primary key, f_table_name text not null, fid text not null);";
+		
+		var createSettingsTableSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null, aoi_left text not null, " +
+		"aoi_bottom text not null, aoi_right text not null, aoi_top text not null);"
+		
+		tx.executeSql(createServersSql);
+		
+		tx.executeSql(createDirtyTableSql);
+		
+		tx.executeSql(createSettingsTableSql);
+	},
+	
+	createDataTables: function(tx){
+		
+		var createGeometryColumnsSql = "CREATE TABLE IF NOT EXISTS geometry_columns (f_table_name text not null, " +
+		"f_geometry_column text not null, geometry_type text not null, srid text not null, " +
+		"PRIMARY KEY(f_table_name, f_geometry_column));";
+		
+		tx.executeSql(createGeometryColumnsSql);
+	},
+	
 	onClick_AddProject: function() {
 		
 		//Create a directory for the project
@@ -519,8 +509,78 @@ var Arbiter = {
 		this.currentProject.aoi = aoiMap.getExtent();
 		console.log(this.currentProject);
 		
+		var arbiter = this;
+		
+		var insertCurrentProject = function(tx){
+			var insertServerSql;
+			var serverList = arbiter.currentProject.serverList;
+			
+			var insertSettingsSql = "INSERT INTO settings (language, aoi_left, aoi_bottom, aoi_right, aoi_top) VALUES ('ENGLISH', " + 
+			arbiter.squote(arbiter.currentProject.aoi.left) + ", " + arbiter.squote(arbiter.currentProject.aoi.bottom) +
+			", " + arbiter.squote(arbiter.currentProject.aoi.right) + ", " + arbiter.squote(arbiter.currentProject.aoi.top) + ");";
+			
+			console.log("insertSettingsSql: " + insertSettingsSql);
+			
+			tx.executeSql(insertSettingsSql, [], function(tx, res){
+				console.log("success");
+			}, function(tx, err){
+				console.log("error: ", err);
+			});
+			
+			for(var x in serverList){
+				insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES " +
+					"(" + arbiter.squote(x) + ", " + arbiter.squote(serverList[x].url) + ", " + 
+					arbiter.squote(serverList[x].username) + ", " + arbiter.squote(serverList[x].password) + ");";
+				
+				tx.executeSql(insertServerSql, [], function(tx, res){
+					console.log(x + " stored!");
+				});
+				
+				//Insert each layer of the server object into the appropriate data tables
+				arbiter.currentProject.dataDatabase.transaction(function(tx){
+					var insertGeometryColumnRowSql;
+					var createFeatureTableSql;
+					var attributes;
+					var layer;
+					
+					for(var i in serverList[x].layers){
+						layer = serverList[x].layers[i];
+						insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
+							"f_geometry_column, geometry_type, srid) VALUES (" + 
+							arbiter.squote(layer.featureType) + ", " + arbiter.squote(layer.geomName) + ", " +
+							arbiter.squote(layer.geometryType) + ", " + arbiter.squote(layer.srsName) + ");";
+						
+						var attributes = "fid text primary key, " + layer.geomName + " text not null";
+						
+						for(var j = 0; j < layer.attributes.length;j++){
+							attributes += ", " + layer.attributes[j] + " text";
+						}
+							
+						createFeatureTableSql = "CREATE TABLE IF NOT EXISTS " + layer.featureType +
+							" (" + attributes + ");";
+						
+						tx.executeSql(insertGeometryColumnRowSql);
+						
+						tx.executeSql(createFeatureTableSql);
+					}
+					
+				}, arbiter.errorSql, function(){});
+			}
+		};
+		
 		var writeToDatabases = function(dir){
-			console.log("writeToDatabases");
+			
+			//Create the databases for that project
+			arbiter.currentProject.variablesDatabase = Cordova.openDatabase(arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
+			arbiter.currentProject.dataDatabase = Cordova.openDatabase(arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
+			
+			//Create the initial tables in each database
+			arbiter.currentProject.variablesDatabase.transaction(arbiter.createMetaTables, arbiter.errorSql, function(){
+				arbiter.currentProject.dataDatabase.transaction(arbiter.createDataTables, arbiter.errorSql, function(){
+					//Transaction succeeded so both metadata and data tables exist
+					arbiter.currentProject.variablesDatabase.transaction(insertCurrentProject, arbiter.errorSql, function(){});
+				});
+			});
 		};
 		
 		var error = function(error){
@@ -608,6 +668,7 @@ var Arbiter = {
 					serverInfo.layers[layernickname] = {
 						featureNS: obj.targetNamespace,
 						geomName: geometryName,
+						geometryType: geometryType,
 						featureType: featureType,
 						typeName: typeName,
 						srsName: selectedOption.attr('layersrs'),
