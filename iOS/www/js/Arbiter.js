@@ -62,6 +62,8 @@ var jqLayerURL;
 //var jqAddLayerSubmit;
 var jqCreateFeature;
 var jqPullFeatures;
+var jqNewProjectName;
+var jqToServersButton;
 var jqNewUsername;
 var jqNewPassword;
 var jqNewNickname;
@@ -88,6 +90,9 @@ var CurrentLanguage = LanguageType.ENGLISH;
 var globalresult;
 
 var Arbiter = {
+	
+	fileSystem: null,
+	
 	variableDatabase: null,
 	
 	serversDatabase: null,
@@ -105,8 +110,15 @@ var Arbiter = {
 		//SQLite.dumpFiles();
 		
 		Cordova.Initialize(this);
-		this.variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
-		this.serversDatabase = Cordova.openDatabase("servers", "1.0", "Server Database", 1000000);
+		this.InitializeDatabases();
+		
+		var arbiter = this;
+		
+		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(filesystem){
+			arbiter.fileSystem = filesystem;					 
+		}, function(error){
+			console.log("requestFileSystem failed with error code: " + error.code);					 
+		});
 		
 		//Load saved variables
 			//LanguageSelected
@@ -131,6 +143,8 @@ var Arbiter = {
 		//jqAddLayerSubmit = $('#addLayerSubmit');
 		jqCreateFeature = $('#createFeature');
 		jqPullFeatures = $('#pullFeatures');
+		jqNewProjectName = $('#newProjectName');
+		jqToServersButton = $('#toServersButton');
 		jqNewUsername = $('#newUsername');
 		jqNewPassword = $('#newPassword');
 		jqNewNickname = $('#newNickname');
@@ -225,7 +239,7 @@ var Arbiter = {
 			}
 		});
 		
-		var arbiter = this;
+	//	var arbiter = this; // this is initialized earlier in this method
 		
 		jqSaveButton.mouseup(function(event){
 			map.layers[map.layers.length - 1].strategies[0].save();
@@ -233,6 +247,35 @@ var Arbiter = {
 		
 		jqAttributesButton.mouseup(function(event){
 			$.mobile.changePage("#popup", "pop");
+		});
+		
+		jqToServersButton.mouseup(function(event){
+								
+			//Fail if the project already exists
+			var projectAlreadyExists = function(dir){
+				console.log("directory exists: " + dir.name);
+				jqToServersButton.val("Project: " + dir.name + " already exists! *");
+				jqToServersButton.removeClass('ui-btn-active');
+			};
+								  
+			//Continue when this is a new project name
+			var projectDoesntExist = function(error){
+				//Keep going when the file wasn't found
+				if(error.code == FileError.NOT_FOUND_ERR){
+					arbiter.changePage_Pop(div_ServersPage);
+					jqToServersButton.removeClass('ui-btn-active');
+				}else{
+					console.log("file system error: " + error.code);				  
+				}
+		  	};
+			
+			var newName = jqNewProjectName.val();
+			if(newName)
+				arbiter.fileSystem.root.getDirectory(jqNewProjectName.val(), null, projectAlreadyExists, projectDoesntExist);
+			else{
+				jqNewProjectName.addClass('invalid-field');
+				jqToServersButton.removeClass('ui-btn-active');
+			}
 		});
 		
 		jqAddLayerButton.mouseup(function(event){
@@ -284,6 +327,40 @@ var Arbiter = {
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
     },
+	
+	createMetaTables: function(tx){
+		var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key, name text not null, url text not null, " +
+		"username text not null, password text not null);";
+		
+		var createDirtyTableSql = "CREATE TABLE IF NOT EXISTS dirty_table (id integer primary key, f_table_name text not null, fid text not null);";
+		
+		var createSettingsTableSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null, aoi_left text not null, " +
+			"aoi_bottom text not null, aoi_right text not null, aoi_top text not null);"
+		
+		tx.executeSql(createServersSql);
+		
+		tx.executeSql(createDirtyTableSql);
+		
+		tx.executeSql(createSettingsTableSql);
+	},
+	
+	createDataTables: function(tx){
+		
+		var createGeometryColumnsSql = "CREATE TABLE IF NOT EXISTS geometry_columns (f_table_name text not null, " +
+			"f_geometry_column text not null, geometry_type text not null, srid text not null, " +
+			"PRIMARY KEY(f_table_name, f_geometry_column));";
+		
+		tx.executeSql(createGeometryColumnsSql);
+	},
+	
+	InitializeDatabases: function(){
+		this.variableDatabase = Cordova.openDatabase("variables", "1.0", "Variable Database", 1000000);
+		this.serversDatabase = Cordova.openDatabase("servers", "1.0", "Server Database", 1000000);
+		
+		this.variableDatabase.transaction(this.createMetaTables, this.errorSql, function(){});
+		
+		this.serversDatabase.transaction(this.createDataTables, this.errorSql, function(){});
+	},
 	
 	PopulateProjectsList: function() {
 		//Fill the projects list (id=idProjectsList) with the ones that are available.
@@ -428,9 +505,16 @@ var Arbiter = {
 		/*For each layer that the user added, create a feature table in the data db and
 		 add a row to the 
 		*/
-		this.changePage_Pop(div_ProjectsPage);
 		
 		var projectAreaOfIntrest = aoiMap.getExtent();
+		
+		//Create a directory for the project
+		
+		//Create a database for the data and a database for the metadata
+		
+		//Write the project to the databases
+		
+		this.changePage_Pop(div_ProjectsPage);
 	},
 	
 	onClick_OpenProject: function(_div) {
