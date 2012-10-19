@@ -355,31 +355,6 @@ var Arbiter = {
 		console.log("Now go spartan, I shall remain here.");
     },
 	
-	createMetaTables: function(tx){
-		var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key, name text not null, url text not null, " +
-		"username text not null, password text not null);";
-		
-		var createDirtyTableSql = "CREATE TABLE IF NOT EXISTS dirty_table (id integer primary key, f_table_name text not null, fid text not null);";
-		
-		var createSettingsTableSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null, aoi_left text not null, " +
-			"aoi_bottom text not null, aoi_right text not null, aoi_top text not null);"
-		
-		tx.executeSql(createServersSql);
-		
-		tx.executeSql(createDirtyTableSql);
-		
-		tx.executeSql(createSettingsTableSql);
-	},
-	
-	createDataTables: function(tx){
-		
-		var createGeometryColumnsSql = "CREATE TABLE IF NOT EXISTS geometry_columns (f_table_name text not null, " +
-			"f_geometry_column text not null, geometry_type text not null, srid text not null, " +
-			"PRIMARY KEY(f_table_name, f_geometry_column));";
-		
-		tx.executeSql(createGeometryColumnsSql);
-	},
-	
 	ToggleEditorMenu: function() {
 		if(!editorOpen) {
 			editorOpen = true;
