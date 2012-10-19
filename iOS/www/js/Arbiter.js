@@ -61,7 +61,6 @@ var jqAddLayerButton;
 var jqLayerURL;
 //var jqAddLayerSubmit;
 var jqCreateFeature;
-var jqPullFeatures;
 var jqNewProjectName;
 var jqToServersButton;
 var jqNewUsername;
@@ -75,6 +74,7 @@ var jqServerSelect;
 var jqLayerSelect;
 var jqLayerNickname;
 var jqLayerSubmit;
+var jqEditorTab;
 
 /* ============================ *
  * 			 Language
@@ -88,6 +88,8 @@ var LanguageType = {
 var isFirstTime = true;
 var CurrentLanguage = LanguageType.ENGLISH;
 var globalresult;
+
+var editorOpen = false;
 
 var Arbiter = {
 	
@@ -146,7 +148,7 @@ var Arbiter = {
 		jqLayerURL = $('#layerurl');
 		//jqAddLayerSubmit = $('#addLayerSubmit');
 		jqCreateFeature = $('#createFeature');
-		jqPullFeatures = $('#pullFeatures');
+		jqEditorTab = $('#editorTab');
 		jqNewProjectName = $('#newProjectName');
 		jqToServersButton = $('#toServersButton');
 		jqNewUsername = $('#newUsername');
@@ -216,8 +218,6 @@ var Arbiter = {
 					center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
 					zoom: 15
 				});
-				
-				arbiter.OpenEditorMenu();
 			}
 		});
 		
@@ -322,8 +322,9 @@ var Arbiter = {
 			}
 		});
 		
-		jqPullFeatures.mouseup(function(event){
-			arbiter.pullFeatures(false);
+		jqEditorTab.mouseup(function(event){
+			//arbiter.pullFeatures(false);
+			arbiter.ToggleEditorMenu();
 		});
 		
 		$(".layer-list-item").live('click', function(event){
@@ -364,13 +365,24 @@ var Arbiter = {
 		tx.executeSql(createGeometryColumnsSql);
 	},
 	
+	ToggleEditorMenu: function() {
+		if(!editorOpen) {
+			editorOpen = true;
+			this.OpenEditorMenu();
+		} else {
+			editorOpen = false;
+			this.CloseEditorMenu();
+		}
+	},
+	
 	OpenEditorMenu: function() {
-		$("#idEditorMenu").animate({ "left": "30%" }, 1000);
-		this.CloseEditorMenu();
+		$("#idEditorMenu").animate({ "left": "20%" }, 250);
+		$("#editorTab").animate({ "right": "80%" }, 250);
 	},
 	
 	CloseEditorMenu:function() {
-		$("#idEditorMenu").animate({ "left": "100%" }, 1000);
+		$("#idEditorMenu").animate({ "left": "100%" }, 250);
+		$("#editorTab").animate({ "right": "0%" }, 250);
 	},
 	
 	InitializeDatabases: function(){
