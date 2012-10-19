@@ -61,7 +61,6 @@ var jqAddLayerButton;
 var jqLayerURL;
 //var jqAddLayerSubmit;
 var jqCreateFeature;
-var jqPullFeatures;
 var jqNewProjectName;
 var jqToServersButton;
 var jqNewUsername;
@@ -76,6 +75,7 @@ var jqLayerSelect;
 var jqLayerNickname;
 var jqLayerSubmit;
 var jqProjectsList;
+var jqEditorTab;
 
 /* ============================ *
  * 			 Language
@@ -89,6 +89,8 @@ var LanguageType = {
 var isFirstTime = true;
 var CurrentLanguage = LanguageType.ENGLISH;
 var globalresult;
+
+var editorOpen = false;
 
 var Arbiter = {
 	
@@ -152,7 +154,7 @@ var Arbiter = {
 		jqLayerURL = $('#layerurl');
 		//jqAddLayerSubmit = $('#addLayerSubmit');
 		jqCreateFeature = $('#createFeature');
-		jqPullFeatures = $('#pullFeatures');
+		jqEditorTab = $('#editorTab');
 		jqNewProjectName = $('#newProjectName');
 		jqToServersButton = $('#toServersButton');
 		jqNewUsername = $('#newUsername');
@@ -223,8 +225,6 @@ var Arbiter = {
 					center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
 					zoom: 15
 				});
-				
-				arbiter.OpenEditorMenu();
 			}
 		});
 		
@@ -329,8 +329,9 @@ var Arbiter = {
 			}
 		});
 		
-		jqPullFeatures.mouseup(function(event){
-			arbiter.pullFeatures(false);
+		jqEditorTab.mouseup(function(event){
+			//arbiter.pullFeatures(false);
+			arbiter.ToggleEditorMenu();
 		});
 		
 		$(".layer-list-item").mouseup(function(event){
@@ -354,13 +355,49 @@ var Arbiter = {
 		console.log("Now go spartan, I shall remain here.");
     },
 	
+	createMetaTables: function(tx){
+		var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key, name text not null, url text not null, " +
+		"username text not null, password text not null);";
+		
+		var createDirtyTableSql = "CREATE TABLE IF NOT EXISTS dirty_table (id integer primary key, f_table_name text not null, fid text not null);";
+		
+		var createSettingsTableSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null, aoi_left text not null, " +
+			"aoi_bottom text not null, aoi_right text not null, aoi_top text not null);"
+		
+		tx.executeSql(createServersSql);
+		
+		tx.executeSql(createDirtyTableSql);
+		
+		tx.executeSql(createSettingsTableSql);
+	},
+	
+	createDataTables: function(tx){
+		
+		var createGeometryColumnsSql = "CREATE TABLE IF NOT EXISTS geometry_columns (f_table_name text not null, " +
+			"f_geometry_column text not null, geometry_type text not null, srid text not null, " +
+			"PRIMARY KEY(f_table_name, f_geometry_column));";
+		
+		tx.executeSql(createGeometryColumnsSql);
+	},
+	
+	ToggleEditorMenu: function() {
+		if(!editorOpen) {
+			editorOpen = true;
+			this.OpenEditorMenu();
+		} else {
+			editorOpen = false;
+			this.CloseEditorMenu();
+		}
+	},
+
 	OpenEditorMenu: function() {
-		$("#idEditorMenu").animate({ "left": "30%" }, 1000);
-		this.CloseEditorMenu();
+		$("#idEditorMenu").animate({ "left": "20%" }, 250);
+		$("#editorTab").animate({ "right": "80%" }, 250);
 	},
 	
 	CloseEditorMenu:function() {
-		$("#idEditorMenu").animate({ "left": "100%" }, 1000);
+		$("#idEditorMenu").animate({ "left": "100%" }, 250);
+		$("#editorTab").animate({ "right": "0%" }, 250);
 	},
 	
 	PopulateProjectsList: function() {

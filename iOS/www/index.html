@@ -265,10 +265,14 @@
 			
 			<!-- Content -->
 			<div data-role="content" style="position:relative" class="MapPageContent" id='idMapPageContent'>
-				<div id="idEditorMenu" style="position:absolute;z-index:2000;">Test</div>
+				<div id="idEditorMenu" style="position:absolute;z-index:2000;">
+					<div data-role="controlgroup" id='idEditorLayersList' data-mini="true" style="padding:5px;">
+						<a data-role="button" id="1" onClick="Arbiter.CloseEditorMenu()">[Temp] Close Editor</a>
+					</div>
+				</div>
 			
 				<div id="map" style="position:relative">
-					<div id="pullFeatures"></div>
+					<div id="editorTab"></div>
 				</div>
 			</div>
 		</div>

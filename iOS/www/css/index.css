@@ -6,6 +6,7 @@ html, body {
 }
 
 #idWelcomePage {
+	overflow : hidden;
 	margin  : 0;
 	padding : 0;
 }
@@ -76,7 +77,8 @@ html, body {
 }
 
 #idEditorMenu {
-	width    : 100%;
+	overflow: scroll;
+	width    : 80%;
 	height   : 100%;
 	top:0px;
 	left: 100%;
@@ -102,16 +104,16 @@ html, body {
 	display: none;
 }
 
-#pullFeatures{
+#editorTab{
 	position:absolute;
 	z-index:1005;
-	right:8px;
-	top:8px;
-	width:40px;
+	right:0px;
+	top:0px;
+	width:25px;
 	height:40px;
-	background-color:blue;
-	border-radius:4px 4px;
-	opacity:0.4;
+	background-color:rgba(84,84,84,255);;
+	border-top-left-radius: 5px;
+	border-bottom-left-radius: 5px;
 }
 
 .invalid-field{
