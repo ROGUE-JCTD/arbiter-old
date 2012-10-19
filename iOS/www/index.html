@@ -30,7 +30,7 @@
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.structure-1.1.1.min"/>
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.theme-1.1.1.min.css"/>
 		<link rel="stylesheet" type="text/css" href="OpenLayers-2.12/theme/default/style.mobile.css"/>
-		<script src="http://192.168.10.126:8082/target/target-script-min.js#mints"></script>
+		<script src="http://192.168.10.126:8082/target/target-script-min.js#smints"></script>
 		<script type="text/javascript" src="cordova-2.0.0.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
 		<script type="text/javascript" src="js/Arbiter.js"></script>
@@ -99,9 +99,9 @@
 				the button at the bottom of the page.
 				</div>
 				
-				<div data-role="controlgroup" id='idProjectsList' data-mini="true">
-					<a data-role="button" id="1" onClick="Arbiter.onClick_OpenProject(this)">TempProject</a>
-				</div>
+				<ul data-role="listview" id='idProjectsList' data-inset="true">
+					<li><a class="project-list-item">TempProject</a></li>
+				<ul/>
 			</div>
 			<!-- /Content -->
 			

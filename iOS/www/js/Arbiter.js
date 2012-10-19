@@ -75,6 +75,7 @@ var jqServerSelect;
 var jqLayerSelect;
 var jqLayerNickname;
 var jqLayerSubmit;
+var jqProjectsList;
 
 /* ============================ *
  * 			 Language
@@ -118,7 +119,13 @@ var Arbiter = {
 		var arbiter = this;
 		
 		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(filesystem){
-			arbiter.fileSystem = filesystem;					 
+			arbiter.fileSystem = filesystem;
+						
+			filesystem.root.getDirectory("Projects", {create: true, exclusive: false}, function(dir){
+					arbiter.InitializeProjectList(dir);
+			}, function(error){
+					console.log("error getting projects");
+			});
 		}, function(error){
 			console.log("requestFileSystem failed with error code: " + error.code);					 
 		});
@@ -159,6 +166,7 @@ var Arbiter = {
 		jqLayerSelect = $('#layerselect');
 		jqLayerNickname = $('#layernickname');
 		jqLayerSubmit = $('#addLayerSubmit');
+		jqProjectsList = $('ul#idProjectsList');
 		
 		div_Popup.live('pageshow', this.PopulatePopup);
 		//div_Popup.live('pagehide', this.DestroyPopup);
@@ -281,7 +289,7 @@ var Arbiter = {
 		  	};
 			
 			if(newName)
-				arbiter.fileSystem.root.getDirectory(jqNewProjectName.val(), null, projectAlreadyExists, projectDoesntExist);
+				arbiter.fileSystem.root.getDirectory("Projects/" + jqNewProjectName.val(), null, projectAlreadyExists, projectDoesntExist);
 			else{
 				jqNewProjectName.addClass('invalid-field');
 				jqToServersButton.removeClass('ui-btn-active');
@@ -325,12 +333,20 @@ var Arbiter = {
 			arbiter.pullFeatures(false);
 		});
 		
-		$(".layer-list-item").live('click', function(event){
+		$(".layer-list-item").mouseup(function(event){
 			arbiter.populateAddLayerDialog($(this).text());
 		});
 		
-		$(".server-list-item").live('click', function(event){
+		$(".server-list-item").mouseup(function(event){
 			arbiter.populateAddServerDialog($(this).text());
+		});
+		
+		$(".project-list-item").mouseup(function(event){
+			var projectName = $(this).text();
+			console.log("Opened Project: " + projectName);
+			//TODO: Load project information from click!
+										
+			arbiter.changePage_Pop(div_MapPage);								
 		});
 		
 		this.readLayerFromDb(this.variableDatabase, "hospitals");
@@ -352,7 +368,8 @@ var Arbiter = {
 		// - Make the div's id = to ProjectID number;
 		// Example: <a data-role="button" id="1" onClick="Arbiter.onClick_OpenProject(this)">TempProject</a>
 		console.log("PopulateProjectsList");
-		
+		jqProjectsList.listview("refresh");
+		//jqProjectsList.listview('refresh');
 		//TODO: Load projects that are available
 		// - add them to the ProjectsList
 	},
@@ -369,6 +386,81 @@ var Arbiter = {
 		
 		//TODO: Load servers that are available
 		// - add them to the ServersList
+	},
+	
+	appendToListView: function(_item, _listview, _mouseup){
+		$(_item).appendTo(_listview).mouseup(_mouseup);
+		
+		if(_listview.hasClass('ui-listview'))
+			_listview.listview("refresh");
+		
+		_listview.children(':first-child').addClass('ui-corner-top');
+		_listview.children(':last-child').addClass('ui-corner-bottom');
+	},
+	
+	InitializeProjectList: function(dirEntry){
+		var arbiter = this;
+		
+		var directoryReader = dirEntry.createReader();
+		
+		
+		var success = function(entries){
+			var li;
+			
+			for(var i = 0; i < entries.length;i++){
+				li = '<li><a class="project-list-view">' + entries[i].name + '</a></li>';
+				var name = entries[i].name;
+				arbiter.appendToListView(li, jqProjectsList, function(event){
+					console.log('added project: "' + name + '"');
+										  
+					arbiter.setCurrentProject(name, arbiter);
+				});
+			}
+		};
+		
+		var fail = function(error){
+			console.log("Failed to list directory contents: " + error.code);
+		};
+		
+		directoryReader.readEntries(success, fail);
+	},
+	
+	setCurrentProject: function(projectName, arbiter){
+		console.log("setcurrentproject: " + projectName + ".");
+		arbiter.currentProject = {};
+		
+		arbiter.currentProject.name = projectName;
+		arbiter.currentProject.serverList = {};
+		
+		//set dataDatabase and variablesDatabase
+		arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Projects/" + arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
+		arbiter.currentProject.dataDatabase = Cordova.openDatabase("Projects/" + arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
+		
+		arbiter.currentProject.variablesDatabase.transaction(function(tx){
+			//select servers and add to the project
+			tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
+				var serverObj;
+				for(var i = 0; i < res.rows.length; i++){
+					serverObj = res.rows.item(i);
+						  console.log("before setting serverList");
+					arbiter.currentProject.serverList[serverObj.name] = {
+						  layers: {},
+						  password: serverObj.password,
+						  url: serverObj.url,
+						  username: serverObj.username
+					};
+				}
+			});
+			
+			//select layers and add to the project
+															 
+			//select area of interest and add to the project
+			
+		}, arbiter.errorSql, function(){});
+		
+		//set aoi
+		
+		//set serverList
 	},
 	
 	onClick_EditServers: function() {
@@ -493,11 +585,16 @@ var Arbiter = {
 		var createSettingsTableSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null, aoi_left text not null, " +
 		"aoi_bottom text not null, aoi_right text not null, aoi_top text not null);"
 		
+		var createLayersTableSql = "CREATE TABLE IF NOT EXISTS layers (id integer primary key, server_id integer, " + 
+		"layername text not null, f_table_name text not null, FOREIGN KEY(server_id) REFERENCES servers(id));";
+		
 		tx.executeSql(createServersSql);
 		
 		tx.executeSql(createDirtyTableSql);
 		
 		tx.executeSql(createSettingsTableSql);
+		
+		tx.executeSql(createLayersTableSql);
 	},
 	
 	createDataTables: function(tx){
@@ -518,7 +615,6 @@ var Arbiter = {
 		//Write the project to the databases
 		
 		this.currentProject.aoi = aoiMap.getExtent();
-		console.log(this.currentProject);
 		
 		var arbiter = this;
 		
@@ -530,51 +626,48 @@ var Arbiter = {
 			arbiter.squote(arbiter.currentProject.aoi.left) + ", " + arbiter.squote(arbiter.currentProject.aoi.bottom) +
 			", " + arbiter.squote(arbiter.currentProject.aoi.right) + ", " + arbiter.squote(arbiter.currentProject.aoi.top) + ");";
 			
-			console.log("insertSettingsSql: " + insertSettingsSql);
-			
-			tx.executeSql(insertSettingsSql, [], function(tx, res){
-				console.log("success");
-			}, function(tx, err){
-				console.log("error: ", err);
-			});
+			tx.executeSql(insertSettingsSql);
 			
 			for(var x in serverList){
-				insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES " +
-					"(" + arbiter.squote(x) + ", " + arbiter.squote(serverList[x].url) + ", " + 
-					arbiter.squote(serverList[x].username) + ", " + arbiter.squote(serverList[x].password) + ");";
+				arbiter.currentProject.variablesDatabase.transaction(function(tx){
+					insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES " +
+						"(" + arbiter.squote(x) + ", " + arbiter.squote(serverList[x].url) + ", " + 
+						arbiter.squote(serverList[x].username) + ", " + arbiter.squote(serverList[x].password) + ");";
 				
-				tx.executeSql(insertServerSql, [], function(tx, res){
-					console.log(x + " stored!");
-				});
-				
-				//Insert each layer of the server object into the appropriate data tables
-				arbiter.currentProject.dataDatabase.transaction(function(tx){
-					var insertGeometryColumnRowSql;
-					var createFeatureTableSql;
-					var attributes;
-					var layer;
-					
-					for(var i in serverList[x].layers){
-						layer = serverList[x].layers[i];
-						insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
-							"f_geometry_column, geometry_type, srid) VALUES (" + 
-							arbiter.squote(layer.featureType) + ", " + arbiter.squote(layer.geomName) + ", " +
-							arbiter.squote(layer.geometryType) + ", " + arbiter.squote(layer.srsName) + ");";
+					var name = x;
+					tx.executeSql(insertServerSql, [], function(tx, res){
+						var insertLayerSql;
+						var layer;
+						var insertGeometryColumnRowSql;
+						var createFeatureTableSql;
+						var attributes;	
 						
-						var attributes = "fid text primary key, " + layer.geomName + " text not null";
-						
-						for(var j = 0; j < layer.attributes.length;j++){
-							attributes += ", " + layer.attributes[j] + " text";
-						}
+						for(var y in serverList[name].layers){
+							layer = serverList[name].layers[y];
+							insertLayerSql = "INSERT INTO layers (server_id, layername, f_table_name) VALUES (" + res.insertId + 
+								  ", " + arbiter.squote(y) + ", " + arbiter.squote(layer.featureType) + ");";
 							
-						createFeatureTableSql = "CREATE TABLE IF NOT EXISTS " + layer.featureType +
-							" (" + attributes + ");";
-						
-						tx.executeSql(insertGeometryColumnRowSql);
-						
-						tx.executeSql(createFeatureTableSql);
-					}
-					
+							arbiter.currentProject.variablesDatabase.transaction(function(tx){
+								tx.executeSql(insertLayerSql);															   
+							}, arbiter.errorSql, function(){});
+								  
+							arbiter.currentProject.dataDatabase.transaction(function(tx){
+								insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
+									"f_geometry_column, geometry_type, srid) VALUES (" + arbiter.squote(layer.featureType) + 
+									", " + arbiter.squote(layer.geomName) + ", " + arbiter.squote(layer.geometryType) + 
+									", " + arbiter.squote(layer.srsName) + ");";
+																			
+								attributes = "fid text primary key, " + layer.geomName + " text not null";
+																			
+								createFeatureTableSql = "CREATE TABLE IF NOT EXISTS " + layer.featureType +
+									" (" + attributes + ");";
+																			
+								tx.executeSql(insertGeometryColumnRowSql);
+																			
+								tx.executeSql(createFeatureTableSql);
+							}, arbiter.errorSql, function(){});
+						}
+					});
 				}, arbiter.errorSql, function(){});
 			}
 		};
@@ -582,14 +675,24 @@ var Arbiter = {
 		var writeToDatabases = function(dir){
 			
 			//Create the databases for that project
-			arbiter.currentProject.variablesDatabase = Cordova.openDatabase(arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
-			arbiter.currentProject.dataDatabase = Cordova.openDatabase(arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
+			arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Projects/" + arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
+			arbiter.currentProject.dataDatabase = Cordova.openDatabase("Projects/" + arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
 			
 			//Create the initial tables in each database
 			arbiter.currentProject.variablesDatabase.transaction(arbiter.createMetaTables, arbiter.errorSql, function(){
 				arbiter.currentProject.dataDatabase.transaction(arbiter.createDataTables, arbiter.errorSql, function(){
 					//Transaction succeeded so both metadata and data tables exist
-					arbiter.currentProject.variablesDatabase.transaction(insertCurrentProject, arbiter.errorSql, function(){});
+					arbiter.currentProject.variablesDatabase.transaction(insertCurrentProject, arbiter.errorSql, function(){
+						//add to the list of projects on success
+						var li = "<li><a class='project-list-item'>" + arbiter.currentProject.name + "</a></li>";
+						
+						var name = arbiter.currentProject.name;
+						arbiter.appendToListView(li, jqProjectsList, function(event){
+							arbiter.setCurrentProject(name, arbiter);
+						});
+																		 
+						arbiter.changePage_Pop(div_ProjectsPage);
+					});
 				});
 			});
 		};
@@ -598,9 +701,9 @@ var Arbiter = {
 			console.log("error creating directory");
 		};
 		
-		this.fileSystem.root.getDirectory(this.currentProject.name, {create: true, exclusive: false}, writeToDatabases, error);
-		
-		this.changePage_Pop(div_ProjectsPage);
+		console.log('"' + this.currentProject.name + '"');
+					
+		this.fileSystem.root.getDirectory("Projects/" + this.currentProject.name, {create: true, exclusive: false}, writeToDatabases, error);
 	},
 	
 	onClick_OpenProject: function(_div) {
