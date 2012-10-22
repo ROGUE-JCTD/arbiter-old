@@ -484,6 +484,7 @@ var Arbiter = {
 						  username: serverObj.username
 					};
 					
+					//select layers and add to the appropriate server
 					var _serverId = serverObj.id;
 					arbiter.currentProject.variablesDatabase.transaction(function(tx){
 						var serverName = serverObj.name;
@@ -503,7 +504,7 @@ var Arbiter = {
 									attributes: []
 								};
 									
-								
+								//get the geometry name, type, and srs of the layer
 								arbiter.currentProject.dataDatabase.transaction(function(tx){
 									var layerObj = layer;
 									var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name='" + layerObj.f_table_name + "';";
@@ -514,7 +515,8 @@ var Arbiter = {
 												  
 										if(res.rows.length){ //should only be 1 right now
 											geomName = res.rows.item(0).f_geometry_column;
-												
+											
+											//get the attributes of the layer
 											arbiter.currentProject.dataDatabase.transaction(function(tx){
 												var tableSelectSql = "PRAGMA table_info (" + layerObj.f_table_name + ");";
 												
@@ -541,16 +543,19 @@ var Arbiter = {
 					}, arbiter.errorSql, function(){});
 				}
 			});
-			
-			//select layers and add to the project
 															 
 			//select area of interest and add to the project
-			
+			tx.executeSql("SELECT * FROM settings;", [], function(tx, res){
+				//should only be 1 row
+				if(res.rows.length){
+					var settings = res.rows.item(0);
+					arbiter.currentProject.aoi = new OpenLayers.Bounds(
+						settings.aoi_left, settings.aoi_bottom, settings.aoi_right, settings.aoi_top
+					);
+				}
+			});
+												
 		}, arbiter.errorSql, function(){});
-		
-		//set aoi
-		
-		//set serverList
 	},
 	
 	onClick_EditServers: function() {
