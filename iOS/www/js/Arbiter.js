@@ -475,6 +475,7 @@ var Arbiter = {
 						  username: serverObj.username
 					};
 					
+					//select layers and add to the appropriate server
 					var _serverId = serverObj.id;
 					arbiter.currentProject.variablesDatabase.transaction(function(tx){
 						var serverName = serverObj.name;
@@ -483,7 +484,6 @@ var Arbiter = {
 						console.log("SELECT * FROM layers where server_id=" + serverId);
 						tx.executeSql("SELECT * FROM layers where server_id=" + serverId, [], function(tx, res){
 							var layer;
-							var table_name;
 									  
 							for(var j = 0; j < res.rows.length; j++){
 								console.log("server name: " + serverName + " - " + serverId);
@@ -495,30 +495,33 @@ var Arbiter = {
 									attributes: []
 								};
 									
-								table_name = layer.f_table_name;
+								//get the geometry name, type, and srs of the layer
 								arbiter.currentProject.dataDatabase.transaction(function(tx){
-									var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name='" + table_name + "';";
+									var layerObj = layer;
+									var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name='" + layerObj.f_table_name + "';";
 									
 									tx.executeSql(geomColumnsSql, [], function(tx, res){
 										var geomName;
-										
+										var serverLayer = arbiter.currentProject.serverList[serverName].layers[layerObj.layername];
+												  
 										if(res.rows.length){ //should only be 1 right now
 											geomName = res.rows.item(0).f_geometry_column;
-												
+											
+											//get the attributes of the layer
 											arbiter.currentProject.dataDatabase.transaction(function(tx){
-												var tableSelectSql = "PRAGMA table_info (" + table_name + ");";
-																						
-												arbiter.currentProject.serverList[serverName].layers[layer.layername].geomName = geomName;
-												arbiter.currentProject.serverList[serverName].layers[layer.layername].srsName = res.rows.item(0).srid;
-												arbiter.currentProject.serverList[serverName].layers[layer.layername].geometryType = res.rows.item(0).geometry_type;
+												var tableSelectSql = "PRAGMA table_info (" + layerObj.f_table_name + ");";
+												
+												serverLayer.geomName = geomName;
+												serverLayer.srsName = res.rows.item(0).srid;
+												serverLayer.geometryType = res.rows.item(0).geometry_type;
 												
 												tx.executeSql(tableSelectSql, [], function(tx, res){
 													var attrName;
 													for(var h = 0; h < res.rows.length;h++){
 														attrName = res.rows.item(h).name;
-														console.log("geomName: " + geomName);
+
 														if(attrName != 'fid' && attrName != geomName)
-															arbiter.currentProject.serverList[serverName].layers[layer.layername].attributes.push(res.rows.item(h).name);
+															serverLayer.attributes.push(res.rows.item(h).name);
 														}
 													});													  
 											}, arbiter.errorSql, function(){});
@@ -531,16 +534,19 @@ var Arbiter = {
 					}, arbiter.errorSql, function(){});
 				}
 			});
-			
-			//select layers and add to the project
 															 
 			//select area of interest and add to the project
-			
+			tx.executeSql("SELECT * FROM settings;", [], function(tx, res){
+				//should only be 1 row
+				if(res.rows.length){
+					var settings = res.rows.item(0);
+					arbiter.currentProject.aoi = new OpenLayers.Bounds(
+						settings.aoi_left, settings.aoi_bottom, settings.aoi_right, settings.aoi_top
+					);
+				}
+			});
+												
 		}, arbiter.errorSql, function(){});
-		
-		//set aoi
-		
-		//set serverList
 	},
 	
 	onClick_EditServers: function() {
