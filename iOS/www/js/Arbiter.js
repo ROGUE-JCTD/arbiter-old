@@ -234,6 +234,8 @@ var Arbiter = {
 					zoom: 15
 				});
 			}
+			
+			arbiter.addLayersToMap(arbiter);
 		});
 		
 		div_AreaOfInterestPage.live('pageshow', function(){
@@ -529,6 +531,8 @@ var Arbiter = {
 									});
 								}, arbiter.errorSql, function(){});
 							}
+							
+							arbiter.changePage_Pop(div_MapPage);
 						});
 																		 
 					}, arbiter.errorSql, function(){});
@@ -547,6 +551,27 @@ var Arbiter = {
 			});
 												
 		}, arbiter.errorSql, function(){});
+	},
+	
+	addLayersToMap: function(_arbiter) {
+		console.log("===Test===");
+		
+		for(var index in _arbiter.currentProject.serverList) {
+			console.log("Server " + index + ": " + _arbiter.currentProject.serverList[index]);
+			
+			var newVectorLayer = new OpenLayers.Layer.Vector(index, {});
+			console.log(newVectorLayer);
+			map.addLayer(newVectorLayer);
+			console.log("added");
+		}
+	},
+	
+	getAssociativeArraySize: function(obj) {
+		var size = 0, key;
+		for (key in obj) {
+			if (obj.hasOwnProperty(key)) size++;
+		}
+		return size;
 	},
 	
 	onClick_EditServers: function() {
