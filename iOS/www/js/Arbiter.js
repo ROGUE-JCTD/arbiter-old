@@ -421,11 +421,9 @@ var Arbiter = {
 			
 			for(var i = 0; i < entries.length;i++){
 				li = '<li><a class="project-list-view">' + entries[i].name + '</a></li>';
-				var name = entries[i].name;
+				
 				arbiter.appendToListView(li, jqProjectsList, function(event){
-					console.log('added project: "' + name + '"');
-										  
-					arbiter.setCurrentProject(name, arbiter);
+					arbiter.setCurrentProject($(this).find('a').text(), arbiter);
 				});
 			}
 		};
@@ -454,6 +452,7 @@ var Arbiter = {
 				var serverObj;
 				for(var i = 0; i < res.rows.length; i++){
 					serverObj = res.rows.item(i);
+						  console.log(serverObj);
 						  console.log("before setting serverList");
 					arbiter.currentProject.serverList[serverObj.name] = {
 						  layers: {},
@@ -461,6 +460,61 @@ var Arbiter = {
 						  url: serverObj.url,
 						  username: serverObj.username
 					};
+					
+					var _serverId = serverObj.id;
+					arbiter.currentProject.variablesDatabase.transaction(function(tx){
+						var serverName = serverObj.name;
+						var serverId = serverObj.id;												 
+						console.log("server: " + serverName + " - " + serverId);
+						console.log("SELECT * FROM layers where server_id=" + serverId);
+						tx.executeSql("SELECT * FROM layers where server_id=" + serverId, [], function(tx, res){
+							var layer;
+							var table_name;
+									  
+							for(var j = 0; j < res.rows.length; j++){
+								console.log("server name: " + serverName + " - " + serverId);
+								layer = res.rows.item(j);
+								arbiter.currentProject.serverList[serverName].layers[layer.layername] = {
+									featureNS: layer.featureNS,
+									featureType: layer.f_table_name,
+									typeName: layer.typeWithPrefix,
+									attributes: []
+								};
+									
+								table_name = layer.f_table_name;
+								arbiter.currentProject.dataDatabase.transaction(function(tx){
+									var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name='" + table_name + "';";
+									
+									tx.executeSql(geomColumnsSql, [], function(tx, res){
+										var geomName;
+										
+										if(res.rows.length){ //should only be 1 right now
+											geomName = res.rows.item(0).f_geometry_column;
+												
+											arbiter.currentProject.dataDatabase.transaction(function(tx){
+												var tableSelectSql = "PRAGMA table_info (" + table_name + ");";
+																						
+												arbiter.currentProject.serverList[serverName].layers[layer.layername].geomName = geomName;
+												arbiter.currentProject.serverList[serverName].layers[layer.layername].srsName = res.rows.item(0).srid;
+												arbiter.currentProject.serverList[serverName].layers[layer.layername].geometryType = res.rows.item(0).geometry_type;
+												
+												tx.executeSql(tableSelectSql, [], function(tx, res){
+													var attrName;
+													for(var h = 0; h < res.rows.length;h++){
+														attrName = res.rows.item(h).name;
+														console.log("geomName: " + geomName);
+														if(attrName != 'fid' && attrName != geomName)
+															arbiter.currentProject.serverList[serverName].layers[layer.layername].attributes.push(res.rows.item(h).name);
+														}
+													});													  
+											}, arbiter.errorSql, function(){});
+										}
+									});
+								}, arbiter.errorSql, function(){});
+							}
+						});
+																		 
+					}, arbiter.errorSql, function(){});
 				}
 			});
 			
@@ -595,10 +649,11 @@ var Arbiter = {
 		var createDirtyTableSql = "CREATE TABLE IF NOT EXISTS dirty_table (id integer primary key, f_table_name text not null, fid text not null);";
 		
 		var createSettingsTableSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null, aoi_left text not null, " +
-		"aoi_bottom text not null, aoi_right text not null, aoi_top text not null);"
+		"aoi_bottom text not null, aoi_right text not null, aoi_top text not null);";
 		
 		var createLayersTableSql = "CREATE TABLE IF NOT EXISTS layers (id integer primary key, server_id integer, " + 
-		"layername text not null, f_table_name text not null, FOREIGN KEY(server_id) REFERENCES servers(id));";
+		"layername text not null, f_table_name text not null, featureNS text not null, typeWithPrefix text not null, " +
+		"FOREIGN KEY(server_id) REFERENCES servers(id));";
 		
 		tx.executeSql(createServersSql);
 		
@@ -656,8 +711,10 @@ var Arbiter = {
 						
 						for(var y in serverList[name].layers){
 							layer = serverList[name].layers[y];
-							insertLayerSql = "INSERT INTO layers (server_id, layername, f_table_name) VALUES (" + res.insertId + 
-								  ", " + arbiter.squote(y) + ", " + arbiter.squote(layer.featureType) + ");";
+								  
+							insertLayerSql = "INSERT INTO layers (server_id, layername, f_table_name, featureNS, typeWithPrefix) VALUES (" + res.insertId + 
+								  ", " + arbiter.squote(y) + ", " + arbiter.squote(layer.featureType) + ", " + arbiter.squote(layer.featureNS) + 
+								  ", " + arbiter.squote(layer.typeName) + ");";
 							
 							arbiter.currentProject.variablesDatabase.transaction(function(tx){
 								tx.executeSql(insertLayerSql);															   
@@ -670,10 +727,15 @@ var Arbiter = {
 									", " + arbiter.squote(layer.srsName) + ");";
 																			
 								attributes = "fid text primary key, " + layer.geomName + " text not null";
-																			
+								
+								for(var i = 0; i < layer.attributes.length; i++){
+									attributes += ", " + layer.attributes[i] + " text not null";
+								}
+								
 								createFeatureTableSql = "CREATE TABLE IF NOT EXISTS " + layer.featureType +
 									" (" + attributes + ");";
-																			
+									
+																			console.log(createFeatureTableSql);
 								tx.executeSql(insertGeometryColumnRowSql);
 																			
 								tx.executeSql(createFeatureTableSql);
@@ -698,9 +760,8 @@ var Arbiter = {
 						//add to the list of projects on success
 						var li = "<li><a class='project-list-item'>" + arbiter.currentProject.name + "</a></li>";
 						
-						var name = arbiter.currentProject.name;
 						arbiter.appendToListView(li, jqProjectsList, function(event){
-							arbiter.setCurrentProject(name, arbiter);
+							arbiter.setCurrentProject($(this).find('a').text(), arbiter);
 						});
 																		 
 						arbiter.changePage_Pop(div_ProjectsPage);
