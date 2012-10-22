@@ -77,6 +77,9 @@ var jqLayerSubmit;
 var jqProjectsList;
 var jqEditorTab;
 
+var jqAddFeature;
+var jqEditFeature;
+
 /* ============================ *
  * 			 Language
  * ============================ */
@@ -103,6 +106,8 @@ var Arbiter = {
 	currentProject: {
 		name: "default",
 		aoi: null,
+		variablesDatabase: null,
+		dataDatabase: null,
 		serverList: {}
 	},
 	
@@ -169,6 +174,9 @@ var Arbiter = {
 		jqLayerNickname = $('#layernickname');
 		jqLayerSubmit = $('#addLayerSubmit');
 		jqProjectsList = $('ul#idProjectsList');
+		
+		jqAddFeature	 = $('#addPointFeature');
+		jqEditFeature	 = $('#editPointFeature');
 		
 		div_Popup.live('pageshow', this.PopulatePopup);
 		//div_Popup.live('pagehide', this.DestroyPopup);
@@ -329,6 +337,14 @@ var Arbiter = {
 			}
 		});
 		
+		jqAddFeature.mouseup(function(event){
+			console.log("Add Feature");
+		});
+		
+		jqEditFeature.mouseup(function(event){
+			console.log("Edit Feature");
+		});
+		
 		jqEditorTab.mouseup(function(event){
 			//arbiter.pullFeatures(false);
 			arbiter.ToggleEditorMenu();
@@ -357,22 +373,29 @@ var Arbiter = {
 	
 	ToggleEditorMenu: function() {
 		if(!editorOpen) {
-			editorOpen = true;
 			this.OpenEditorMenu();
 		} else {
-			editorOpen = false;
 			this.CloseEditorMenu();
 		}
 	},
 
 	OpenEditorMenu: function() {
-		$("#idEditorMenu").animate({ "left": "20%" }, 250);
-		$("#editorTab").animate({ "right": "80%" }, 250);
+		editorOpen = true;
+		$("#idEditorMenu").animate({ "left": "72px" }, 50);
+		var width;
+		
+		if(this.isOrientationPortrait()) {
+			width = screen.width - 72;
+		} else {
+			width = screen.height - 72;
+		}
+		$("#editorTab").animate({ "right": width }, 50);
 	},
 	
 	CloseEditorMenu:function() {
-		$("#idEditorMenu").animate({ "left": "100%" }, 250);
-		$("#editorTab").animate({ "right": "0%" }, 250);
+		editorOpen = false;
+		$("#idEditorMenu").animate({ "left": "100%" }, 50);
+		$("#editorTab").animate({ "right": "0px" }, 50);
 	},
 	
 	PopulateProjectsList: function() {
@@ -780,11 +803,33 @@ var Arbiter = {
 		this.fileSystem.root.getDirectory("Projects/" + this.currentProject.name, {create: true, exclusive: false}, writeToDatabases, error);
 	},
 	
+	getProjectDirectory: function(_projectName, _successCallback, _errorCallback) {
+		this.fileSystem.root.getDirectory(_projectName, null, _successCallback, _errorCallback);
+	},
+	
+	failedGetProjectDirectory: function(error) {
+		console.log("Failed to read Project Directory.");
+	},
+	
+	parseProjectFromDirectory: function(_dir) {
+		
+	},
+	
 	onClick_OpenProject: function(_div) {
 		console.log("OpenProject: " + _div.id);
 		var projectID = _div.id;
 
 		//TODO: Load project information from click!
+		//TODO: ERROR CHECK
+		console.log("Project Opened: " + this.currentProject.name);
+		var test = Cordova.openDatabase(this.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
+		console.log(test);
+		
+		//Set the title to the Project Name
+		$('#projectName').text(this.currentProject.name);
+		
+		//Reset Project page if needed
+		this.CloseEditorMenu();
 		
 		this.changePage_Pop(div_MapPage);
 	},
@@ -1475,6 +1520,30 @@ var Arbiter = {
 	
 	changePage_Pop: function(_div) {
 		$.mobile.changePage(_div, "pop");
+	},
+	
+	getOrientation: function() {
+		return window.orientation;
+	},
+	
+	/*
+	 Returns true if the application is in Landscape mode.
+	 */
+	isOrientationLandscape: function() {
+		if(this.getOrientation() == 90 || this.getOrientation() == -90)
+			return true;
+		else
+			return false;
+	},
+	
+	/*
+	 Returns true if the application is in Portrait mode.
+	 */
+	isOrientationPortrait: function() {
+		if(this.getOrientation() == 0 || this.getOrientation() == 180)
+			return true;
+		else
+			return false;
 	},
 	
 	//===================
