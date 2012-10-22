@@ -755,19 +755,27 @@ var Arbiter = {
 									", " + arbiter.squote(layer.geomName) + ", " + arbiter.squote(layer.geometryType) + 
 									", " + arbiter.squote(layer.srsName) + ");";
 																			
-								attributes = "fid text primary key, " + layer.geomName + " text not null";
+								attributes = "id integer primary key, fid text unique, " + layer.geomName + " text not null";
 								
 								for(var i = 0; i < layer.attributes.length; i++){
-									attributes += ", " + layer.attributes[i] + " text not null";
+									attributes += ", " + layer.attributes[i] + " text";
 								}
 								
 								createFeatureTableSql = "CREATE TABLE IF NOT EXISTS " + layer.featureType +
 									" (" + attributes + ");";
 									
-																			console.log(createFeatureTableSql);
+								
 								tx.executeSql(insertGeometryColumnRowSql);
+																	
+								var typeName = layer.typeName;
+								var geomName = layer.geomName;
+								var featureType = layer.featureType;
+								var srsName = layer.srsName;
+								var url = serverList[name].url;
 																			
-								tx.executeSql(createFeatureTableSql);
+								tx.executeSql(createFeatureTableSql, [], function(tx, res){
+									arbiter.pullFeatures(typeName, geomName, featureType, srsName, url);														  
+								});
 							}, arbiter.errorSql, function(){});
 						}
 					});
@@ -964,21 +972,20 @@ var Arbiter = {
 	},
 	
 	//override: Bool, should override
-	pullFeatures: function(override){
+	pullFeatures: function(featureType, geomName, f_table_name, srs, serverUrl){
 		var arbiter = this;
-		var currentBounds = map.calculateBounds().transform(WGS84_Google_Mercator, WGS84);
+		var layerNativeSRS = new OpenLayers.Projection(srs);
+		var currentBounds = arbiter.currentProject.aoi.clone().transform(WGS84_Google_Mercator, layerNativeSRS);
 		
-		var featureType = 'opengeo:hospitals_try';
-		var propertyName = 'geom';
 		var postData = '<wfs:GetFeature service="WFS" version="1.0.0" outputFormat="GML2" ' +
-		'xmlns:usa="http://usa.opengeo.org" xmlns:wfs="http://www.opengis.net/wfs" ' +
+		'xmlns:wfs="http://www.opengis.net/wfs" ' +
 		'xmlns:ogc="http://www.opengis.net/ogc" xmlns:gml="http://www.opengis.net/gml" ' +
 		'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wfs ' +
 		'http://schemas.opengis.net/wfs/1.0.0/WFS-basic.xsd"> ' +
 		'<wfs:Query typeName="' + featureType + '">' +
 		'<ogc:Filter>' +
 		'<ogc:BBOX>' +
-		'<ogc:PropertyName>' + propertyName + '</ogc:PropertyName>' +
+		'<ogc:PropertyName>' + geomName + '</ogc:PropertyName>' +
 		'<gml:Box srsName="http://www.opengis.net/gml/srs/epsg.xml#4326">' +
 		'<gml:coordinates>' + currentBounds.left + ',' + currentBounds.bottom +
 		' ' + currentBounds.right + ',' + currentBounds.top + '</gml:coordinates>' +
@@ -989,7 +996,7 @@ var Arbiter = {
 		'</wfs:GetFeature>';
 		
 		var request = new OpenLayers.Request.POST({
-			url: map.layers[2].protocol.url,
+			url: serverUrl + "/wfs",
 			data: postData,
 			headers: {
 				'Content-Type': 'text/xml;charset=utf-8'
@@ -1001,13 +1008,9 @@ var Arbiter = {
 				
 				var features = gmlReader.read(response.responseText);
 				
-				for(var i = 0; i < features.length; i++){
-					if(!map.layers[2].getFeatureByFid(features[i].fid) || override){
-						features[i].geometry.transform(WGS84, WGS84_Google_Mercator);
-						arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [features[i]], "hospitals");
-						map.layers[2].addFeatures([features[i]]);
-					}
-				}
+				console.log(features);
+				
+				arbiter.insertFeaturesIntoTable(features, f_table_name, geomName);
 			},
 			failure: function(response){
 				console.log('something went wrong');
@@ -1207,19 +1210,51 @@ var Arbiter = {
 		}
 	},
 	
-	insertFeaturesIntoTable: function(db, features, layerName){
+	insertFeaturesIntoTable: function(features, f_table_name, geomName){
+		var arbiter = this;
+		var db = arbiter.currentProject.dataDatabase;
+		
+		for(var i = 0; i < features.length; i++){
+			var feature = features[i];
+			db.transaction(function(tx){
+				var geometry = wktFormatter.write(feature);
+				var propertiesList = "fid, " + geomName;
+				var propertyValues = arbiter.squote(feature.fid) + ", " + 
+						   arbiter.squote(geometry);
+						   
+				for(var x in feature.attributes){
+					propertiesList += ", " + x;
+					
+					propertyValues += ", " + arbiter.squote(features[i].attributes[x]);
+				}
+				
+				var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
+					propertyValues + ");";
+				
+				console.log(insertSql);
+						   
+				tx.executeSql(insertSql, [], function(tx, res){
+										 
+				});
+			}, arbiter.errorSql, function(){});
+		}
+	},
+	
+	/*insertFeaturesIntoTable: function(db, features, layerName, geometryColumn){
 		var arbiter = this;
 		var query = function(tx){
 			var lists = arbiter.getCommaDelimitedLists(features[0].attributes); // Need to check to make sure the attributes are in there even if not set
 			
-			tx.executeSql("CREATE TABLE IF NOT EXISTS " + layerName + " (id integer primary key, fid unique, geometry TEXT NOT NULL, " +
+			/*tx.executeSql("CREATE TABLE IF NOT EXISTS " + layerName + " (id integer primary key, fid unique, geometry TEXT NOT NULL, " +
 						  lists.propertiesWithType + ");");
 			
+			console.log("CREATE TABLE IF NOT EXISTS " + layerName + " (id integer primary key, fid unique, geometry TEXT NOT NULL, " +
+						lists.propertiesWithType + ");");/
 			for(var i = 0; i < features.length; i++){
 				var attributeLists = arbiter.getCommaDelimitedLists(features[i].attributes);
 				
 				var clonedfeature = features[i].clone();
-				clonedfeature.geometry.transform(WGS84_Google_Mercator, WGS84);
+				//clonedfeature.geometry.transform(WGS84_Google_Mercator, WGS84);
 				var fid = features[i].fid;
 				var geom = arbiter.squote(wktFormatter.write(clonedfeature));
 				var selectsql = "SELECT * FROM " + layerName + " WHERE fid='" + features[i].fid + "';";
@@ -1255,8 +1290,8 @@ var Arbiter = {
 								//if its an update, insert feature into the table keeping track of dirty features
 								tx.executeSql(updatesql, [], function(tx, res){
 									arbiter.variableDatabase.transaction(function(tx){
-										tx.executeSql("CREATE TABLE IF NOT EXISTS " + modifiedTable + " (id integer primary key, fid unique, " +
-													  "layer text not null);");
+										/*tx.executeSql("CREATE TABLE IF NOT EXISTS " + modifiedTable + " (id integer primary key, fid unique, " +
+													  "layer text not null);");/
 												
 										tx.executeSql("INSERT INTO " + modifiedTable + " (fid, layer) VALUES ('" +
 													  fid + "', '" + layerName + "');");
@@ -1267,7 +1302,7 @@ var Arbiter = {
 							}, arbiter.errorSql, function(){});
 						}else{
 							  
-							  var insertsql = "INSERT INTO " + layerName + " (fid, geometry, " + lists.properties 
+							  var insertsql = "INSERT INTO " + layerName + " (fid, " + geometryColumn + ", " + lists.properties 
 							  + ") VALUES ('" + fid + "', " + geom + ", " + attributeLists.values + ");";
 							
 							  console.log(insertsql);
@@ -1277,7 +1312,11 @@ var Arbiter = {
 							  console.log("insert undefined");
 							  }
 							db.transaction(function(tx){
-										   tx.executeSql(insertsql);					 
+										   tx.executeSql(insertsql, [], function(tx, res){
+														 console.log("successful insert");
+														 }, function(tx, err){
+														 console.log(err);
+														 });					 
 							}, arbiter.errorSql, function(){});
 						}
 				});
@@ -1286,7 +1325,7 @@ var Arbiter = {
 		};
 		
 		db.transaction(query, this.errorSql, function(){});
-	},
+	},*/
 	
 	SubmitAttributes: function(){
 		if(selectedFeature){
