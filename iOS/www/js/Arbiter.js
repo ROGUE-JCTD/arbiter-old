@@ -358,15 +358,6 @@ var Arbiter = {
 			arbiter.populateAddServerDialog($(this).text());
 		});
 		
-		$(".project-list-item").mouseup(function(event){
-			var projectName = $(this).text();
-			console.log("Opened Project: " + projectName);
-			//TODO: Load project information from click!
-										
-			arbiter.changePage_Pop(div_MapPage);								
-		});
-		
-		this.readLayerFromDb(this.variableDatabase, "hospitals");
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
     },
@@ -813,26 +804,7 @@ var Arbiter = {
 	parseProjectFromDirectory: function(_dir) {
 		
 	},
-	
-	onClick_OpenProject: function(_div) {
-		console.log("OpenProject: " + _div.id);
-		var projectID = _div.id;
-
-		//TODO: Load project information from click!
-		//TODO: ERROR CHECK
-		console.log("Project Opened: " + this.currentProject.name);
-		var test = Cordova.openDatabase(this.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
-		console.log(test);
 		
-		//Set the title to the Project Name
-		$('#projectName').text(this.currentProject.name);
-		
-		//Reset Project page if needed
-		this.CloseEditorMenu();
-		
-		this.changePage_Pop(div_MapPage);
-	},
-	
 	validateAddLayerSubmit: function(){
 		var valid = true;
 		
@@ -1137,6 +1109,7 @@ var Arbiter = {
 		return feature;
 	},
 		
+	/*
 	readLayerFromDb: function(db, _spatialFilter){
 		
 		if(db){
@@ -1200,6 +1173,7 @@ var Arbiter = {
 			db.transaction(query, this.errorSql, function(){});
 		}
 	},
+	*/
 	
 	insertFeaturesIntoTable: function(db, features, layerName){
 		var arbiter = this;
