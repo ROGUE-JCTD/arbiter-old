@@ -1186,17 +1186,15 @@ var Arbiter = {
 	readLayerFromDb: function(tableName, layerName, geomName, srsName){
 		var arbiter = this;
 		var layer = map.getLayersByName(layerName + "-wfs")[0];
-		
+		console.log("readLayerFromDb: " + tableName + ", " + layerName + ", " + geomName + ", " + srsName);
 		arbiter.currentProject.dataDatabase.transaction(function(tx){
 			tx.executeSql("SELECT * FROM " + tableName, [], function(tx, res){
-				var row;
-				var attributes = {};
-				var feature;
-				var fid;
-						  
 				for(var i = 0; i < res.rows.length;i++){
-					row = res.rows.item(i);
-					
+					var row = res.rows.item(i);
+					var attributes = {};
+					var feature;
+					var fid;
+						  
 					for(var x in row){
 						if(x != "id"){
 							if(x == geomName){
