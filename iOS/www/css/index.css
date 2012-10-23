@@ -105,18 +105,41 @@ html, body {
 	background-color:rgba(0, 60, 136, 0.496094);
 	border-top-left-radius: 4px;
 	border-bottom-left-radius: 4px;
+	opacity: 1.0;
 }
 
 #idEditorMenu {
 	overflow: scroll;
-	left: 72px;
+	left: 100%;
+	right: 0px;
+	height   : 100%;
+	top:0px;
+	background-color:rgba(0, 60, 136, 0.496094);
+	opacity: 1.0;
+}
+
+#attributeTab {
+	position:absolute;
+	z-index:1005;
+	right:0px;
+	top:44px;
+	width:32px;
+	height:32px;
+	background-color:rgba(136, 60, 0, 0.496094);
+	border-top-left-radius: 4px;
+	border-bottom-left-radius: 4px;
+	opacity: 0.0;
+}
+
+#idAttributeMenu {
+	overflow: scroll;
+	left: 100%;
 	right: 0px;
 	height   : 100%;
 	top:0px;
 	left: 100%;
-	background-color:rgba(0, 60, 136, 0.496094);
+	background-color:rgba(136, 60, 0, 0.496094);
 }
-
 
 .olControlZoom{
 	left:0px !important;
@@ -146,6 +169,17 @@ html, body {
 	background-color:rgba(0, 60, 136, 0.496094);
 	border-bottom-left-radius: 4px;
 	border-bottom-right-radius: 4px;
+}
+
+#syncUpdates {
+	position:absolute;
+	z-index:1005;
+	left:3px;
+	bottom:11px;
+	width:32px;
+	height:32px;
+	background-color:rgba(0, 60, 136, 0.496094);
+	border-radius: 5px;
 }
 
 .invalid-field{

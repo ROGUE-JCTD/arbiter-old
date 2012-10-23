@@ -59,7 +59,6 @@ var jqSaveButton;
 var jqAttributesButton;
 var jqAddLayerButton;
 var jqLayerURL;
-//var jqAddLayerSubmit;
 var jqCreateFeature;
 var jqNewProjectName;
 var jqToServersButton;
@@ -76,9 +75,11 @@ var jqLayerNickname;
 var jqLayerSubmit;
 var jqProjectsList;
 var jqEditorTab;
+var jqAttributeTab;
 
 var jqAddFeature;
 var jqEditFeature;
+var jqSyncUpdates;
 
 /* ============================ *
  * 			 Language
@@ -93,7 +94,9 @@ var isFirstTime = true;
 var CurrentLanguage = LanguageType.ENGLISH;
 var globalresult;
 
-var editorOpen = false;
+var tabOpen = false;
+var editorTabOpen = false;
+var attributeTabOpen = false;
 
 var Arbiter = {
 	
@@ -110,7 +113,7 @@ var Arbiter = {
 		dataDatabase: null,
 		serverList: {}
 	},
-	
+
 	isOnline: false,
 	
     Initialize: function() {
@@ -159,7 +162,6 @@ var Arbiter = {
 		jqLayerURL = $('#layerurl');
 		//jqAddLayerSubmit = $('#addLayerSubmit');
 		jqCreateFeature = $('#createFeature');
-		jqEditorTab = $('#editorTab');
 		jqNewProjectName = $('#newProjectName');
 		jqToServersButton = $('#toServersButton');
 		jqNewUsername = $('#newUsername');
@@ -174,12 +176,12 @@ var Arbiter = {
 		jqLayerNickname = $('#layernickname');
 		jqLayerSubmit = $('#addLayerSubmit');
 		jqProjectsList = $('ul#idProjectsList');
+		jqEditorTab = $('#editorTab');
+		jqAttributeTab = $('#attributeTab');
 		
 		jqAddFeature	 = $('#addPointFeature');
 		jqEditFeature	 = $('#editPointFeature');
-		
-		div_Popup.live('pageshow', this.PopulatePopup);
-		//div_Popup.live('pagehide', this.DestroyPopup);
+		jqSyncUpdates	 = $('#syncUpdates');
 		
 		div_ProjectsPage.live('pageshow', this.PopulateProjectsList);
 		div_ServersPage.live('pageshow', this.PopulateServersList);
@@ -261,8 +263,6 @@ var Arbiter = {
 					}
 				}
 			}
-						 
-			//arbiter.addLayersToMap(arbiter);
 		});
 		
 		div_AreaOfInterestPage.live('pageshow', function(){
@@ -374,9 +374,22 @@ var Arbiter = {
 			console.log("Edit Feature");
 		});
 		
+		jqSyncUpdates.mouseup(function(event){
+			console.log("Sync Updates");
+		});
+		
 		jqEditorTab.mouseup(function(event){
 			//arbiter.pullFeatures(false);
 			arbiter.ToggleEditorMenu();
+		});
+		
+		jqAttributeTab.mouseup(function(event){
+			//arbiter.pullFeatures(false);
+			if(attributeTab) {
+				if(selectedFeature) {
+					arbiter.newWFSLayer.unselected(selectedFeature);
+				}
+			}
 		});
 		
 		$(".layer-list-item").mouseup(function(event){
@@ -392,7 +405,7 @@ var Arbiter = {
     },
 	
 	ToggleEditorMenu: function() {
-		if(!editorOpen) {
+		if(!editorTabOpen) {
 			this.OpenEditorMenu();
 		} else {
 			this.CloseEditorMenu();
@@ -400,7 +413,7 @@ var Arbiter = {
 	},
 
 	OpenEditorMenu: function() {
-		editorOpen = true;
+		editorTabOpen = true;
 		$("#idEditorMenu").animate({ "left": "72px" }, 50);
 		var width;
 		
@@ -413,9 +426,36 @@ var Arbiter = {
 	},
 	
 	CloseEditorMenu:function() {
-		editorOpen = false;
+		editorTabOpen = false;
 		$("#idEditorMenu").animate({ "left": "100%" }, 50);
 		$("#editorTab").animate({ "right": "0px" }, 50);
+	},
+	
+	OpenAttributesMenu: function() {
+		attributeTab = true;
+		$("#idAttributeMenu").animate({ "left": "72px" }, 50);
+		var width;
+		
+		if(this.isOrientationPortrait()) {
+			width = screen.width - 72;
+		} else {
+			width = screen.height - 72;
+		}
+		$("#attributeTab").animate({ "right": width }, 50);
+		$("#attributeTab").animate({ "opacity": "1.0" }, 0);
+		$("#editorTab").animate({ "opacity": "0.0" }, 0);
+		$("#idEditorMenu").animate({ "opacity": "0.0" }, 0);
+		
+		this.PopulatePopup();
+	},
+	
+	CloseAttributesMenu: function() {
+		attributeTab = false;
+		$("#idAttributeMenu").animate({ "left": "100%" }, 50);
+		$("#attributeTab").animate({ "right": "0px" }, 50);
+		$("#attributeTab").animate({ "opacity": "0.0" }, 0);
+		$("#editorTab").animate({ "opacity": "1.0" }, 0);
+		$("#idEditorMenu").animate({ "opacity": "1.0" }, 0);
 	},
 	
 	PopulateProjectsList: function() {
@@ -579,19 +619,6 @@ var Arbiter = {
 			});
 												
 		}, arbiter.errorSql, function(){});
-	},
-	
-	addLayersToMap: function(_arbiter) {
-		console.log("===Test===");
-		
-		for(var index in _arbiter.currentProject.serverList) {
-			console.log("Server " + index + ": " + _arbiter.currentProject.serverList[index]);
-			
-			var newVectorLayer = new OpenLayers.Layer.Vector(index, {});
-			console.log(newVectorLayer);
-			map.addLayer(newVectorLayer);
-			console.log("added");
-		}
 	},
 	
 	getAssociativeArraySize: function(obj) {
@@ -1478,29 +1505,20 @@ var Arbiter = {
 		$.mobile.changePage("#popup", "pop");
 	},*/
 	
-	PopulatePopup: function(event, ui) {
+	PopulatePopup: function() {
 		if(selectedFeature){
 			var li = "";
 			for(var attr in selectedFeature.attributes){
-			
-				//if(attr != "Image") {
-					//li += "<li><div>" + attr + ":</div><div> - "
-					//+ selectedFeature.attributes[attr] + "</div></li>";
-					
-					li += "<li><div>";
+					li += "<li style='padding:5px; border-radius: 4px;'><div>";
 					li += "<label for='textinput" + selectedFeature.attributes[attr] + "'>";
 					li += attr;
 					li += "</label>";
 					li += "<input name='' id='textinput-" + attr + "' placeholder='' value='";
 					li += selectedFeature.attributes[attr];
 					li += "' type='text'></div></li>";
-				//}
 			}
-			
-			/*li += "<li><div>" + "Location" + ":</div><div> - "
-			+ selectedFeature.geometry.getBounds().getCenterLonLat() + "</div></li>";*/
-			
-			$("ul#details-list").empty().append(li).listview("refresh");
+
+			$("ul#attribute-list").empty().append(li).listview("refresh");
 		}
 	},
 	
@@ -1581,8 +1599,15 @@ var Arbiter = {
 			});
 			
 			newWFSLayer.events.register("featureselected", null, function(event){
-				console.log(event);
+				console.log("Feature selected: " + event);
 				selectedFeature = event.feature;
+				arbiter.OpenAttributesMenu();
+			});
+			
+			newWFSLayer.events.register("featureunselected", null, function(event){
+				console.log("Feature unselected: " + event);
+				selectedFeature = null;
+				arbiter.CloseAttributesMenu();
 			});
 			
 			saveStrategy.events.register("success", '', function(event){
@@ -1721,7 +1746,7 @@ var Arbiter = {
 	onOffline: function() {
 		console.log("Arbiter: Offline");
 		if(this.isOnline){
-			this.Online = false;
+			this.isOnline = false;
 		}
 	},
 	

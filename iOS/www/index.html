@@ -43,8 +43,6 @@
 		<script type="text/javascript" src="js/jquery.localize.js"></script>
 		<script type="text/javascript" src="OpenLayers-2.12/OpenLayers.js"></script>
 		<script type="text/javascript" src="js/jquery.base64.min.js"></script>
-		<!--<script type="text/javascript" src="OpenLayers-2.12/lib/OpenLayers/Strategy/Filter.js"></script>
-		<script type="text/javascript" src="OpenLayers-2.12/lib/OpenLayers/Control/WMSGetFeatureInfo.js"></script>-->
         <title>Hello Cordova</title>
     </head>
     <body>
@@ -101,7 +99,6 @@
 				</div>
 				
 				<ul data-role="listview" id='idProjectsList' data-inset="true">
-					<li><a class="project-list-item">TempProject</a></li>
 				<ul/>
 			</div>
 			<!-- /Content -->
@@ -271,42 +268,26 @@
 						<a data-role="button" id="1" onClick="Arbiter.CloseEditorMenu()">[Temp] Close Editor</a>
 					</div>
 				</div>
+				
+				<div id="idAttributeMenu" style="position:absolute;z-index:2000;">
+					<div data-role="content" style="padding: 5px">
+						<ul id="attribute-list" data-role="listview" data-mini="true" style="padding:20px;"></ul>
+						
+						<input type="submit" value="Save" data-mini="true" onClick="Arbiter.SubmitAttributes()">
+					</div>
+				</div>
 			
 				<div id="map" style="position:relative">
 					<div id="editorTab"><div class="ui-icon-glyphish-landscape" style="padding: 7px 4px;"></div></div>
+					<div id="attributeTab"><div class="ui-icon-glyphish-pin" style="padding: 6px 12px;"></div></div>
 					
 					<div id="addPointFeature"><div class="ui-icon-glyphish-target" style="padding: 2px 2px;"></div></div>
 					<div id="editPointFeature"><div class="ui-icon-glyphish-stickynote" style="padding: 5px 5px;"></div></div>
+					
+					<div id="syncUpdates"><div class="ui-icon-glyphish-stopwatch" style="padding: 3px 5px;"></div></div>
 				</div>
 			</div>
 		</div>
-		
-		<!--
-		 // =======================
-		 //		Layer Page
-		 // =======================
-		 -->
-		<!--<div id="layerPage" data-role="page" data-theme="a" class="Page">
-			<div data-position="inline" data-role="header">
-				<h1>Layers</h1>
-				<a id="addLayerBtn" data-icon="plus" data-iconpos="notext" class="ui-btn-right"></a>
-			</div>
-			<div data-role="content">
-				<ul id="layer-list" data-role="listview">
-				</ul>
-			</div>
-			<!-- Footer
-			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
-				<div data-role="navbar" data-iconpos="top">
-					<ul>
-						<li><a href="#idMapPage" data-icon="back">	<div data-localize="page.map">Map</div></a></li>
-						<li><a href="#" data-icon="info" class="ui-btn-active">	<div data-localize="page.layers">Layers</div></a></li>
-						<li><a href="#more-dialog" data-icon="search">	<div data-localize="page.search">Search</div></a></li>
-						<li><a href="#idSettingsPage" data-icon="gear">	<div data-localize="page.settings">Settings</div></a></li>
-					</ul>
-				</div>
-			</div>
-		</div>-->
 		
 		<!--
 		 // =====================================================================
@@ -328,7 +309,7 @@
 			
 			<!-- Content -->
 			<div data-role="content" class="ArbiterSettingsPageContent" id='idArbiterSettingsPageContent'>
-				
+				<a href="#idWelcomePage"><input type="submit" value="Choose Language" data-mini="true"></a>
 			</div>
 			
 			<!-- Footer -->
@@ -480,45 +461,6 @@
 				<input type="submit" value="Save" data-mini="true" onClick="Arbiter.SubmitAttributes()">
 			</div>
         </div>
-		
-		<!--
-		 // =======================
-		 //		Add Layer Dialog
-		 // =======================
-		 -->
-		<!--<div id="addLayerDialog" data-role="dialog" data-theme="a">
-            <div data-position="inline" data-role="header">
-                <h1>Add Layer</h1>
-            </div>
-            <div  data-role="content">
-                <form action="#" method="get">
-					<div data-role="fieldcontain" class="ui-hide-label">
-						<label for="layerurl">URL</label>
-						<input type="url" name="layerurl" id="layerurl" value="" placeholder="URL to GeoServer *" />
-					</div>
-					<!--<div data-role="fieldcontain" class="ui-hide-label">
-						<label for="featureType">Feature Type</label>
-						<input type="text" name="featureType" id="featureType" value="" placeholder="Name of the feature type *" />
-					</div>
-					<div data-role="fieldcontain" class="ui-hide-label">
-						<label for="featureNS">Layer NS</label>
-						<input type="url" name="featureNS" id="featureNS" value="" placeholder="Layer Namespace *" />
-					</div>
-					<div data-role="fieldcontain" class="ui-hide-label">
-						<label for="layernickname">Layer Nickname</label>
-						<input type="text" name="layernickname" id="layernickname" value="" placeholder="Layer Nickname *" />
-					</div>
-					<div data-role="fieldcontain">
-						<label for="layerselect" class="select">Choose a layer:</label>
-						<select name="layerselect" id="layerselect">
-						</select>
-					</div>
-				</form>
-            </div>
-			<div data-role="content" style="padding: 15px">
-				<input type="submit" id="addLayerSubmit" value="Submit Layer" data-mini="true">
-			</div>
-        </div>-->
 		
 		<!-- Scripts -->
         <script type="text/javascript">
