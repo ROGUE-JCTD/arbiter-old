@@ -1191,26 +1191,24 @@ var Arbiter = {
 			tx.executeSql("SELECT * FROM " + tableName, [], function(tx, res){
 				for(var i = 0; i < res.rows.length;i++){
 					var row = res.rows.item(i);
-					var attributes = {};
-					var feature;
-					var fid;
+						  
+					var feature = wktFormatter.read(row[geomName]);
+					feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
+					feature.attributes = {};
 						  
 					for(var x in row){
-						if(x != "id"){
-							if(x == geomName){
-								feature = wktFormatter.read(row[x]);
-								
-								feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
-							}else if(x == "fid"){
-							  fid = row[x];
-							}else{
-								attributes[x] = row[x];
-							}
+						if(x != "id" && x != "fid" && x != geomName){
+							feature.attributes[x] = row[x];
 						}
 					}
 						  
-					feature.attributes = attributes;
-					feature.fid = fid;	  
+					if(row.fid)
+						feature.fid = row.fid;
+					else{
+						feature.state = OpenLayers.State.INSERT;
+						feature.rowid = row.id;
+					}
+					
 					layer.addFeatures([feature]);
 				}
 						  
@@ -1659,8 +1657,8 @@ var Arbiter = {
 				for(var i = 0; i < attributes.length;i++){
 					event.feature.attributes[attributes[i]] = "";							  
 				}
-				
-				console.log("new attributes", event.feature.attributes);
+				event.feature.fid = '';
+				console.log("new feature", event.feature);
 				arbiter.insertFeaturesIntoTable([event.feature], meta.featureType, meta.geomName, meta.srsName, true);	
 			});
 			
