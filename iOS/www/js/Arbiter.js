@@ -233,9 +233,36 @@ var Arbiter = {
 					center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
 					zoom: 15
 				});
+				
+				var serverList = arbiter.currentProject.serverList;
+				var url;
+				var username;
+				var password;
+				var layers;
+						 
+				for(var x in serverList){
+					layers = serverList[x].layers;
+					for(var y in layers){
+						//add the wms and wfs layers to the map
+						arbiter.AddLayer({
+							featureNS: layers[y].featureNS,
+							url: serverList[x].url,
+							geomName: layers[y].geomName,
+							featureType: layers[y].featureType, //e.g. hospitals
+							typeName: layers[y].typeName, //e.g. medford:hospitals
+							srsName: layers[y].srsName,
+							nickname: y,
+							username: serverList[x].username,
+							password: serverList[x].password
+						});
+						 
+						//add the data from local storage
+						arbiter.readLayerFromDb(layers[y].featureType, y, layers[y].geomName, layers[y].srsName);
+					}
+				}
 			}
-			
-			arbiter.addLayersToMap(arbiter);
+						 
+			//arbiter.addLayersToMap(arbiter);
 		});
 		
 		div_AreaOfInterestPage.live('pageshow', function(){
@@ -496,7 +523,7 @@ var Arbiter = {
 									typeName: layer.typeWithPrefix,
 									attributes: []
 								};
-									
+									  
 								//get the geometry name, type, and srs of the layer
 								arbiter.currentProject.dataDatabase.transaction(function(tx){
 									var layerObj = layer;
@@ -504,7 +531,8 @@ var Arbiter = {
 									
 									tx.executeSql(geomColumnsSql, [], function(tx, res){
 										var geomName;
-										var serverLayer = arbiter.currentProject.serverList[serverName].layers[layerObj.layername];
+										var server = arbiter.currentProject.serverList[serverName];
+										var serverLayer = server.layers[layerObj.layername];
 												  
 										if(res.rows.length){ //should only be 1 right now
 											geomName = res.rows.item(0).f_geometry_column;
@@ -524,8 +552,8 @@ var Arbiter = {
 
 														if(attrName != 'fid' && attrName != geomName)
 															serverLayer.attributes.push(res.rows.item(h).name);
-														}
-													});													  
+													}
+												});													  
 											}, arbiter.errorSql, function(){});
 										}
 									});
@@ -788,9 +816,11 @@ var Arbiter = {
 								var featureType = layer.featureType;
 								var srsName = layer.srsName;
 								var url = serverList[name].url;
+								var username = serverList[name].username;
+								var password = serverList[name].password;
 																			
 								tx.executeSql(createFeatureTableSql, [], function(tx, res){
-									arbiter.pullFeatures(typeName, geomName, featureType, srsName, url);														  
+									arbiter.pullFeatures(typeName, geomName, featureType, srsName, url, username, password);														  
 								});
 							}, arbiter.errorSql, function(){});
 						}
@@ -969,7 +999,7 @@ var Arbiter = {
 	},
 	
 	//override: Bool, should override
-	pullFeatures: function(featureType, geomName, f_table_name, srs, serverUrl){
+	pullFeatures: function(featureType, geomName, f_table_name, srs, serverUrl, username, password){
 		var arbiter = this;
 		var layerNativeSRS = new OpenLayers.Projection(srs);
 		var currentBounds = arbiter.currentProject.aoi.clone().transform(WGS84_Google_Mercator, layerNativeSRS);
@@ -992,11 +1022,13 @@ var Arbiter = {
 		'</wfs:Query>' +
 		'</wfs:GetFeature>';
 		
+		var encodedCredentials = $.base64.encode(username + ':' + password);
 		var request = new OpenLayers.Request.POST({
 			url: serverUrl + "/wfs",
 			data: postData,
 			headers: {
-				'Content-Type': 'text/xml;charset=utf-8'
+				'Content-Type': 'text/xml;charset=utf-8',
+				'Authorization': 'Basic ' + encodedCredentials
 			},
 			callback: function(response){
 				var gmlReader = new OpenLayers.Format.GML({
@@ -1005,9 +1037,7 @@ var Arbiter = {
 				
 				var features = gmlReader.read(response.responseText);
 				
-				console.log(features);
-				
-				arbiter.insertFeaturesIntoTable(features, f_table_name, geomName);
+				arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false);
 			},
 			failure: function(response){
 				console.log('something went wrong');
@@ -1125,11 +1155,11 @@ var Arbiter = {
 	},
 	
 	//return a feature from a row of the data table
-	createFeature: function(obj){
+	createFeature: function(obj, srsName){
 		var feature = wktFormatter.read(obj.geometry);
 		
 		// TODO: somehow get the srid from the table instead of assuming it'll be epsg:4326
-		feature.geometry.transform(WGS84, WGS84_Google_Mercator);
+		feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
 		
 		for(var x in obj){
 			if(x != "geometry" && x != "id"){
@@ -1143,6 +1173,55 @@ var Arbiter = {
 		return feature;
 	},
 		
+	readLayerFromDb: function(tableName, layerName, geomName, srsName){
+		var arbiter = this;
+		var layer = map.getLayersByName(layerName + "-wfs")[0];
+		
+		arbiter.currentProject.dataDatabase.transaction(function(tx){
+			tx.executeSql("SELECT * FROM " + tableName, [], function(tx, res){
+				var row;
+				var attributes = {};
+				var feature;
+				var fid;
+						  
+				for(var i = 0; i < res.rows.length;i++){
+					row = res.rows.item(i);
+					
+					for(var x in row){
+						if(x != "id"){
+							if(x == geomName){
+								feature = wktFormatter.read(row[x]);
+								
+								feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
+							}else if(x == "fid"){
+							  fid = row[x];
+							}else{
+								attributes[x] = row[x];
+							}
+						}
+					}
+						  
+					feature.attributes = attributes;
+					feature.fid = fid;	  
+					layer.addFeatures([feature]);
+				}
+						  
+				//after the transaction is complete, check to see which features are dirty
+				arbiter.currentProject.variablesDatabase.transaction(function(tx){
+					tx.executeSql("SELECT * FROM dirty_table where f_table_name=" + arbiter.squote(tableName) + ";", [], function(tx, res){
+						for(var i = 0; i < res.rows.length;i++){
+							var feature = layer.getFeatureByFid(res.rows.item(i).fid);
+							feature.modified = true;
+							feature.state = OpenLayers.State.UPDATE;	  	
+						}
+					});
+				}, arbiter.errorSql, function(){});
+			});
+		}, arbiter.errorSql, function(){
+			
+		});
+	},
+	
 	/*
 	readLayerFromDb: function(db, _spatialFilter){
 		
@@ -1209,31 +1288,76 @@ var Arbiter = {
 	},
 	*/
 	
-	insertFeaturesIntoTable: function(features, f_table_name, geomName){
+	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit){
 		var arbiter = this;
 		var db = arbiter.currentProject.dataDatabase;
-		
+		console.log("insertFeaturesIntoTable");
 		for(var i = 0; i < features.length; i++){
-			var feature = features[i];
 			db.transaction(function(tx){
-				var geometry = wktFormatter.write(feature);
-				var propertiesList = "fid, " + geomName;
-				var propertyValues = arbiter.squote(feature.fid) + ", " + 
-						   arbiter.squote(geometry);
-						   
-				for(var x in feature.attributes){
-					propertiesList += ", " + x;
-					
-					propertyValues += ", " + arbiter.squote(features[i].attributes[x]);
-				}
-				
-				var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
-					propertyValues + ");";
-				
-				console.log(insertSql);
-						   
-				tx.executeSql(insertSql, [], function(tx, res){
-										 
+				var feature = features[i];
+				console.log(feature.fid);
+				tx.executeSql("SELECT * FROM " + f_table_name + " WHERE fid=" + arbiter.squote(feature.fid), [], function(tx, res){
+					var clonedFeature = feature.clone();
+							  console.log("srs: " + srsName);
+					if(isEdit)
+						clonedFeature.geometry.transform(WGS84_Google_Mercator, new OpenLayers.Projection(srsName));
+					var geometry = wktFormatter.write(clonedFeature);
+					console.log(geometry);
+					var propertiesList = "fid, " + geomName;
+					var propertyValues = arbiter.squote(feature.fid) + ", " + 
+					  arbiter.squote(geometry);
+					var updateList = " SET " + geomName + "=" + arbiter.squote(geometry);	
+					console.log(updateList);
+					console.log("length: " + res.rows.length);
+					for(var x in feature.attributes){
+						propertiesList += ", " + x;
+							  
+					  	propertyValues += ", " + arbiter.squote(feature.attributes[x]);
+							
+						updateList += ", " + x + "=" + arbiter.squote(feature.attributes[x]);	  
+					}
+							
+					console.log(updateList);
+					//If this exists, then its an update, else its an insert
+					if(res.rows.length){
+						console.log("UPDATE", res.rows.item(0));
+						db.transaction(function(tx){											 
+							var updateSql = "UPDATE " + f_table_name + updateList + " WHERE id=" + res.rows.item(0).id + ";";
+											 
+							console.log(updateSql);
+											 
+							tx.executeSql(updateSql, [], function(tx, res){
+										  console.log("update success");			   
+										  }, function(tx, err){
+										  console.log("update err: ", err);
+										  });
+									   
+							arbiter.currentProject.variablesDatabase.transaction(function(tx){
+								var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid) VALUES (" + arbiter.squote(f_table_name) + ", " + arbiter.squote(feature.fid) + ");";
+																				 
+								console.log(insertDirtySql);
+								tx.executeSql(insertDirtySql, [], function(tx, res){
+											  console.log("insert dirty success");			 
+								}, function(tx, err){
+											  console.log("insert dirty fail: ", err);
+								});
+							}, arbiter.errorSql, function(){});
+						}, arbiter.errorSql, function(){});
+					}else{
+						console.log('new insert');
+						db.transaction(function(tx){
+							var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
+							   propertyValues + ");";
+									   
+							console.log(insertSql);
+									   
+							tx.executeSql(insertSql, [], function(tx, res){
+													 
+							});
+						}, arbiter.errorSql, function(){});
+					}
+				}, function(tx, err){
+					console.log("err: ", err);
 				});
 			}, arbiter.errorSql, function(){});
 		}
@@ -1411,6 +1535,7 @@ var Arbiter = {
 	 	}
 	 */
 	AddLayer: function(meta){
+		console.log("meta", meta);
 		if(meta.url && meta.featureNS && meta.featureType
 			&& meta.srsName && meta.nickname && meta.username
 			&& meta.password && meta.typeName && meta.geomName){ // theres no wfs layer for that layer yet
@@ -1433,13 +1558,13 @@ var Arbiter = {
 			});
 			
 			// TODO: replace later with dynamic implementation
-			var tableName = "hospitals";
+			var tableName = meta.featureType;
 			
 			var saveStrategy = new OpenLayers.Strategy.Save();
 			
 			var newWFSLayer = new OpenLayers.Layer.Vector(meta.nickname + "-wfs", {
 				strategies: [saveStrategy],
-				projection: WGS84,
+				projection: new OpenLayers.Projection(meta.srsName),
 				protocol: protocol
 			});
 			
@@ -1452,7 +1577,7 @@ var Arbiter = {
 			map.addLayers([newWMSLayer, newWFSLayer]);
 			
 			newWFSLayer.events.register("featuremodified", null, function(event){
-				arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [event.feature], meta.nickname);
+				arbiter.insertFeaturesIntoTable([event.feature], meta.featureType, meta.geomName, meta.srsName, true);
 			});
 			
 			newWFSLayer.events.register("featureselected", null, function(event){
@@ -1473,7 +1598,7 @@ var Arbiter = {
 				//map.layers[2].destroyFeatures();
 				//arbiter.pullFeatures(true);
 				//Remove the features for this layer from the table keeping track of dirty features
-				arbiter.variableDatabase.transaction(function(tx){
+				arbiter.currentProject.variableDatabase.transaction(function(tx){
 					tx.executeSql("DELETE FROM " + modifiedTable + " WHERE layer='" + tableName + "';", [], 
 								  function(){}, function(tx, err){
 								  console.log("error: ", err);
@@ -1486,7 +1611,7 @@ var Arbiter = {
 			addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer,OpenLayers.Handler.Point);
 			addFeatureControl.events.register("featureadded", null, function(event){
 				event.feature.attributes.name = "";
-				arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [event.feature], "hospitals");	
+				arbiter.insertFeaturesIntoTable([event.feature], meta.featureType, meta.geomName, meta.srsName, true);	
 			});
 			
 			map.addControl(addFeatureControl);
@@ -1495,7 +1620,7 @@ var Arbiter = {
 			map.addControl(modifyControl);
 			modifyControl.activate();
 						
-			if(!wmsSelectControl){
+			/*if(!wmsSelectControl){
 				wmsSelectControl = new OpenLayers.Control.WMSGetFeatureInfo({
 					url: meta.url + '/wms',
 					title: 'identify features on click',
@@ -1510,7 +1635,7 @@ var Arbiter = {
 					
 					//if there are any features at the touch event, get that feature in the wfs layer for editing
 					if(event && event.features && event.features.length && (!newWFSLayer.getFeatureByFid(event.features[0].fid))){
-						var geom = event.features[0].geometry.transform(WGS84, WGS84_Google_Mercator);
+						var geom = event.features[0].geometry.transform(new OpenLayers.Projection(meta.srsName), WGS84_Google_Mercator);
 						var attributes = event.features[0].attributes;
 						var newFeature = new OpenLayers.Feature.Vector(geom, attributes);
 						newFeature.fid = event.features[0].fid;
@@ -1524,13 +1649,13 @@ var Arbiter = {
 						
 						selectedFeature = newFeature;
 						
-						arbiter.insertFeaturesIntoTable(arbiter.serversDatabase, [event.features[0]], meta.nickname);
+						arbiter.insertFeaturesIntoTable([event.features[0]], meta.featureType, meta.geomName);
 					}
 				});
 				
 				map.addControl(wmsSelectControl);
 				wmsSelectControl.activate();
-			}
+			}*/
 			
 			var li = "<li><a href='#' class='layer-list-item'>" + meta.nickname + "</a></li>";
 			
@@ -1539,20 +1664,6 @@ var Arbiter = {
 			}catch(err){
 				
 			}
-		}
-		
-		if(!meta.alreadyIn){
-			$.mobile.changePage("#layerPage", "pop");
-			this.StoreLayerMetadata(this.variableDatabase, {
-				file: "variables",
-				table: "hospitals",
-				featureType: meta.featureType,
-				featureNS: meta.featureNS,
-				geomName: meta.geomName,
-				srsName: meta.srsName,
-				nickname: meta.nickname,
-				geoserverURL: meta.url
-			});
 		}
 	},
 	
