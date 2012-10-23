@@ -255,7 +255,8 @@ var Arbiter = {
 							srsName: layers[y].srsName,
 							nickname: y,
 							username: serverList[x].username,
-							password: serverList[x].password
+							password: serverList[x].password,
+							serverName: x
 						});
 						 
 						//add the data from local storage
@@ -356,7 +357,7 @@ var Arbiter = {
 			arbiter.submitLayer(args);
 		});*/
 		
-		jqCreateFeature.mouseup(function(event){
+		/*jqCreateFeature.mouseup(function(event){
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
 				$(this).removeClass("ui-btn-active");
@@ -364,10 +365,17 @@ var Arbiter = {
 				addFeatureControl.activate();
 				$(this).addClass("ui-btn-active");
 			}
-		});
+		});*/
 		
 		jqAddFeature.mouseup(function(event){
 			console.log("Add Feature");
+			if(addFeatureControl.active){
+				addFeatureControl.deactivate();
+				$(this).removeClass("ui-btn-active");
+			}else{
+				addFeatureControl.activate();
+				$(this).addClass("ui-btn-active");
+			}
 		});
 		
 		jqEditFeature.mouseup(function(event){
@@ -590,7 +598,7 @@ var Arbiter = {
 													for(var h = 0; h < res.rows.length;h++){
 														attrName = res.rows.item(h).name;
 
-														if(attrName != 'fid' && attrName != geomName)
+														if(attrName != 'fid' && attrName != geomName && attrName != 'id')
 															serverLayer.attributes.push(res.rows.item(h).name);
 													}
 												});													  
@@ -826,7 +834,9 @@ var Arbiter = {
 									", " + arbiter.squote(layer.geomName) + ", " + arbiter.squote(layer.geometryType) + 
 									", " + arbiter.squote(layer.srsName) + ");";
 																			
-								attributes = "id integer primary key, fid text unique, " + layer.geomName + " text not null";
+								//made fid not unique to be able to handle multiple inserts while offline.
+								//fid is null until the server knows about the feature
+								attributes = "id integer primary key, fid text, " + layer.geomName + " text not null";
 								
 								for(var i = 0; i < layer.attributes.length; i++){
 									attributes += ", " + layer.attributes[i] + " text";
@@ -1203,17 +1213,15 @@ var Arbiter = {
 	readLayerFromDb: function(tableName, layerName, geomName, srsName){
 		var arbiter = this;
 		var layer = map.getLayersByName(layerName + "-wfs")[0];
-		
+		console.log("readLayerFromDb: " + tableName + ", " + layerName + ", " + geomName + ", " + srsName);
 		arbiter.currentProject.dataDatabase.transaction(function(tx){
 			tx.executeSql("SELECT * FROM " + tableName, [], function(tx, res){
-				var row;
-				var attributes = {};
-				var feature;
-				var fid;
-						  
 				for(var i = 0; i < res.rows.length;i++){
-					row = res.rows.item(i);
-					
+					var row = res.rows.item(i);
+					var attributes = {};
+					var feature;
+					var fid;
+						  
 					for(var x in row){
 						if(x != "id"){
 							if(x == geomName){
@@ -1318,74 +1326,109 @@ var Arbiter = {
 	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit){
 		var arbiter = this;
 		var db = arbiter.currentProject.dataDatabase;
-		console.log("insertFeaturesIntoTable");
+		console.log("insertFeaturesIntoTable: ", features);
+		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
 		for(var i = 0; i < features.length; i++){
+			var feature = features[i];
 			db.transaction(function(tx){
-				var feature = features[i];
-				console.log(feature.fid);
-				tx.executeSql("SELECT * FROM " + f_table_name + " WHERE fid=" + arbiter.squote(feature.fid), [], function(tx, res){
-					var clonedFeature = feature.clone();
-							  console.log("srs: " + srsName);
-					if(isEdit)
-						clonedFeature.geometry.transform(WGS84_Google_Mercator, new OpenLayers.Projection(srsName));
-					var geometry = wktFormatter.write(clonedFeature);
-					console.log(geometry);
-					var propertiesList = "fid, " + geomName;
-					var propertyValues = arbiter.squote(feature.fid) + ", " + 
-					  arbiter.squote(geometry);
-					var updateList = " SET " + geomName + "=" + arbiter.squote(geometry);	
-					console.log(updateList);
-					console.log("length: " + res.rows.length);
-					for(var x in feature.attributes){
-						propertiesList += ", " + x;
-							  
-					  	propertyValues += ", " + arbiter.squote(feature.attributes[x]);
-							
-						updateList += ", " + x + "=" + arbiter.squote(feature.attributes[x]);	  
-					}
-							
-					console.log(updateList);
-					//If this exists, then its an update, else its an insert
-					if(res.rows.length){
-						console.log("UPDATE", res.rows.item(0));
-						db.transaction(function(tx){											 
-							var updateSql = "UPDATE " + f_table_name + updateList + " WHERE id=" + res.rows.item(0).id + ";";
-											 
-							console.log(updateSql);
-											 
-							tx.executeSql(updateSql, [], function(tx, res){
-										  console.log("update success");			   
-										  }, function(tx, err){
-										  console.log("update err: ", err);
-										  });
-									   
-							arbiter.currentProject.variablesDatabase.transaction(function(tx){
-								var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid) VALUES (" + arbiter.squote(f_table_name) + ", " + arbiter.squote(feature.fid) + ");";
-																				 
-								console.log(insertDirtySql);
-								tx.executeSql(insertDirtySql, [], function(tx, res){
-											  console.log("insert dirty success");			 
+				var selectSql;
+				var clonedFeature = feature.clone();
+				console.log("srs: " + srsName);
+				if(isEdit)
+					clonedFeature.geometry.transform(WGS84_Google_Mercator, new OpenLayers.Projection(srsName));
+				var geometry = wktFormatter.write(clonedFeature);
+				console.log(geometry);
+				var propertiesList = "fid, " + geomName;
+				var propertyValues = arbiter.squote(feature.fid) + ", " + 
+				arbiter.squote(geometry);
+				var updateList = " SET " + geomName + "=" + arbiter.squote(geometry);	
+				console.log(updateList);
+				for(var x in feature.attributes){
+					propertiesList += ", " + x;
+						   
+					propertyValues += ", " + arbiter.squote(feature.attributes[x]);
+						   
+					updateList += ", " + x + "=" + arbiter.squote(feature.attributes[x]);	  
+				}
+						   
+				if(feature.fid || feature.rowid){
+					if(feature.fid)
+						selectSql = "SELECT * FROM " + f_table_name + " WHERE fid=" + arbiter.squote(feature.fid);
+					else
+						selectSql = "SELECT * FROM " + f_table_name + " WHERE id=" + feature.rowid;
+						
+					console.log(selectSql);
+					tx.executeSql(selectSql, [], function(tx, res){
+						
+										 
+						console.log(updateList);
+						//If this exists, then its an update, else its an insert
+						if(res.rows.length){
+							console.log("UPDATE", res.rows.item(0));
+							db.transaction(function(tx){											 
+								var updateSql = "UPDATE " + f_table_name + updateList + " WHERE id=" + res.rows.item(0).id + ";";
+														
+								console.log(updateSql);
+														
+								tx.executeSql(updateSql, [], function(tx, res){
+									console.log("update success");			   
 								}, function(tx, err){
-											  console.log("insert dirty fail: ", err);
+									console.log("update err: ", err);
+								});
+								if(feature.fid){						
+									arbiter.currentProject.variablesDatabase.transaction(function(tx){
+										var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid) VALUES (" + arbiter.squote(f_table_name) + ", " + arbiter.squote(feature.fid) + ");";
+																												 
+										console.log(insertDirtySql);
+										tx.executeSql(insertDirtySql, [], function(tx, res){
+											console.log("insert dirty success");			 
+										}, function(tx, err){
+											console.log("insert dirty fail: ", err);
+										});
+									}, arbiter.errorSql, function(){});
+								}
+							}, arbiter.errorSql, function(){});
+						}else{
+							console.log('new insert');
+							db.transaction(function(tx){
+								var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
+									propertyValues + ");";
+														
+								console.log(insertSql);
+														
+								tx.executeSql(insertSql, [], function(tx, res){
+									console.log("insert success");
+									if(isEdit){
+										console.log('isEdit: ' + res.insertId);
+										feature.rowid = res.insertId;
+									}
+								}, function(tx, err){
+									console.log("insert err: ", err);
 								});
 							}, arbiter.errorSql, function(){});
-						}, arbiter.errorSql, function(){});
-					}else{
-						console.log('new insert');
-						db.transaction(function(tx){
-							var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
-							   propertyValues + ");";
-									   
-							console.log(insertSql);
-									   
-							tx.executeSql(insertSql, [], function(tx, res){
-													 
-							});
-						}, arbiter.errorSql, function(){});
-					}
-				}, function(tx, err){
-					console.log("err: ", err);
-				});
+						}
+					}, function(tx, err){
+						console.log("err: ", err);
+					});
+				}else{
+					console.log('new insert');
+					db.transaction(function(tx){
+						var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
+						  propertyValues + ");";
+										  
+						console.log(insertSql);
+										  
+						tx.executeSql(insertSql, [], function(tx, res){
+							console.log("insert success");
+							if(isEdit){
+								console.log('isEdit: ' + res.insertId);
+								feature.rowid = res.insertId;
+							}
+						}, function(tx, err){
+							console.log("insert err: ", err);
+						});
+					}, arbiter.errorSql, function(){});	
+				}
 			}, arbiter.errorSql, function(){});
 		}
 	},
@@ -1635,7 +1678,14 @@ var Arbiter = {
 			
 			addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer,OpenLayers.Handler.Point);
 			addFeatureControl.events.register("featureadded", null, function(event){
-				event.feature.attributes.name = "";
+				//populate the features attributes object
+				var attributes = arbiter.currentProject.serverList[meta.serverName].layers[meta.nickname].attributes;
+											  
+				for(var i = 0; i < attributes.length;i++){
+					event.feature.attributes[attributes[i]] = "";							  
+				}
+				
+				console.log("new attributes", event.feature.attributes);
 				arbiter.insertFeaturesIntoTable([event.feature], meta.featureType, meta.geomName, meta.srsName, true);	
 			});
 			
