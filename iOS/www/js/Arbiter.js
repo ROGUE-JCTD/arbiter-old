@@ -1531,8 +1531,9 @@ var Arbiter = {
 				selectedFeature.state = OpenLayers.State.UPDATE;
 				selectedFeature.modified = true;
 			}
-			
-			this.insertFeaturesIntoTable(this.serversDatabase, [selectedFeature], "hospitals");
+			//features, f_table_name, geomName, srsName, isEdit
+			var protocol = selectedFeature.layer.protocol;
+			this.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
 		}
 		
 		//$.mobile.changePage("#idMapPage", {transition: "slide", reverse: true});
@@ -1640,7 +1641,7 @@ var Arbiter = {
 			});
 			
 			newWFSLayer.events.register("featureselected", null, function(event){
-				console.log("Feature selected: " + event);
+				console.log("Feature selected: ", event.feature);
 				selectedFeature = event.feature;
 				arbiter.OpenAttributesMenu();
 			});
