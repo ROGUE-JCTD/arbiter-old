@@ -80,7 +80,6 @@ var jqAttributeTab;
 var jqAddFeature;
 var jqEditFeature;
 var jqSyncUpdates;
-var jqOptionsPopup;
 
 /* ============================ *
  * 			 Language
@@ -179,11 +178,9 @@ var Arbiter = {
 		jqProjectsList = $('ul#idProjectsList');
 		jqEditorTab = $('#editorTab');
 		jqAttributeTab = $('#attributeTab');
-		jqOptionsPopup = $('#optionPopup');
 		jqAddFeature	 = $('#addPointFeature');
 		jqEditFeature	 = $('#editPointFeature');
 		jqSyncUpdates	 = $('#syncUpdates');
-		jqOptionsPopup = $('#optionsPopup');
 		div_ProjectsPage.live('pageshow', this.PopulateProjectsList);
 		div_ServersPage.live('pageshow', this.PopulateServersList);
 		div_LayersPage.live('pageshow', this.PopulateLayersList);
@@ -265,6 +262,8 @@ var Arbiter = {
 					}
 				}
 			}
+			
+			arbiter.setSyncColor();
 		});
 		
 		div_AreaOfInterestPage.live('pageshow', function(){
@@ -379,11 +378,6 @@ var Arbiter = {
 			}
 		});
 		
-		jqOptionsPopup.mouseup(function(event){
-			$(this).toggle();
-			arbiter.OpenAttributesMenu();					   
-		});
-		
 		jqEditFeature.mouseup(function(event){
 			console.log("Edit Feature");
 		});
@@ -403,12 +397,7 @@ var Arbiter = {
 		});
 		
 		jqAttributeTab.mouseup(function(event){
-			//arbiter.pullFeatures(false);
-			if(attributeTab) {
-				if(selectedFeature) {
-					arbiter.newWFSLayer.unselected(selectedFeature);
-				}
-			}
+			arbiter.ToggleAttributeMenu();
 		});
 		
 		$(".layer-list-item").mouseup(function(event){
@@ -430,6 +419,20 @@ var Arbiter = {
 			this.CloseEditorMenu();
 		}
 	},
+	
+	ToggleAttributeMenu: function() {
+		if(!attributeTab) {
+			this.OpenAttributesMenu();
+		} else {
+			this.CloseAttributesMenu();
+			
+			if(attributeTab) {
+				if(selectedFeature) {
+					arbiter.newWFSLayer.unselected(selectedFeature);
+				}
+			}
+		}
+	},
 
 	OpenEditorMenu: function() {
 		editorTabOpen = true;
@@ -442,12 +445,14 @@ var Arbiter = {
 			width = screen.height - 72;
 		}
 		$("#editorTab").animate({ "right": width }, 50);
+		$("#attributeTab").animate({ "opacity": "0.0" }, 0);
 	},
 	
 	CloseEditorMenu:function() {
 		editorTabOpen = false;
 		$("#idEditorMenu").animate({ "left": "100%" }, 50);
 		$("#editorTab").animate({ "right": "0px" }, 50);
+		$("#attributeTab").animate({ "opacity": "1.0" }, 0);
 	},
 	
 	OpenAttributesMenu: function() {
@@ -461,9 +466,7 @@ var Arbiter = {
 			width = screen.height - 72;
 		}
 		$("#attributeTab").animate({ "right": width }, 50);
-		$("#attributeTab").animate({ "opacity": "1.0" }, 0);
 		$("#editorTab").animate({ "opacity": "0.0" }, 0);
-		$("#idEditorMenu").animate({ "opacity": "0.0" }, 0);
 		
 		this.PopulatePopup();
 	},
@@ -472,9 +475,7 @@ var Arbiter = {
 		attributeTab = false;
 		$("#idAttributeMenu").animate({ "left": "100%" }, 50);
 		$("#attributeTab").animate({ "right": "0px" }, 50);
-		$("#attributeTab").animate({ "opacity": "0.0" }, 0);
 		$("#editorTab").animate({ "opacity": "1.0" }, 0);
-		$("#idEditorMenu").animate({ "opacity": "1.0" }, 0);
 	},
 	
 	PopulateProjectsList: function() {
@@ -1660,16 +1661,18 @@ var Arbiter = {
 			newWFSLayer.events.register("featureselected", null, function(event){
 				console.log("Feature selected: ", event.feature);
 				selectedFeature = event.feature;
-				if(!jqOptionsPopup.is(':visible'))
-					jqOptionsPopup.toggle();
+					
+				if(!jqAttributeTab.is(':visible'))
+					jqAttributeTab.toggle();
 			});
 			
 			newWFSLayer.events.register("featureunselected", null, function(event){
 				console.log("Feature unselected: " + event);
 				selectedFeature = null;
 				arbiter.CloseAttributesMenu();
-				if(jqOptionsPopup.is(':visible'))
-					jqOptionsPopup.toggle();
+					
+				if(jqAttributeTab.is(':visible'))
+					jqAttributeTab.toggle();
 			});
 			
 			saveStrategy.events.register("success", '', function(event){
@@ -1824,6 +1827,14 @@ var Arbiter = {
 			return false;
 	},
 	
+	setSyncColor: function() {
+		if(this.isOnline) {
+			$('#syncUpdates').css("background-color", "rgba(0, 136, 0, 0.496094)");
+		} else {
+			$('#syncUpdates').css("background-color", "rgba(136, 0, 0, 0.496094)");
+		}
+	},
+	
 	//===================
 	// Cordova Callbacks
 	//===================
@@ -1840,6 +1851,8 @@ var Arbiter = {
 		if(!this.isOnline){
 			this.isOnline = true;
 		}
+		
+		this.setSyncColor();
 	},
 	
 	onOffline: function() {
@@ -1847,6 +1860,8 @@ var Arbiter = {
 		if(this.isOnline){
 			this.isOnline = false;
 		}
+		
+		this.setSyncColor();
 	},
 	
 	onBatteryCritical: function(info) {

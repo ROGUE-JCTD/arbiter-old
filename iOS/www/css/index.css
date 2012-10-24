@@ -115,7 +115,6 @@ html, body {
 	height   : 100%;
 	top:0px;
 	background-color:rgba(0, 60, 136, 0.496094);
-	opacity: 1.0;
 }
 
 #attributeTab {
@@ -128,7 +127,7 @@ html, body {
 	background-color:rgba(136, 60, 0, 0.496094);
 	border-top-left-radius: 4px;
 	border-bottom-left-radius: 4px;
-	opacity: 0.0;
+	display:none;
 }
 
 #idAttributeMenu {
@@ -194,7 +193,7 @@ html, body {
 	bottom:11px;
 	width:32px;
 	height:32px;
-	background-color:rgba(0, 60, 136, 0.496094);
+	background-color:rgba(136, 0, 0, 0.496094);
 	border-radius: 5px;
 }
 
