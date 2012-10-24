@@ -80,6 +80,7 @@ var jqAttributeTab;
 var jqAddFeature;
 var jqEditFeature;
 var jqSyncUpdates;
+var jqOptionsPopup;
 
 /* ============================ *
  * 			 Language
@@ -178,11 +179,11 @@ var Arbiter = {
 		jqProjectsList = $('ul#idProjectsList');
 		jqEditorTab = $('#editorTab');
 		jqAttributeTab = $('#attributeTab');
-		
+		jqOptionsPopup = $('#optionPopup');
 		jqAddFeature	 = $('#addPointFeature');
 		jqEditFeature	 = $('#editPointFeature');
 		jqSyncUpdates	 = $('#syncUpdates');
-		
+		jqOptionsPopup = $('#optionsPopup');
 		div_ProjectsPage.live('pageshow', this.PopulateProjectsList);
 		div_ServersPage.live('pageshow', this.PopulateServersList);
 		div_LayersPage.live('pageshow', this.PopulateLayersList);
@@ -378,12 +379,22 @@ var Arbiter = {
 			}
 		});
 		
+		jqOptionsPopup.mouseup(function(event){
+			$(this).toggle();
+			arbiter.OpenAttributesMenu();					   
+		});
+		
 		jqEditFeature.mouseup(function(event){
 			console.log("Edit Feature");
 		});
 		
 		jqSyncUpdates.mouseup(function(event){
 			console.log("Sync Updates");
+			var layers = map.getLayersByClass('OpenLayers.Layer.Vector');
+						
+			for(var i = 0; i < layers.length;i++){
+				layers[i].strategies[0].save();
+			}
 		});
 		
 		jqEditorTab.mouseup(function(event){
@@ -1398,7 +1409,10 @@ var Arbiter = {
 									console.log("insert success");
 									if(isEdit){
 										console.log('isEdit: ' + res.insertId);
-										feature.rowid = res.insertId;
+										if(res.insertId) //hack because insertid is returned as 1 for the first insert...
+											feature.rowid = res.insertId;
+										else
+											feature.rowid = 1;
 									}
 								}, function(tx, err){
 									console.log("insert err: ", err);
@@ -1420,7 +1434,10 @@ var Arbiter = {
 							console.log("insert success");
 							if(isEdit){
 								console.log('isEdit: ' + res.insertId);
-								feature.rowid = res.insertId;
+								if(res.insertId) //hack because insertid is returned as 1 for the first insert...
+									feature.rowid = res.insertId;
+								else
+									feature.rowid = 1;
 							}
 						}, function(tx, err){
 							console.log("insert err: ", err);
@@ -1643,13 +1660,16 @@ var Arbiter = {
 			newWFSLayer.events.register("featureselected", null, function(event){
 				console.log("Feature selected: ", event.feature);
 				selectedFeature = event.feature;
-				arbiter.OpenAttributesMenu();
+				if(!jqOptionsPopup.is(':visible'))
+					jqOptionsPopup.toggle();
 			});
 			
 			newWFSLayer.events.register("featureunselected", null, function(event){
 				console.log("Feature unselected: " + event);
 				selectedFeature = null;
 				arbiter.CloseAttributesMenu();
+				if(jqOptionsPopup.is(':visible'))
+					jqOptionsPopup.toggle();
 			});
 			
 			saveStrategy.events.register("success", '', function(event){
@@ -1661,16 +1681,46 @@ var Arbiter = {
 				});
 				
 				newWMSLayer.redraw(true);
-				
+										 
 				//map.layers[2].destroyFeatures();
 				//arbiter.pullFeatures(true);
 				//Remove the features for this layer from the table keeping track of dirty features
-				arbiter.currentProject.variableDatabase.transaction(function(tx){
-					tx.executeSql("DELETE FROM " + modifiedTable + " WHERE layer='" + tableName + "';", [], 
-								  function(){}, function(tx, err){
-								  console.log("error: ", err);
-								  });															  
+				arbiter.currentProject.variablesDatabase.transaction(function(tx){
+					tx.executeSql("DELETE FROM dirty_table;");															  
 				}, arbiter.errorSql, function(){console.log("delete success");});
+				
+				var serverList = arbiter.currentProject.serverList;
+				var url;
+				var username;
+				var password;
+				var serverLayer;	
+				var typeName;	
+				var geomName;
+				var featureType;
+				var srsName;
+										 console.log("before loop");
+				for(var x in serverList){
+					url = serverList[x].url;
+					username = serverList[x].username;
+					password = serverList[x].password;
+										 
+					for(var layername in serverList[x].layers){
+						serverLayer = serverList[x].layers[layername];
+						typeName = serverLayer.typeName;
+						geomName = serverLayer.geomName;
+						featureType = serverLayer.featureType;
+						srsName = serverLayer.srsName;
+						console.log(x + ": " + url);
+						arbiter.currentProject.dataDatabase.transaction(function(tx){
+							tx.executeSql("DELETE FROM " + featureType, [], function(tx, res){
+								//pull everything down
+										  console.log("pull after delete");
+								console.log("pullFeatures after delete: " + typeName + geomName + featureType + srsName + url + username + password);
+								arbiter.pullFeatures(typeName, geomName, featureType, srsName, url, username, password);
+							}); 													  
+						}, arbiter.errorSql, function(){});
+					}
+				}
 			});
 			
 			var modifyControl = new OpenLayers.Control.ModifyFeature(newWFSLayer);
