@@ -263,8 +263,10 @@
 			<!-- Content -->
 			<div data-role="content" style="position:relative" class="MapPageContent" id='idMapPageContent'>
 				<div id="idEditorMenu" style="position:absolute;z-index:2000;">
-					<div data-role="controlgroup" id='idEditorLayersList' data-mini="true" style="padding:5px;">
-						<a data-role="button" id="1" onClick="Arbiter.CloseEditorMenu()">[Temp] Close Editor</a>
+					<div data-role="content" style="padding: 5px">
+						<ul id="editor-layer-list" data-role="listview" data-mini="true" style="padding:20px;"></ul>
+						
+						<input type="submit" value="Testing stuff" data-mini="true">
 					</div>
 				</div>
 				
