@@ -32,8 +32,6 @@ var wktFormatter;
 var capabilitiesFormatter;
 var describeFeatureTypeReader;
 
-var addFeatureControl;
-
 var metadataTable = "layermeta";
 var modifiedTable = "dirtytable";
 
@@ -369,12 +367,15 @@ var Arbiter = {
 		
 		jqAddFeature.mouseup(function(event){
 			console.log("Add Feature");
-			if(addFeatureControl.active){
-				addFeatureControl.deactivate();
-				$(this).removeClass("ui-btn-active");
-			}else{
-				addFeatureControl.activate();
-				$(this).addClass("ui-btn-active");
+			if(arbiter.currentProject.activeLayer){
+				var addFeatureControl = arbiter.currentProject.modifyControls[arbiter.currentProject.activeLayer].insertControl;
+				if(addFeatureControl.active){
+					addFeatureControl.deactivate();
+					$(this).removeClass("ui-btn-active");
+				}else{
+					addFeatureControl.activate();
+					$(this).addClass("ui-btn-active");
+				}
 			}
 		});
 		
@@ -544,6 +545,7 @@ var Arbiter = {
 		
 		arbiter.currentProject.name = projectName;
 		arbiter.currentProject.serverList = {};
+		arbiter.currentProject.modifyControls = {};
 		
 		//set dataDatabase and variablesDatabase
 		arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Projects/" + arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
@@ -1692,43 +1694,30 @@ var Arbiter = {
 					tx.executeSql("DELETE FROM dirty_table;");															  
 				}, arbiter.errorSql, function(){console.log("delete success");});
 				
-				var serverList = arbiter.currentProject.serverList;
-				var url;
-				var username;
-				var password;
-				var serverLayer;	
-				var typeName;	
-				var geomName;
-				var featureType;
-				var srsName;
-										 console.log("before loop");
-				for(var x in serverList){
-					url = serverList[x].url;
-					username = serverList[x].username;
-					password = serverList[x].password;
-										 
-					for(var layername in serverList[x].layers){
-						serverLayer = serverList[x].layers[layername];
-						typeName = serverLayer.typeName;
-						geomName = serverLayer.geomName;
-						featureType = serverLayer.featureType;
-						srsName = serverLayer.srsName;
-						console.log(x + ": " + url);
-						arbiter.currentProject.dataDatabase.transaction(function(tx){
-							tx.executeSql("DELETE FROM " + featureType, [], function(tx, res){
-								//pull everything down
-										  console.log("pull after delete");
-								console.log("pullFeatures after delete: " + typeName + geomName + featureType + srsName + url + username + password);
-								arbiter.pullFeatures(typeName, geomName, featureType, srsName, url, username, password);
-							}); 													  
-						}, arbiter.errorSql, function(){});
-					}
-				}
+				var server = arbiter.currentProject.serverList[meta.serverName];
+				var serverLayer = server.layers[meta.nickname];
+				var url = server.url;
+				var username = server.username;
+				var password = server.password;
+				var typeName = serverLayer.typeName;	
+				var geomName = serverLayer.geomName;
+				var featureType = serverLayer.featureType;
+				var srsName = serverLayer.srsName;
+				
+				
+				arbiter.currentProject.dataDatabase.transaction(function(tx){
+					tx.executeSql("DELETE FROM " + featureType, [], function(tx, res){
+						//pull everything down
+								  console.log("pull after delete");
+						console.log("pullFeatures after delete: " + serverLayer.typeName + serverLayer.geomName + serverLayer.featureType + serverLayer.srsName + server.url + server.username + server.password);
+						arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url, server.username, server.password);
+					}); 													  
+				}, arbiter.errorSql, function(){});
 			});
 			
 			var modifyControl = new OpenLayers.Control.ModifyFeature(newWFSLayer);
 			
-			addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer,OpenLayers.Handler.Point);
+			var addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer,OpenLayers.Handler.Point);
 			addFeatureControl.events.register("featureadded", null, function(event){
 				//populate the features attributes object
 				var attributes = arbiter.currentProject.serverList[meta.serverName].layers[meta.nickname].attributes;
@@ -1745,44 +1734,12 @@ var Arbiter = {
 			
 			//TODO: Change the active modify control			
 			map.addControl(modifyControl);
-			modifyControl.activate();
+			//modifyControl.activate();
 						
-			/*if(!wmsSelectControl){
-				wmsSelectControl = new OpenLayers.Control.WMSGetFeatureInfo({
-					url: meta.url + '/wms',
-					title: 'identify features on click',
-					//	layers: [ wmsLayer ],
-					queryVisible: true
-				});
-				
-				wmsSelectControl.infoFormat = 'application/vnd.ogc.gml';
-				
-				// TODO: adjust the handler so that it can handle multiple features at that location
-				wmsSelectControl.events.register("getfeatureinfo", this, function(event){
-					
-					//if there are any features at the touch event, get that feature in the wfs layer for editing
-					if(event && event.features && event.features.length && (!newWFSLayer.getFeatureByFid(event.features[0].fid))){
-						var geom = event.features[0].geometry.transform(new OpenLayers.Projection(meta.srsName), WGS84_Google_Mercator);
-						var attributes = event.features[0].attributes;
-						var newFeature = new OpenLayers.Feature.Vector(geom, attributes);
-						newFeature.fid = event.features[0].fid;
-						
-					//	var gml = event.features[0].gml;
-						
-					//	wfsLayer.addFeatures([newFeature]);
-						newWFSLayer.addFeatures([newFeature]);
-						modifyControl.selectControl.select(newFeature);
-						//wfsModifyControl.selectControl.select(newFeature);
-						
-						selectedFeature = newFeature;
-						
-						arbiter.insertFeaturesIntoTable([event.features[0]], meta.featureType, meta.geomName);
-					}
-				});
-				
-				map.addControl(wmsSelectControl);
-				wmsSelectControl.activate();
-			}*/
+			arbiter.currentProject.modifyControls[meta.nickname] = {
+				modifyControl: modifyControl,
+				insertControl: addFeatureControl
+			};
 			
 			var li = "<li><a href='#' class='layer-list-item'>" + meta.nickname + "</a></li>";
 			
