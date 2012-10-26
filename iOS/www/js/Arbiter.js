@@ -279,6 +279,8 @@ var Arbiter = {
 				var username;
 				var password;
 				var layers;
+				var li = "";
+				var radioNumber = 1;
 						 
 				for(var x in serverList){
 					layers = serverList[x].layers;
@@ -296,13 +298,42 @@ var Arbiter = {
 							password: serverList[x].password,
 							serverName: x
 						});
+						
+						li += "<li style='padding:5px; border-radius: 4px;'>";
+						li += "<input type='radio' name='radio-choice' id='" + y;
+						li += "' value='choice-";
+						li += radioNumber + "'";
+						
+						if(radioNumber == 1) {
+							li += "checked='checked'/>";
+							arbiter.currentProject.activeLayer = y;
+							arbiter.currentProject.modifyControls[arbiter.currentProject.activeLayer].modifyControl.activate();
+						} else {
+						 	li += "/>";
+						}
+						li += "<label for='radio-choice-" + radioNumber + "'>";
+						li += x + " / " + y;
+						li += "</label>";
+						radioNumber++;
 						 
 						//add the data from local storage
 						arbiter.readLayerFromDb(layers[y].featureType, y, layers[y].geomName, layers[y].srsName);
 					}
 				}
+						 
+				$("ul#editor-layer-list").empty().append(li).listview("refresh");
+				
+				$("input[type='radio']").bind( "change", function(event, ui) {
+					console.log("Radio Change");
+					console.log($("input[type=radio]:checked").attr('id'));
+					
+					arbiter.currentProject.modifyControls[arbiter.currentProject.activeLayer].modifyControl.deactivate();
+					arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
+					arbiter.currentProject.modifyControls[arbiter.currentProject.activeLayer].modifyControl.activate();
+				});
 			}
 			
+			$('#projectName').text(arbiter.currentProject.name);
 			arbiter.setSyncColor();
 		});
 		
@@ -1668,7 +1699,7 @@ var Arbiter = {
 		}
 	},
 	
-	//db filename, table in db file, featureType, featureNS, geomName, srsName, geoserverURL, nickname 
+	//db filename, table in db file, featureType, featureNS, geomName, srsName, geoserverURL, nickname
 	StoreLayerMetadata: function(db, metadata){
 		var arbiter = this;
 		var query = function(tx){
