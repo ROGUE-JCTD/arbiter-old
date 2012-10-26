@@ -258,12 +258,14 @@ var Arbiter = {
 						});
 						
 						li += "<li style='padding:5px; border-radius: 4px;'>";
-						li += "<input type='radio' name='radio-choice' id='radio-choice-";
-						li += radioNumber + "' value='choice-";
+						li += "<input type='radio' name='radio-choice' id='" + y;
+						li += "' value='choice-";
 						li += radioNumber + "'";
 						
 						if(radioNumber == 1) {
 							li += "checked='checked'/>";
+							arbiter.currentProject.activeLayer = y;
+							arbiter.currentProject.modifyControls[arbiter.currentProject.activeLayer].modifyControl.activate();
 						} else {
 						 	li += "/>";
 						}
@@ -282,6 +284,10 @@ var Arbiter = {
 				$("input[type='radio']").bind( "change", function(event, ui) {
 					console.log("Radio Change");
 					console.log($("input[type=radio]:checked").attr('id'));
+					
+					arbiter.currentProject.modifyControls[arbiter.currentProject.activeLayer].modifyControl.deactivate();
+					arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
+					arbiter.currentProject.modifyControls[arbiter.currentProject.activeLayer].modifyControl.activate();
 				});
 			}
 			
