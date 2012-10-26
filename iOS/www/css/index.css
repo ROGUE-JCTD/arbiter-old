@@ -200,3 +200,11 @@ html, body {
 .invalid-field{
 	background-color: #700000 !important;
 }
+
+.ui-hide-label.ui-br, .no-field-separator {
+    border-bottom-width: 0;
+}
+.ui-field-contain.ui-hide-label, .no-field-separator {
+    margin: 1em 0;
+    padding: 0;
+}
