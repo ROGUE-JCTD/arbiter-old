@@ -361,8 +361,6 @@ var Arbiter = {
 		console.log("Language selected: " + CurrentLanguage.name);
 		this.UpdateLocale();
 		$.mobile.changePage(div_MapPage, "pop");
-		
-		TileUtil.countTilesInBounds();
 	},
 	
 	UpdateLocale: function() {

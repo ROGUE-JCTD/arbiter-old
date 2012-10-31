@@ -177,6 +177,7 @@ startCachingTiles: function() {
 countTilesInBounds: function (){
     var layer =  map.baseLayer;
     var tileWidth = layer.tileSize.w;
+    var tileHeight = layer.tileSize.h;
 
     var zoomLevel = map.getZoom();
     
@@ -185,17 +186,64 @@ countTilesInBounds: function (){
     while (zoomLevel < layer.numZoomLevels) {
 
         var extentWidth = map.getExtent().getWidth() / map.getResolutionForZoom(zoomLevel);
-        var buffer = Math.ceil((extentWidth / tileWidth - map.getSize().w / tileWidth) / 2);    	
-    	
-        // buffer * 2 is one side of the rectangle. squared to get tiles in the rect.  
-        totalTiles += ((buffer * 2) * (buffer * 2));
-
-        alert("Will cache " + ((buffer * 2) * (buffer * 2)) + " tiles for zoom level: " + zoomLevel + ", buffer: " + buffer);
+        
+        var widthInTiles = Math.ceil(extentWidth / tileWidth);
+        // add one for good measure since when the buffer is computed during caching, it tries to subtract 
+        // the tiles that are already downloaded. but since the map is not square (and layer.buffer essentially assumes it is since we dont have layer.buffer.x and layer.buffer.y), 
+        // we can have more tiles already downloaded vertically than horizontally. Also, the center of map can be falling such that we have more tiles needed in the view vertically 
+        // vs horizontally or vice versa. It can be computed but for now probably not worth it. 
+        widthInTiles += 1;  /// seems like map always gets 3x3. if this is really true, layer.buffer can just be set to Math.ceil(extentWidth / tileWidth); - 1.5
+        totalTiles += widthInTiles * widthInTiles;
+        
+        // Test data
+        // widthInTiles+1       widthInTiles+1.5    count..InBounds2 actual 
+        // 218                  248                 212              217  
+        // 623                  673                 684              715
+        // 2466                 2562                2460             2482
+        // 9190                 9369                9184             9235 (45.2MB) 
+        //
+        //
+        //
+        console.log("-----<< Will cache " + widthInTiles * widthInTiles + " tiles for zoom level: " + zoomLevel + "widthInTiles: " + widthInTiles);
         
     	zoomLevel += 1;
     }
     
-    alert("Will cache " + totalTiles + " tiles for " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
+    console.log("=====<< simple method Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
+    //alert("Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
+    
+    return totalTiles;
+},
+
+countTilesInBounds2: function (){
+    var layer =  map.baseLayer;
+    var tileWidth = layer.tileSize.w;
+    var tileHeight = layer.tileSize.h;
+
+    var zoomLevel = map.getZoom();
+    
+    var totalTiles = 0;
+    
+    while (zoomLevel < layer.numZoomLevels) {
+
+        var extentWidth = map.getExtent().getWidth() / map.getResolutionForZoom(zoomLevel);
+        
+        // buffer is being computed the same way it gets computed in cacheTile to help get as close of an estimate as possible 
+        // the number of tiles downloaded should really be  Math.ceil(extentWidth / tileWidth) * Math.ceil(extentHeight / tileHeight);
+        // but we're playing along since we want to be as close to the number we actually end up downloading as possible. 
+        var buffer = Math.ceil((extentWidth / tileWidth - map.getSize().w / tileWidth) / 2);
+        var widthInTiles =  Math.ceil(buffer * 2 + map.getSize().w / tileWidth);
+        var heightInTiles =  Math.ceil(buffer * 2 + map.getSize().h / tileHeight);
+        totalTiles += (widthInTiles * heightInTiles);
+        
+        //alert("Will cache " + (widthInTiles * widthInTiles) + " tiles for zoom level: " + zoomLevel);
+        console.log("-----<< Will cache " + (widthInTiles * heightInTiles) + " tiles for zoom level: " + zoomLevel + " widthInTiles: " + widthInTiles + " heightInTiles: " + heightInTiles);
+        
+    	zoomLevel += 1;
+    }
+    
+    console.log("=====<< complex method Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
+    //alert("Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
     
     return totalTiles;
 },
@@ -213,7 +261,7 @@ cacheTile: function() {
         var extentWidth = caching.extent.getWidth() / map.getResolutionForZoom(nextZoom);
         // adjust the layer's buffer size so we don't have to pan
         layer.buffer = Math.ceil((extentWidth / tileWidth - map.getSize().w / tileWidth) / 2);
-        alert("setting buffer to: " + layer.buffer + ", for zoom: " + nextZoom);
+        //alert("setting buffer to: " + layer.buffer + ", for zoom: " + nextZoom);
         map.zoomIn();
     }
 },
