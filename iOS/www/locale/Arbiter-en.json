@@ -20,7 +20,8 @@
 	},
 	"label" : {
 		"name": "Name your Project *",
-		"nickname": "Give it a Nickname *",
+		"serverNickname": "Give server a nickname *",
+		"layerNickname": "Give layer a nickname *",
 		"serverURL": "Server URL *",
 		"username": "Username *",
 		"password": "Password *",
