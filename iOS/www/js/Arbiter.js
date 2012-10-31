@@ -1233,7 +1233,7 @@ var Arbiter = {
 		var arbiter = this;
 		var serverInfo = arbiter.currentProject.serverList[serverName];
 		var request = new OpenLayers.Request.GET({
-			url: serverInfo.url + "/wms?request=getCapabilities",
+			url: serverInfo.url + "/wms?service=wms&version=1.1.1&request=getCapabilities",
 			user: serverInfo.username,
 			password: serverInfo.password,
 			callback: function(response){
