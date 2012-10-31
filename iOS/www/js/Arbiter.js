@@ -26,6 +26,8 @@ var postgisStyle;
 var osmLayer;
 var postgisLayer;
 
+var yayoma = false;
+
 //Zusy
 //var geoserverUrl = "http://192.168.10.187:8080";
 var wmsLayer; 
@@ -122,42 +124,7 @@ var Arbiter = {
 				ratio : 1.3671875,
 				isBaseLayer : true,
 				visibility : true,
-				getURL : function(bounds) {
-					
-			        var xyz = this.getXYZ(bounds);
-			        var url = this.url;
-			        if (OpenLayers.Util.isArray(url)) {
-			            var s = '' + xyz.x + xyz.y + xyz.z;
-			            url = this.selectUrl(s, url);
-			        }
-			        
-			        var finalUrl = OpenLayers.String.format(url, xyz);
-			        
-			        var tilePath = window.localStorage.getItem("tile_" + finalUrl);
-			        
-			        if (tilePath) {
-			        	console.log("<<<<<<<< ++++++ founed cached tile: " + tilePath + " for " + finalUrl);
-			        } else {
-			        	
-						var saveTileSuccess = function(url, filename){
-						}
-						
-						var saveTileError = function(url, filename, error){
-							console.log("========>> saveTileError filename: " + url + ", filename: " + filename);
-							// if save failed, remove it. 
-							window.localStorage.removeItem("tile_" + url);
-						}
-						
-						tilePath = TileUtil.saveTile(finalUrl, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, saveTileError);
-
-						console.log("<<<<<<<< ------ cach tile: " + finalUrl + " to: " + tilePath);
-
-			        	//Add it immediately before we have confirmation that it has saved so that we do not download it multiple times
-						window.localStorage.setItem("tile_" + finalUrl, tilePath);			        	
-					}
-					
-					return tilePath;
-				}
+				getURL : TileUtil.getURL
 			}			
 		);
 		
@@ -245,8 +212,8 @@ var Arbiter = {
 		this.readLayerFromDb(this.variableDatabase, "hospitals");
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
-    },
-	
+    },    
+    
 	// args: featureNS, serverUrl, typeName, srsName, layernickname
 	submitLayer: function(args){
 		var request = new OpenLayers.Request.GET({
@@ -394,6 +361,8 @@ var Arbiter = {
 		console.log("Language selected: " + CurrentLanguage.name);
 		this.UpdateLocale();
 		$.mobile.changePage(div_MapPage, "pop");
+		
+		TileUtil.countTilesInBounds();
 	},
 	
 	UpdateLocale: function() {
