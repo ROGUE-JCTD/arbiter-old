@@ -79,6 +79,7 @@ var jqAddFeature;
 var jqEditFeature;
 var jqSyncUpdates;
 
+var fileSystem = null;
 /* ============================ *
  * 			 Language
  * ============================ */
@@ -117,10 +118,8 @@ var Arbiter = {
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); //http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
-        
-        //SQLite.Initialize(this);
-		// SQLite.testSQLite(); 
-		//SQLite.dumpFiles();
+        TileUtil.Initialize(this);
+        TileUtil.dumpFiles();
 		
 		Cordova.Initialize(this);
 		
@@ -181,8 +180,8 @@ var Arbiter = {
 		});
 		
 		//Load saved variables
-			//LanguageSelected
-			//CurrentLanguage
+		//LanguageSelected
+		//CurrentLanguage
 
 		//Save divs for later
 		div_MapPage 		= $('#idMapPage');
@@ -238,8 +237,14 @@ var Arbiter = {
 						
 		//Initialize Layers
 		osmLayer		=	new OpenLayers.Layer.OSM('OpenStreetMap', null, {
-								transitionEffect: 'resize'
-							});
+				transitionEffect : 'resize',
+				singleTile : false,
+				ratio : 1.3671875,
+				isBaseLayer : true,
+				visibility : true,
+				getURL : TileUtil.getURL
+			}			
+		);
 		
 		aoi_osmLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
 			transitionEffect: 'resize'
@@ -1092,6 +1097,7 @@ var Arbiter = {
 					/*right now just assuming that theres only 1 featureType*/
 					
 					//have the typeName from before, but this way we don't have to parse
+
 					featureType = obj.featureTypes[0].typeName;
 					
 					for(var j = 0; j < obj.featureTypes[0].properties.length; j++){
@@ -1672,6 +1678,7 @@ var Arbiter = {
 				layers: meta.typeName,
 				transparent: 'TRUE'
 			});
+
 			
 			map.addLayers([newWMSLayer, newWFSLayer]);
 			
