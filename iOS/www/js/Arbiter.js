@@ -74,7 +74,7 @@ var jqLayerSubmit;
 var jqProjectsList;
 var jqEditorTab;
 var jqAttributeTab;
-
+var jqExistingServers;
 var jqAddFeature;
 var jqEditFeature;
 var jqSyncUpdates;
@@ -126,6 +126,49 @@ var Arbiter = {
 		
 		var arbiter = this;
 		
+		//Save divs for later
+		div_MapPage 		= $('#idMapPage');
+		div_WelcomePage		= $('#idWelcomePage');
+		div_ProjectsPage	= $('#idProjectsPage');
+		div_NewProjectPage	= $('#idNewProjectPage');
+		div_ServersPage		= $('#idServersPage');
+		div_LayersPage		= $('#idLayersPage');
+		div_AreaOfInterestPage = $('#idAreaOfInterestPage');
+		div_ArbiterSettingsPage	= $('#idArbiterSettingsPage');
+		div_ProjectSettingsPage	= $('#idProjectSettingsPage');
+		div_Popup			= $('#popup');
+		
+		jqSaveButton = $('#saveButton');
+		jqAttributesButton = $('#attributesButton');
+		jqAddLayerButton = $('#addLayerBtn');
+		jqLayerURL = $('#layerurl');
+		//jqAddLayerSubmit = $('#addLayerSubmit');
+		jqCreateFeature = $('#createFeature');
+		jqNewProjectName = $('#newProjectName');
+		jqToServersButton = $('#toServersButton');
+		jqNewUsername = $('#newUsername');
+		jqNewPassword = $('#newPassword');
+		jqNewNickname = $('#newNickname');
+		jqNewServerURL = $('#newServerURL');
+		jqAddServerButton = $('#addServerButton');
+		jqGoToAddServer = $('#goToAddServer');
+		jqAddServerPage = $('#idAddServerPage');
+		jqServerSelect = $('#serverselect');
+		jqExistingServers = $('#existingServers');
+		jqLayerSelect = $('#layerselect');
+		jqLayerNickname = $('#layernickname');
+		jqLayerSubmit = $('#addLayerSubmit');
+		jqProjectsList = $('ul#idProjectsList');
+		jqEditorTab = $('#editorTab');
+		jqAttributeTab = $('#attributeTab');
+		jqAddFeature	 = $('#addPointFeature');
+		jqEditFeature	 = $('#editPointFeature');
+		jqSyncUpdates	 = $('#syncUpdates');
+		jqServersPageContent = $('#idServersPageContent');
+		div_ProjectsPage.live('pageshow', this.PopulateProjectsList);
+		div_ServersPage.live('pageshow', this.PopulateServersList);
+		div_LayersPage.live('pageshow', this.PopulateLayersList);
+		
 		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(filesystem){
 			arbiter.fileSystem = filesystem;
 			
@@ -171,6 +214,50 @@ var Arbiter = {
 					}, function(tx, err){
 						console.log("global projects table err: ", err);			  
 					});
+					
+					//populate the existing servers drop down on the add server page
+					tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
+						var row;
+						var html = '';
+						var contentClass;
+						var leftClass;
+						//var leftPositioning;
+						
+						for(var i = 0;i < res.rows.length;i++){
+							row = res.rows.item(i);
+							contentClass = 'existingServer-contentColumn';
+							leftClass = 'existingServer-leftColumn';
+							
+							if(i == 0){
+								contentClass += ' existingServer-top-right';
+								leftClass += ' existingServer-top-left';
+							}
+		
+							if(i == (res.rows.length - 1)){
+								contentClass += ' existingServer-bottom-right';
+								leftClass += ' existingServer-bottom-left';
+							}
+							
+							//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
+							
+							html += '<div class="existingServer-row">' +
+										'<div class="existingServer-contentWrapper">' +
+								  			'<div class="' + contentClass + '">' +
+								  				'<a class="existingServer-name">' + row.name + '</a>' +
+											'</div>' +
+										'</div>' +
+								  		'<div class="' + leftClass + '">' +
+								  			'<div class="existingServer-checkbox-container">' +
+												'<input type="checkbox" name="test" id="test" style="width:20px;height:20px;" />' +
+								  			'</div>' +
+								  		'</div>' +
+									'</div>';
+						}
+						
+						jqServersPageContent.html(html);
+					}, function(tx, err){
+						
+					});
 				}, arbiter.errorSql, function(){});
 			}, function(error){
 										 console.log("couldn't create arbiter directory");
@@ -184,46 +271,6 @@ var Arbiter = {
 			//LanguageSelected
 			//CurrentLanguage
 
-		//Save divs for later
-		div_MapPage 		= $('#idMapPage');
-		div_WelcomePage		= $('#idWelcomePage');
-		div_ProjectsPage	= $('#idProjectsPage');
-		div_NewProjectPage	= $('#idNewProjectPage');
-		div_ServersPage		= $('#idServersPage');
-		div_LayersPage		= $('#idLayersPage');
-		div_AreaOfInterestPage = $('#idAreaOfInterestPage');
-		div_ArbiterSettingsPage	= $('#idArbiterSettingsPage');
-		div_ProjectSettingsPage	= $('#idProjectSettingsPage');
-		div_Popup			= $('#popup');
-		
-		jqSaveButton = $('#saveButton');
-		jqAttributesButton = $('#attributesButton');
-		jqAddLayerButton = $('#addLayerBtn');
-		jqLayerURL = $('#layerurl');
-		//jqAddLayerSubmit = $('#addLayerSubmit');
-		jqCreateFeature = $('#createFeature');
-		jqNewProjectName = $('#newProjectName');
-		jqToServersButton = $('#toServersButton');
-		jqNewUsername = $('#newUsername');
-		jqNewPassword = $('#newPassword');
-		jqNewNickname = $('#newNickname');
-		jqNewServerURL = $('#newServerURL');
-		jqAddServerButton = $('#addServerButton');
-		jqGoToAddServer = $('#goToAddServer');
-		jqAddServerPage = $('#idAddServerPage');
-		jqServerSelect = $('#serverselect');
-		jqLayerSelect = $('#layerselect');
-		jqLayerNickname = $('#layernickname');
-		jqLayerSubmit = $('#addLayerSubmit');
-		jqProjectsList = $('ul#idProjectsList');
-		jqEditorTab = $('#editorTab');
-		jqAttributeTab = $('#attributeTab');
-		jqAddFeature	 = $('#addPointFeature');
-		jqEditFeature	 = $('#editPointFeature');
-		jqSyncUpdates	 = $('#syncUpdates');
-		div_ProjectsPage.live('pageshow', this.PopulateProjectsList);
-		div_ServersPage.live('pageshow', this.PopulateServersList);
-		div_LayersPage.live('pageshow', this.PopulateLayersList);
 		
 		//Start on the Language Select screen if this is the users first time.
 		//Otherwise move to the Projects page.
@@ -415,6 +462,9 @@ var Arbiter = {
 			arbiter.getFeatureTypesOnServer($(this).val());
 		});
 		
+		jqLayerSelect.change(function(event){
+			jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
+		});
 		/*jqAddLayerSubmit.mouseup(function(event){
 			// featureNS, serverUrl, typeName, srsName, layernickname
 			
@@ -481,6 +531,14 @@ var Arbiter = {
 		
 		$(".server-list-item").mouseup(function(event){
 			arbiter.populateAddServerDialog($(this).text());
+		});
+		
+		$(".testing1").mousedown(function(event){
+			$(this).addClass("ui-btn-active");	
+		});
+		
+		$(".testing1").mouseup(function(event){
+			$(this).removeClass("ui-btn-active");					   
 		});
 		
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
@@ -809,8 +867,41 @@ var Arbiter = {
 					  	layers: {}
 					};
 					
-					$("ul#idServersList").append("<li><a href='#' serverid='" + res.insertId + 
-							"' class='server-list-item'>" + name + "</a></li>").listview('refresh');
+					/*$("ul#idServersList").append("<li><a href='#' serverid='" + res.insertId + 
+							"' class='server-list-item'>" + name + "</a></li>").listview('refresh');*/
+					
+					//remove the bottom class from the previously last row
+					$('.existingServer-bottom-left').removeClass('existingServer-bottom-left');
+					$('.existingServer-bottom-right').removeClass('existingServer-bottom-right');
+					 
+					//if are no existingServer-row elements yet, then this is the top
+					var contentClass = 'existingServer-contentColumn';
+					var leftClass = 'existingServer-leftColumn';
+					  
+					if($('.existingServer-row').length == 0){
+					  contentClass += ' existingServer-top-right';
+					  leftClass += ' existingServer-top-left';
+					}
+					
+					contentClass += ' existingServer-bottom-right';
+					leftClass += ' existingServer-bottom-left';
+					  
+					//var leftPositioning = -1 * (((name.length * 16) / 2) - 40);
+					  
+					var html = '<div class="existingServer-row">' +
+					  				'<div class="existingServer-contentWrapper">' +
+					  					'<div class="' + contentClass + '">' +
+					  						'<a class="existingServer-name" style="font-weight:bold;">' + name + '</a>' +
+					  					'</div>' +
+					  				'</div>' +
+					  				'<div class="' + leftClass + '">' +
+					  					'<div class="existingServer-checkbox-container" style="left:8px;top:8px;">' +
+					  						'<input type="checkbox" checked name="test" id="test" style="width:20px;height:20px;" />' +
+					  					'</div>' +
+									'</div>' +
+					  			'</div>';
+					
+					jqServersPageContent.append(html);
 							  
 					//want the index into the serverList, which is the server's name
 					var option = '<option value="' + name + '">' + name + '</option>';
@@ -1233,7 +1324,7 @@ var Arbiter = {
 		var arbiter = this;
 		var serverInfo = arbiter.currentProject.serverList[serverName];
 		var request = new OpenLayers.Request.GET({
-			url: serverInfo.url + "/wms?request=getCapabilities",
+			url: serverInfo.url + "/wms?service=wms&version=1.1.1&request=getCapabilities",
 			user: serverInfo.username,
 			password: serverInfo.password,
 			callback: function(response){
@@ -1260,6 +1351,8 @@ var Arbiter = {
 					}
 												 
 					jqLayerSelect.html(options).selectmenu('refresh', true);
+					
+					jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
 					
 					arbiter.enableLayerSelectAndNickname();
 				}
