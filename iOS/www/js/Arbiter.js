@@ -247,7 +247,7 @@ var Arbiter = {
 										'</div>' +
 								  		'<div class="' + leftClass + '">' +
 								  			'<div class="existingServer-checkbox-container">' +
-												'<input type="checkbox" name="test" id="test" style="width:20px;height:20px;" />' +
+												'<input type="checkbox" class="existingServer-checkbox" name="' + row.name + '" id="' + row.id + '" style="width:20px;height:20px;" />' +
 								  			'</div>' +
 								  		'</div>' +
 									'</div>';
@@ -538,12 +538,31 @@ var Arbiter = {
 			arbiter.populateAddServerDialog($(this).text());
 		});
 		
-		$(".testing1").mousedown(function(event){
-			$(this).addClass("ui-btn-active");	
-		});
-		
-		$(".testing1").mouseup(function(event){
-			$(this).removeClass("ui-btn-active");					   
+		$(".existingServer-checkbox").live('click', function(event){
+			var element = $(this);
+			var name = element.attr('name');			
+											
+			if(element.is(":checked")){ // if checked, add the server to the projects serverList
+				arbiter.globalDatabase.transaction(function(tx){
+					tx.executeSql("SELECT * FROM servers WHERE name=?;", [name], function(tx, res){
+						if(res.rows.length){
+							var row = res.rows.item(0);
+								  
+							arbiter.currentProject.serverList[row.name] = {
+								layers: {},
+								password: row.password,
+								url: row.url,
+								username: row.username,
+								serverId: row.id
+							};
+						}
+					}, function(tx, err){
+																 
+					});
+				}, arbiter.errorSql, function(){});
+			}else{
+				delete arbiter.currentProject.serverList[name];								
+			}
 		});
 		
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
@@ -901,7 +920,7 @@ var Arbiter = {
 					  				'</div>' +
 					  				'<div class="' + leftClass + '">' +
 					  					'<div class="existingServer-checkbox-container" style="left:8px;top:8px;">' +
-					  						'<input type="checkbox" checked name="test" id="test" style="width:20px;height:20px;" />' +
+					  						'<input type="checkbox" checked class="existingServer-checkbox" name="' + name + '" id="' + res.insertId + '" style="width:20px;height:20px;" />' +
 					  					'</div>' +
 									'</div>' +
 					  			'</div>';
