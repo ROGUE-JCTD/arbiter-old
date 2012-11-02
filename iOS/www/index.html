@@ -31,7 +31,7 @@
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.theme-1.1.1.min.css"/>
 		<link rel="stylesheet" type="text/css" href="css/glyphish.css"/>
 		<link rel="stylesheet" type="text/css" href="OpenLayers-2.12/theme/default/style.mobile.css"/>
-		<script src="http://192.168.10.126:8082/target/target-script-min.js#crack"></script>
+		<script src="http://192.168.10.126:8082/target/target-script-min.js#switch"></script>
 		<script type="text/javascript" src="cordova-2.0.0.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
 		<script type="text/javascript" src="js/Arbiter.js"></script>
@@ -397,6 +397,48 @@
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
 						<li><a id="addServerButton" onClick="Arbiter.onClick_AddServer()"><div data-localize="footer.addServer">Add Server</div></a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		
+		<!--
+		 // =======================
+		 //		Edit Server Page
+		 // =======================
+		 -->
+		<div data-role="page" class="Page" id='idEditServerPage' data-theme="a">
+			<!-- Header -->
+			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
+				<a data-rel="back" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<h1 data-localize="page.editServer">Edit Server</h1>
+			</div>
+			
+			<!-- Content -->
+			<div data-role="content" class="EditServerContent" id='idEditServerPageContent'>
+				<div data-role="fieldcontain" class="ui-hide-label">
+					<label for="editNickname">Nickname</label>
+					<input type="text" autocorrect="off" autocapitalize="off" name="editNickname" id="editNickname" value="" placeholder="Give server a name *" data-localize="label.nickname"/>
+				</div>
+				<div data-role="fieldcontain" class="ui-hide-label">
+					<label for="editServerURL">URL</label>
+					<input type="url" name="editServerURL" id="editServerURL" value="" placeholder="Server URL *" data-localize="label.serverURL"/>
+				</div>
+				<div data-role="fieldcontain" class="ui-hide-label">
+					<label for="editUsername">Username</label>
+					<input type="text" autocorrect="off" autocapitalize="off" name="editUsername" id="editUsername" value="" placeholder="Username *" data-localize="label.username"/>
+				</div>
+				<div data-role="fieldcontain" class="ui-hide-label">
+					<label for="editPassword">Password</label>
+					<input type="password" name="editPassword" id="editPassword" value="" placeholder="Password *" data-localize="label.password"/>
+				</div>
+			</div>
+			
+			<!-- Footer -->
+			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
+				<div data-role="navbar" data-iconpos="top">
+					<ul>
+						<li><a id="editServerButton" onClick="Arbiter.onClick_EditServer()"><div data-localize="footer.editServer">Edit Server</div></a></li>
 					</ul>
 				</div>
 			</div>

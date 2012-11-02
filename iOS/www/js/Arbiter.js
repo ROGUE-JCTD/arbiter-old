@@ -52,7 +52,7 @@ var div_AreaOfInterestPage;
 var div_ArbiterSettingsPage;
 var div_ProjectSettingsPage;
 var div_Popup;
-
+var div_EditServerPage;
 var jqSaveButton;
 var jqAttributesButton;
 var jqAddLayerButton;
@@ -65,6 +65,11 @@ var jqNewPassword;
 var jqNewNickname;
 var jqNewServerURL;
 var jqAddServerButton;
+var jqEditUsername;
+var jqEditPassword;
+var jqEditNickname;
+var jqEditServerURL;
+var jqEditServerButton;
 var jqGoToAddServer;
 var jqAddServerPage;
 var jqServerSelect;
@@ -136,7 +141,7 @@ var Arbiter = {
 		div_ArbiterSettingsPage	= $('#idArbiterSettingsPage');
 		div_ProjectSettingsPage	= $('#idProjectSettingsPage');
 		div_Popup			= $('#popup');
-		
+		div_EditServerPage = $('#idEditServersPage');
 		jqSaveButton = $('#saveButton');
 		jqAttributesButton = $('#attributesButton');
 		jqAddLayerButton = $('#addLayerBtn');
@@ -150,6 +155,11 @@ var Arbiter = {
 		jqNewNickname = $('#newNickname');
 		jqNewServerURL = $('#newServerURL');
 		jqAddServerButton = $('#addServerButton');
+		jqEditUsername = $('#editUsername');
+		jqEditPassword = $('#editPassword');
+		jqEditNickname = $('#editNickname');
+		jqEditServerURL = $('#editServerURL');
+		jqEditServerButton = $('#editServerButton');
 		jqGoToAddServer = $('#goToAddServer');
 		jqAddServerPage = $('#idAddServerPage');
 		jqServerSelect = $('#serverselect');
@@ -242,12 +252,13 @@ var Arbiter = {
 							html += '<div class="existingServer-row">' +
 										'<div class="existingServer-contentWrapper">' +
 								  			'<div class="' + contentClass + '">' +
-								  				'<a class="existingServer-name">' + row.name + '</a>' +
+								  				'<a class="existingServer-name" id="existingServer-' + row.id + '">' + row.name + '</a>' +
 											'</div>' +
 										'</div>' +
 								  		'<div class="' + leftClass + '">' +
 								  			'<div class="existingServer-checkbox-container">' +
-												'<input type="checkbox" class="existingServer-checkbox" name="' + row.name + '" id="' + row.id + '" style="width:20px;height:20px;" />' +
+												'<input type="checkbox" class="existingServer-checkbox" server-id="' + row.id + '" name="' + row.name +
+								  					'" id="existingServer-checkbox-' + row.id + '" style="width:20px;height:20px;" />' +
 								  			'</div>' +
 								  		'</div>' +
 									'</div>';
@@ -540,11 +551,12 @@ var Arbiter = {
 		
 		$(".existingServer-checkbox").live('click', function(event){
 			var element = $(this);
-			var name = element.attr('name');			
-											
+			var id = element.attr('server-id');			
+			var name = element.attr('name');
+										   
 			if(element.is(":checked")){ // if checked, add the server to the projects serverList
 				arbiter.globalDatabase.transaction(function(tx){
-					tx.executeSql("SELECT * FROM servers WHERE name=?;", [name], function(tx, res){
+					tx.executeSql("SELECT * FROM servers WHERE id=?;", [id], function(tx, res){
 						if(res.rows.length){
 							var row = res.rows.item(0);
 								  
@@ -563,6 +575,27 @@ var Arbiter = {
 			}else{
 				delete arbiter.currentProject.serverList[name];								
 			}
+		});
+		
+		$('.existingServer-contentColumn').live('mouseup', function(event){
+			var element = $(this);
+			var name = element.find('a').text();
+												
+			arbiter.globalDatabase.transaction(function(tx){
+				tx.executeSql("SELECT * FROM servers WHERE name=?;", [name], function(tx, res){
+					if(res.rows.length){
+						var row = res.rows.item(0);
+							  
+						jqEditUsername.val(row.username);
+						jqEditPassword.val(row.password);
+						jqEditNickname.val(row.name);
+						jqEditServerURL.val(row.url);
+						jqEditServerButton.attr('server-id', row.id);
+					}
+							  
+					$.mobile.changePage('#idEditServerPage', 'pop');
+				});
+			}, arbiter.errorSql, function(){});
 		});
 		
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
@@ -817,138 +850,97 @@ var Arbiter = {
 		return size;
 	},
 	
-	onClick_EditServers: function() {
-		//TODO: Make the servers List editable
-		console.log("User wants to edit his/her servers.");
-	},
-	
-	validateAddServerFields: function(){
-		var username = jqNewUsername.val();
-		var password = jqNewPassword.val();
-		var nickname = jqNewNickname.val();
-		var url = jqNewServerURL.val();
+	/*
+	 * args: {
+	 *		jqusername,
+	 *		jqpassword,
+	 *		jqurl,
+	 *		jqnickname,
+	 *		func //either insert or update
+	 * }
+	 */
+	validateAddServerFields: function(args){
+		var username = args.jqusername.val();
+		var password = args.jqpassword.val();
+		var nickname = args.jqnickname.val();
+		var url = args.jqurl.val();
 		var valid = true;
 		
 		if(!username){
-			jqNewUsername.addClass('invalid-field');
+			args.jqusername.addClass('invalid-field');
 			valid = false;
 		}else
-			jqNewUsername.removeClass('invalid-field');
+			args.jqusername.removeClass('invalid-field');
 		
 		if(!password){
-			jqNewPassword.addClass('invalid-field');
+			args.jqpassword.addClass('invalid-field');
 			valid = false;
 		}else
-			jqNewPassword.removeClass('invalid-field');
+			args.jqpassword.removeClass('invalid-field');
 		
 		if(!nickname){
-			jqNewNickname.addClass('invalid-field');
+			args.jqnickname.addClass('invalid-field');
 			valid = false;
-		}else if(this.currentProject.serverList[nickname]){
-			jqNewNickname.addClass('invalid-field');
-			jqNewNickname.val("");
-			jqNewNickname.attr("placeholder", "Choose another Nickname *");
+		}else if(this.currentProject.serverList[nickname]){ //TODO: need to check the global db now
+			args.jqnickname.addClass('invalid-field');
+			args.jqnickname.val("");
+			args.jqnickname.attr("placeholder", "Choose another Nickname *");
 			valid = false;
 		}else{
-			jqNewNickname.removeClass('invalid-field');
+			args.jqnickname.removeClass('invalid-field');
 		}
 		
 		if(!url){
-			jqNewServerURL.addClass('invalid-field');
+			args.jqurl.addClass('invalid-field');
 			valid = false;
 		}else
-			jqNewServerURL.removeClass('invalid-field');
+			args.jqurl.removeClass('invalid-field');
 		
 		return valid;
 	},
 	
 	//This should be checking the JSESSIONID cookie instead, but it doesn't seem like
 	//we're getting it back even after authenticating
-	checkCacheControl: function(cacheControl, url, username, password){
+	/*
+	 * args: {
+	 *		jqusername,
+	 *		jqpassword,
+	 *		jqurl,
+	 *		jqnickname,
+	 *		func //either insert or update
+	 * }
+	 */
+	checkCacheControl: function(cacheControl, args){
 		 // Not authenticated
 		if(cacheControl && (cacheControl.indexOf("must-revalidate") != -1)){
-			jqNewUsername.addClass('invalid-field');
-			jqNewPassword.addClass('invalid-field');
-			jqNewPassword.val("");
+			args.jqusername.addClass('invalid-field');
+			args.jqpassword.addClass('invalid-field');
+			args.jqpassword.val("");
 		}else{ //authenticated
-			var arbiter = this;
-			var name = jqNewNickname.val();
-			
-			//It's a new server so add it to the global servers table
-			arbiter.globalDatabase.transaction(function(tx){
-				var insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES (" +
-					arbiter.squote(name) + ", " + arbiter.squote(url) + ", " + arbiter.squote(username) + ", " + arbiter.squote(password) + ");";
-											   
-				tx.executeSql(insertServerSql, [], function(tx, res){
-					jqNewUsername.removeClass('invalid-field');
-					jqNewPassword.removeClass('invalid-field');
-					
-					arbiter.currentProject.serverList[name] = {
-						url: url,
-					  	username: username,
-					  	password: password,
-						serverId: res.insertId,
-					  	layers: {}
-					};
-					
-					/*$("ul#idServersList").append("<li><a href='#' serverid='" + res.insertId + 
-							"' class='server-list-item'>" + name + "</a></li>").listview('refresh');*/
-					
-					//remove the bottom class from the previously last row
-					$('.existingServer-bottom-left').removeClass('existingServer-bottom-left');
-					$('.existingServer-bottom-right').removeClass('existingServer-bottom-right');
-					 
-					//if are no existingServer-row elements yet, then this is the top
-					var contentClass = 'existingServer-contentColumn';
-					var leftClass = 'existingServer-leftColumn';
-					  
-					if($('.existingServer-row').length == 0){
-					  contentClass += ' existingServer-top-right';
-					  leftClass += ' existingServer-top-left';
-					}
-					
-					contentClass += ' existingServer-bottom-right';
-					leftClass += ' existingServer-bottom-left';
-					  
-					//var leftPositioning = -1 * (((name.length * 16) / 2) - 40);
-					  
-					var html = '<div class="existingServer-row">' +
-					  				'<div class="existingServer-contentWrapper">' +
-					  					'<div class="' + contentClass + '">' +
-					  						'<a class="existingServer-name" style="font-weight:bold;">' + name + '</a>' +
-					  					'</div>' +
-					  				'</div>' +
-					  				'<div class="' + leftClass + '">' +
-					  					'<div class="existingServer-checkbox-container" style="left:8px;top:8px;">' +
-					  						'<input type="checkbox" checked class="existingServer-checkbox" name="' + name + '" id="' + res.insertId + '" style="width:20px;height:20px;" />' +
-					  					'</div>' +
-									'</div>' +
-					  			'</div>';
-					
-					jqServersPageContent.append(html);
-							  
-					//want the index into the serverList, which is the server's name
-					var option = '<option value="' + name + '">' + name + '</option>';
-					jqServerSelect.append(option);
-					
-					if(jqServerSelect.parent().parent().hasClass('ui-select'))
-						jqServerSelect.selectmenu('refresh', true);
-					  
-					jqAddServerButton.removeClass('ui-btn-active');
-					  
-					window.history.back();
-				});
-			}, arbiter.errorSql, function(){});
+			args.func.call(this);	
 		}
 	},
 	
-	authenticateServer: function(url, username, password){
+	/*
+	 * args: {
+	 *		jqusername,
+	 *		jqpassword,
+	 *		jqurl,
+	 *		jqnickname,
+	 *		func //either insert or update
+	 * }
+	 */
+	authenticateServer: function(args){
 		var arbiter = this;
+		var username = args.jqusername.val();
+		var password = args.jqpassword.val();
+		var url = args.jqurl.val();
+		
 		$.post(url + "/j_spring_security_check", {username: username, password: password}, function(results, textStatus, jqXHR){
-			arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), url, username, password);
+			arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
 		}).error(function(err){ //seems to require request to the server before it actually can find it
 			$.post(url + "/j_spring_security_check", {username: username, password: password}, function(results, textStatus, jqXHR){
-				arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), url, username, password);
+				arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
 			});
 		});
 	},
@@ -956,12 +948,139 @@ var Arbiter = {
 	onClick_AddServer: function() {
 		//TODO: Add the new server to the server list
 		console.log("User wants to submit a new servers.");
-		var url = jqNewServerURL.val();
-		var username = jqNewUsername.val();
-		var password = jqNewPassword.val();
+
+		var args = {
+			jqusername: jqNewUsername,
+			jqpassword: jqNewPassword,
+			jqurl: jqNewServerURL,
+			jqnickname: jqNewNickname
+		};
 		
-		if(this.validateAddServerFields()){
-			this.authenticateServer(url, username, password);
+		args.func = function(){
+			console.log("func called");
+			var arbiter = this;
+			var name = jqNewNickname.val();
+			var url = jqNewServerURL.val();
+			var username = jqNewUsername.val();
+			var password = jqNewPassword.val();
+			
+			//It's a new server so add it to the global servers table
+			arbiter.globalDatabase.transaction(function(tx){
+			   var insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES (" +
+			   arbiter.squote(name) + ", " + arbiter.squote(url) + ", " + arbiter.squote(username) + ", " + arbiter.squote(password) + ");";
+			   
+			   tx.executeSql(insertServerSql, [], function(tx, res){
+					jqNewUsername.removeClass('invalid-field');
+					jqNewPassword.removeClass('invalid-field');
+							 
+					arbiter.currentProject.serverList[name] = {
+						url: url,
+						username: username,
+						password: password,
+						serverId: res.insertId,
+						layers: {}
+					};
+					
+					//remove the bottom class from the previously last row
+					$('.existingServer-bottom-left').removeClass('existingServer-bottom-left');
+					$('.existingServer-bottom-right').removeClass('existingServer-bottom-right');
+							 
+					//if are no existingServer-row elements yet, then this is the top
+					var contentClass = 'existingServer-contentColumn';
+					var leftClass = 'existingServer-leftColumn';
+							 
+					if($('.existingServer-row').length == 0){
+						contentClass += ' existingServer-top-right';
+						leftClass += ' existingServer-top-left';
+					}
+							 
+					contentClass += ' existingServer-bottom-right';
+					leftClass += ' existingServer-bottom-left';
+							 
+							 //var leftPositioning = -1 * (((name.length * 16) / 2) - 40);
+							 
+					var html = '<div class="existingServer-row">' +
+							 		'<div class="existingServer-contentWrapper">' +
+							 			'<div class="' + contentClass + '">' +
+							 				'<a class="existingServer-name" id="existingServer-' + res.insertId + '" style="font-weight:bold;">' + name + '</a>' +
+							 			'</div>' +
+							 		'</div>' +
+							 		'<div class="' + leftClass + '">' +
+							 			'<div class="existingServer-checkbox-container" style="left:8px;top:8px;">' +
+							 				'<input type="checkbox" checked class="existingServer-checkbox" server-id="' + res.insertId + '" name="' + name + 
+							 					'" id="existingServer-checkbox-' + res.insertId + '" style="width:20px;height:20px;" />' +
+							 			'</div>' +
+							 		'</div>' +
+							 	'</div>';
+							 
+					jqServersPageContent.append(html);
+							 
+					jqAddServerButton.removeClass('ui-btn-active');
+							 
+					window.history.back();
+				});
+			}, arbiter.errorSql, function(){});
+		};
+		
+		if(this.validateAddServerFields(args)){
+			this.authenticateServer(args);
+		}
+	},
+	
+	onClick_EditServer: function() {
+		//TODO: Add the new server to the server list
+		var args = {
+			jqusername: jqEditUsername,
+			jqpassword: jqEditPassword,
+			jqurl: jqEditServerURL,
+			jqnickname: jqEditNickname
+		};
+		
+		var arbiter = this;
+		args.func = function(){
+			var username = jqEditUsername.val();
+			var password = jqEditPassword.val();
+			var name = jqEditNickname.val();
+			var url = jqEditServerURL.val();
+			var id = jqEditServerButton.attr('server-id');	
+		
+			arbiter.globalDatabase.transaction(function(tx){
+				var updatesql = "UPDATE servers SET name=?, username=?, password=?, url=? WHERE id=?";
+				tx.executeSql(updatesql,[name, username, password, url, id], function(tx, res){
+							  console.log("server update success");
+					jqEditUsername.removeClass('invalid-field');
+					jqEditPassword.removeClass('invalid-field');
+					
+					//get the old name
+					var oldname = $('#existingServer-' + id).text();
+					
+					//TODO: need to check to see if the servers being used
+					
+					if(arbiter.currentProject.serverList[oldname]){
+						//delete the old object
+						delete arbiter.currentProject.serverList[oldname];
+						
+						arbiter.currentProject.serverList[name] = {
+							url: url,
+							username: username,
+							password: password,
+							serverId: id,
+							layers: {}
+						};
+					}
+					//change the name of the server in the list
+					$('#existingServer-' + id).text(name);
+					$('#existingServer-checkbox-' + id).attr('name', name);
+							  
+					jqEditServerButton.removeClass('ui-btn-active');
+							  
+					window.history.back();
+				});
+			}, arbiter.errorSql, function(){});
+		};
+		
+		if(this.validateAddServerFields(args)){
+			this.authenticateServer(args);
 		}
 	},
 	
@@ -1371,7 +1490,7 @@ var Arbiter = {
 							}
 						}
 						
-						options += '<option layersrs="' + layersrs + '" value="' + 
+						options +=  '<option layersrs="' + layersrs + '" value="' + 
 							layer.name + '">' + layer.title + '</option>';
 					}
 												 

@@ -7,6 +7,7 @@
 		"newProject": "New Project",
 		"servers": "Server",
 		"newServer": "New Server",
+		"editServer": "Edit Server",
 		"layers": "Layers",
 		"newLayer": "New Layer",
 		"area": "Area of Interest"
@@ -35,6 +36,7 @@
 		"next": "Next",
 		"newServer": "Add a new server.",
 		"addServer": "Add Server",
+		"editServer": "Edit Server",
 		"newLayer": "Add a new layer.",
 		"addLayer": "Add Layer",
 		"finish": "Finish",
