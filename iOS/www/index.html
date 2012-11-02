@@ -31,7 +31,7 @@
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.theme-1.1.1.min.css"/>
 		<link rel="stylesheet" type="text/css" href="css/glyphish.css"/>
 		<link rel="stylesheet" type="text/css" href="OpenLayers-2.12/theme/default/style.mobile.css"/>
-		<script src="http://192.168.10.126:8082/target/target-script-min.js#howdy"></script>
+		<script src="http://localhost:8080/target/target-script-min.js#anonymous"></script>
 		<script type="text/javascript" src="cordova-2.0.0.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
 		<script type="text/javascript" src="js/Arbiter.js"></script>
@@ -444,6 +444,48 @@
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
 						<li><a id="addLayerSubmit" onClick="Arbiter.submitLayer()"><div data-localize="footer.addLayer">Add Layer</div></a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		
+		<!--
+		 // =======================
+		 //		Edit Layer Page
+		 // =======================
+		 -->
+		<div data-role="page" class="Page" id='idEditLayerPage' data-theme="a">
+			<!-- Header -->
+			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
+				<a data-rel="back" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<h1 data-localize="page.editLayer">Edit Layer</h1>
+			</div>
+			
+			<!-- Content -->
+			<div data-role="content" class="AddLayerContent" id='idAddLayerPageContent'>
+				<div data-role="fieldcontain">
+					<label for="serverselect">Choose a server</label>
+					<select name="serverselect" id="Edit_serverselect">
+						<option value="" data-localize="label.chooseAServer">Choose a server...</option>
+					</select>
+				</div>
+				<div data-role="fieldcontain">
+					<label for="layerselect">Choose a layer</label>
+					<select name="layerselect" id="layerselect" disabled="disabled">
+						<option value="" data-localize="label.chooseALayer">Choose a layer...</option>
+					</select>
+				</div>
+				<div data-role="fieldcontain" class="ui-hide-label">
+					<label for="layernickname">Give it a nickname</label>
+					<input type="text" autocorrect="off" autocapitalize="off" name="layernickname" id="layernickname" disabled="disabled" placeholder="Give layer a nickname *" data-localize="label.layerNickname"/>
+				</div>
+			</div>
+			
+			<!-- Footer -->
+			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
+				<div data-role="navbar" data-iconpos="top">
+					<ul>
+						<li><a id="addLayerSubmit" onClick="Arbiter.saveLayer()"><div data-localize="footer.saveLayer">Save Layer</div></a></li>
 					</ul>
 				</div>
 			</div>

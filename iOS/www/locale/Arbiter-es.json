@@ -9,6 +9,8 @@
 		"newServer": "Spanish New Server",
 		"layers": "Spanish Layers",
 		"newLayer": "Spanish New Layer",
+		"editLayer": "Spanish Edit Layer",
+		"saveLayer": "Spanish Save Layer",
 		"area": "Spanish Area of Interest"
 	},
 	"button" : {

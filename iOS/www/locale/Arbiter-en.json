@@ -9,6 +9,8 @@
 		"newServer": "New Server",
 		"layers": "Layers",
 		"newLayer": "New Layer",
+		"editLayer": "Edit Layer",
+		"saveLayer": "Save Layer",
 		"area": "Area of Interest"
 	},
 	"button" : {
