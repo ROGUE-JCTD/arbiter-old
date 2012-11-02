@@ -79,7 +79,6 @@ var jqAddFeature;
 var jqEditFeature;
 var jqSyncUpdates;
 
-var fileSystem = null;
 /* ============================ *
  * 			 Language
  * ============================ */
@@ -103,6 +102,9 @@ var Arbiter = {
 	
 	globalDatabase: null,
 	
+	//grout tilesets db. primarily used to import grout tiles into global.tiles table since unlike grout's this table is optimized for access 
+	tilesetsDatabase: null, 
+	
 	serverList: {},
 	
 	currentProject: {
@@ -118,10 +120,8 @@ var Arbiter = {
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); //http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
-        TileUtil.Initialize(this);
-        TileUtil.dumpFiles();
-		
 		Cordova.Initialize(this);
+        TileUtil.Initialize(this);
 		
 		var arbiter = this;
 		
@@ -139,7 +139,9 @@ var Arbiter = {
 								
 				arbiter.globalDatabase = Cordova.openDatabase("Arbiter/global", "1.0", "Global Database", 1000000);
 				arbiter.globalDatabase.transaction(function(tx){
-					tx.executeSql("CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);", [], function(tx, res){
+					
+					var createSettingsSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);";
+					tx.executeSql(createSettingsSql, [], function(tx, res){
 						console.log("global settings table created");											 
 					}, function(tx, err){
 						console.log("global settings err: ", err);		  
@@ -147,34 +149,68 @@ var Arbiter = {
 					
 					var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key, name text not null, url text not null, " +
 												   "username text not null, password text not null);";
-					
-					var createServerUsageSql = "CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, dirty integer, " +
-												   "FOREIGN KEY(server_id) REFERENCES servers(id));";
-					
-					var createProjectsSql = "CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);";
-												   
+					   
 					tx.executeSql(createServersSql, [], function(tx, res){
 						console.log("global servers table created");											 
 					}, function(tx, err){
 						console.log("global servers err: ", err);		  
 					});
 												   
+					var createServerUsageSql = "CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, dirty integer, " +
+												"FOREIGN KEY(server_id) REFERENCES servers(id));";
+
 					tx.executeSql(createServerUsageSql, [], function(tx, res){
 						console.log("global server_usage table created");											 
 					}, function(tx, err){
 						console.log("global server_usage err: ", err);		  
 					});
-												   
+
+					
+					var createProjectsSql = "CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);";
+
 					tx.executeSql(createProjectsSql, [], function(tx, res){
 						console.log("global projects table created");
 					}, function(tx, err){
 						console.log("global projects table err: ", err);			  
 					});
+
+
+					var createTilesSql = "CREATE TABLE IF NOT EXISTS tiles (" +
+							"id integer primary key autoincrement, " +
+							"tileset text not null, " +
+							"z integer not null, " +
+							"x integer not null, " +
+							"y integer not null, " +
+							"path text not null, " +
+							"url text not null, " +
+							"ref_counter integer not null);";
+   
+					tx.executeSql(createTilesSql, [], function(tx, res){
+						console.log("global tiles table created");
+					}, function(tx, err){
+						console.log("global tiles table err: ", err);			  
+					});
 				}, arbiter.errorSql, function(){});
+				
 			}, function(error){
-										 console.log("couldn't create arbiter directory");
-										 
+				console.log("couldn't create arbiter directory");
 			});
+			
+			// create the table that will store the tile sets across all projects
+			arbiter.tilesetsDatabase = Cordova.openDatabase("Arbiter/tilesets", "1.0", "Tilesets Database", 1000000);
+			arbiter.tilesetsDatabase.transaction(function(tx){
+				var createTileRefCounterSql = "CREATE TABLE IF NOT EXISTS tilesets (tilelevel_table text PRIMARY KEY, title text not null);";
+				   
+				tx.executeSql(createTileRefCounterSql, [], function(tx, res){
+					console.log("tilesetsDatabase.tile_ref_counter table created");
+				}, function(tx, err){
+					console.log("tilesetsDatabase.tile_ref_counter table err: ", err);			  
+				});
+			}, arbiter.errorSql, function(){});
+		}, function(error){
+			console.log("couldn't create arbiter directory");
+		});
+			
 		}, function(error){
 			console.log("requestFileSystem failed with error code: " + error.code);					 
 		});
@@ -994,6 +1030,17 @@ var Arbiter = {
 					});	  
 				}, arbiter.errorSql, function(){});
 			}
+			
+			// every project has a list of tiles it uses so that:
+			// - when the project is removed, the global tile's reference counter can be decremented.
+			// - when a project's tiles need to updated, we can potentially used this list... though normally, they will pull data in area of interest. 
+			var createTileIdsSql = "CREATE TABLE IF NOT EXISTS tileIds (id integer not null primary key);";  
+
+			tx.executeSql(createTileIdsSql, [], function(tx, res){
+				console.log("project tileIds table created");
+			}, function(tx, err){
+				console.log("project tileIds table err: ", err);			  
+			});
 		};
 		
 		var writeToDatabases = function(dir){
