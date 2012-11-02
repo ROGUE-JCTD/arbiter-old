@@ -208,3 +208,63 @@ html, body {
     margin: 1em 0;
     padding: 0;
 }
+
+.existingServer-top-left{
+	border-top-left-radius:15px;
+}
+
+.existingServer-top-right{
+	border-top-right-radius:15px;
+}
+
+.existingServer-bottom-left{
+	border-bottom-left-radius:15px;
+}
+
+.existingServer-bottom-right{
+	border-bottom-right-radius:15px;
+}
+
+.existingServer-contentWrapper{
+	float: left;
+	width: 100%;
+}
+
+.existingServer-contentColumn{
+	margin-left:40px;
+	border: 1px;
+	height:40px;
+	background-image:-webkit-linear-gradient(top, #3C3C3C, #111);
+}
+
+.existingServer-contentColumn:active{
+	background-image:-webkit-linear-gradient(top, #5393C5, #6FACD5);
+}
+
+.existingServer-leftColumn{
+	float:left;
+	width:40px;
+	margin-left: -100%;
+	background-image:-webkit-linear-gradient(top, #3C3C3C, #111);
+	height:100%;
+	border: 1px;
+	border-right: 1px solid rgba(255, 255, 255, .3); 
+}
+
+.existingServer-row{
+	width:100%;
+	height:40px;
+	position:relative;
+}
+.existingServer-name{
+	position:absolute;
+	left:55px;
+	top:10px;
+	color:white !important;
+}
+
+.existingServer-checkbox-container{
+	position:absolute;
+	top:15px;
+	left:-10px;
+}
