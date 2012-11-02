@@ -37,6 +37,7 @@
 		"newServer": "Add a new server.",
 		"addServer": "Add Server",
 		"editServer": "Edit Server",
+		"deleteServer": "Delete Server",
 		"newLayer": "Add a new layer.",
 		"addLayer": "Add Layer",
 		"finish": "Finish",
