@@ -571,6 +571,8 @@ var Arbiter = {
 			for(var i = 0; i < layers.length;i++){
 				layers[i].strategies[0].save();
 			}
+			
+			TileUtil.startCachingTiles();
 		});
 		
 		jqEditorTab.mouseup(function(event){
