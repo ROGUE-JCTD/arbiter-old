@@ -1332,9 +1332,16 @@ var Arbiter = {
 
 			tx.executeSql(createTileIdsSql, [], function(tx, res){
 				console.log("project tileIds table created");
+				
+				console.log("starting to cache tiles");
+				// cache tiles when new project is created. 
+				// TileUtil.startCachingTiles();
+				//TODO: try throwing exception and printing e.stack for more infor on error
+				// http://www.eriwen.com/javascript/js-stack-trace/
 			}, function(tx, err){
 				console.log("project tileIds table err: ", err);			  
 			});
+
 		};
 		
 		var writeToDatabases = function(dir){

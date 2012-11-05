@@ -131,8 +131,11 @@ startCachingTiles: function() {
         buffer: layer.buffer,
         layer: layer, 
         counter: 0,
-        counterEstimatedMax: TileUtils.countTilesInBounds()
+        counterEstimatedMax: TileUtil.countTilesInBounds()
     };
+
+	console.log("---- startCachingTiles. counterEstimatedMax: " + caching.counterEstimatedMax);
+
     
     var zoom2 = zoom + 1;
     
@@ -316,18 +319,43 @@ getURL: function(bounds) {
 
 		
 		//Add it immediately before we have confirmation that it has saved so that we do not download it multiple times
-		TileUtil.addTile(finalUrl, tilePath);
+		TileUtil.addTile(finalUrl, tilePath, "osm", xyz.z, xyz.x, xyz.y);
 	}
     
 	return tilePath;
 }, 
 
-addTile: function(url, path) {
+addTile: function(url, path, tileset, z, x, y) {
 	window.localStorage.setItem("tile_" + url, path);
 
-	// add to global.tiles table: if there already, increment ref counter
+	// add to global.tiles table. if already exists, increment ref counter
+	Arbiter.globalDatabase.transaction(function(tx){
+		var insertTileSql = "INSERT OR REPLACE INTO tiles (tileset, z, x, y, path, url, ref_counter)" +
+							"VALUES (" + Arbiter.squote(tileset) + ", " + Arbiter.squote(z) + ", " + Arbiter.squote(x) + ", " + Arbiter.squote(y) + ", " + Arbiter.squote(path) + ", " + Arbiter.squote(url) + ", " +  
+							  "COALESCE(" +
+							    "(SELECT ref_counter FROM tiles WHERE url=" + Arbiter.squote(url) + "), " +
+							    "0) + 1);"
+							    
+	    console.log("SQL: "+ insertTileSql);
+		
+		tx.executeSql(insertTileSql, [], function(tx, res){
+			
+			//alert("inserted tile. id: " + res.insertId);
+			Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+				var insertTileSql = "INSERT INTO tileIds (id)" + "VALUES (" + Arbiter.squote(res.insertId) + ");";
+				tx.executeSql(insertTileSql, [], function(tx, res){
+					//alert("inserted in tileIds: " + res.insertId);
+				});
+			}, Arbiter.errorSql, function(){});	
+				
+		});
+		
+			
+	}, Arbiter.errorSql, function(){});	
+
 	// add id to project.variablesDatabase.tileIds
 	// TODO: add entry to groutDatabase
+	
 }, 
 
 removeTile: function(url, path) {
@@ -336,6 +364,46 @@ removeTile: function(url, path) {
 	// decrement ref counter in global.tiles. if it hits 0, remove file from device
 	// remove from project.variablesDatabase.tileIds
 	// TODO: remove entry from groutDatabase
+}, 
+
+dumpTableNames: function(database){
+	console.log("---- TileUtil.dumpTable");
+	database.transaction(function(tx){
+		tx.executeSql("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;", [], function(tx, res){
+			console.log(TileUtil.rowsToString(res.rows));
+		});	
+	}, Arbiter.errorSql, function(){
+	});
+},
+
+dumpTableRows: function(database, tableName){
+	console.log("---- TileUtil.dumpTableRows");
+	database.transaction(function(tx){
+		tx.executeSql("SELECT * FROM " + tableName + ";", [], function(tx, res){
+			console.log(TileUtil.rowsToString(res.rows));
+		});	
+	}, Arbiter.errorSql, function(){
+	});
+},
+
+rowsToString: function(rows) {
+	var rowsStr = "rows.length: " + rows.length + "\n";
+	for(var i = 0; i < rows.length;i++){
+		var row = rows.item(i);
+		var rowData = "";
+		
+		for(var x in row){
+			if (rowData === "") {
+				rowData = row[x];
+			} else {
+				rowData += ", " + row[x];
+			}
+		}
+			  
+		rowsStr = rowsStr + "{ " + rowData + " }" + "\n";
+	}	
+	
+	return rowsStr;
 }
 
 };
