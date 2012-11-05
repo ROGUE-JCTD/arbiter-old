@@ -462,6 +462,17 @@ var Arbiter = {
 			}
 		});
 		
+		$('#idAddLayerPage').live('pagebeforeshow', function(){
+			//populate the servers drop down from the currentProject.serverList
+			var html = '<option value="" data-localize="label.chooseAServer">Choose a Server...</option>';
+			
+			for(var x in arbiter.currentProject.serverList){
+				html += '<option value="' + x + '">' + x + '</option>';
+			}
+			
+			jqServerSelect.html(html);
+		});
+		
 	//	var arbiter = this; // this is initialized earlier in this method
 		
 		jqSaveButton.mouseup(function(event){
@@ -511,37 +522,20 @@ var Arbiter = {
 		});
 		
 		jqServerSelect.change(function(event){
-			//var serverUrl = $(this).val();
-							  console.log($(this).val());
-			arbiter.getFeatureTypesOnServer($(this).val());
+			var serverName = $(this).val();
+			if(serverName)
+				arbiter.getFeatureTypesOnServer(serverName);
+			else{
+				jqLayerSelect.html('<option value="" data-localize="label.chooseALayer">Choose a layer...</option>');
+				jqLayerSelect.selectmenu('refresh', true);
+				jqLayerNickname.val('');
+				arbiter.disableLayerSelectAndNickname();
+			}
 		});
 		
 		jqLayerSelect.change(function(event){
 			jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
 		});
-		/*jqAddLayerSubmit.mouseup(function(event){
-			// featureNS, serverUrl, typeName, srsName, layernickname
-			
-			var args = {
-				featureNS: "http://opengeo.org",
-				serverUrl: $("#layerurl").val(),
-				typeName: $("#layerselect").val(),
-				srsName: "EPSG:4326",
-				layernickname: "hospitals"
-			};
-									 
-			arbiter.submitLayer(args);
-		});*/
-		
-		/*jqCreateFeature.mouseup(function(event){
-			if(addFeatureControl.active){
-				addFeatureControl.deactivate();
-				$(this).removeClass("ui-btn-active");
-			}else{
-				addFeatureControl.activate();
-				$(this).addClass("ui-btn-active");
-			}
-		});*/
 		
 		jqAddFeature.mouseup(function(event){
 			console.log("Add Feature");
