@@ -118,24 +118,25 @@ var Arbiter = {
 	isOnline: false,
 	
     Initialize: function() {
-		console.log("What will you have your Arbiter do?"); //http://www.youtube.com/watch?v=nhcHoUj4GlQ
+		console.log("What will you have your Arbiter do?"); // http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
 		Cordova.Initialize(this);
-        TileUtil.Initialize(this);
-		
+        
 		var arbiter = this;
 		
 		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(filesystem){
 			arbiter.fileSystem = filesystem;
 			
 			arbiter.fileSystem.root.getDirectory("Arbiter", {create: true, exclusive: false}, function(dir){
-										 console.log("created arbiter directory");
+				console.log("created arbiter directory");
+				
 				arbiter.fileSystem.root.getDirectory("Arbiter/Projects", {create: true, exclusive: false}, function(dir){
-											 console.log("created projects directory");
+					console.log("created projects directory");
 					arbiter.InitializeProjectList(dir);
 				}, function(error){
 					console.log("error getting projects");
 				});
+				
 								
 				arbiter.globalDatabase = Cordova.openDatabase("Arbiter/global", "1.0", "Global Database", 1000000);
 				arbiter.globalDatabase.transaction(function(tx){
@@ -190,31 +191,33 @@ var Arbiter = {
 					}, function(tx, err){
 						console.log("global tiles table err: ", err);			  
 					});
+					
+
 				}, arbiter.errorSql, function(){});
+				
+				// create the table that will store the tile sets across all
+				// projects
+				arbiter.tilesetsDatabase = Cordova.openDatabase("Arbiter/tilesets", "1.0", "Tilesets Database", 1000000);
+				arbiter.tilesetsDatabase.transaction(function(tx){
+					var createTileRefCounterSql = "CREATE TABLE IF NOT EXISTS tilesets (tilelevel_table text PRIMARY KEY, title text not null);";
+					   
+					tx.executeSql(createTileRefCounterSql, [], function(tx, res){
+						console.log("tilesetsDatabase.tile_ref_counter table created");
+					}, function(tx, err){
+						console.log("tilesetsDatabase.tile_ref_counter table err: ", err);			  
+					});
+				}, arbiter.errorSql, function(){});
+				
 				
 			}, function(error){
 				console.log("couldn't create arbiter directory");
 			});
 			
-			// create the table that will store the tile sets across all projects
-			arbiter.tilesetsDatabase = Cordova.openDatabase("Arbiter/tilesets", "1.0", "Tilesets Database", 1000000);
-			arbiter.tilesetsDatabase.transaction(function(tx){
-				var createTileRefCounterSql = "CREATE TABLE IF NOT EXISTS tilesets (tilelevel_table text PRIMARY KEY, title text not null);";
-				   
-				tx.executeSql(createTileRefCounterSql, [], function(tx, res){
-					console.log("tilesetsDatabase.tile_ref_counter table created");
-				}, function(tx, err){
-					console.log("tilesetsDatabase.tile_ref_counter table err: ", err);			  
-				});
-			}, arbiter.errorSql, function(){});
-		}, function(error){
-			console.log("couldn't create arbiter directory");
-		});
-			
 		}, function(error){
 			console.log("requestFileSystem failed with error code: " + error.code);					 
 		});
 		
+
 		//Load saved variables
 		//LanguageSelected
 		//CurrentLanguage

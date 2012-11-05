@@ -1,5 +1,3 @@
-
-
 var TileUtil = {
 
 debug: false,		
@@ -25,7 +23,7 @@ dumpFiles: function() {
 					function(){
 						console.log("====>> failDirectoryReader");
 					}
-				);¨
+				);
 			} catch (e) {
 				console.log("====>> dumpFiles.exception: "+ e);
 			}
@@ -68,7 +66,7 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 
 	var extention = fileUrl.substr(fileUrl.lastIndexOf("."));
 	//console.log("---- TileUtil.saveTile.extention: " + extention);
-
+	
 	Arbiter.fileSystem.root.getDirectory(tileset, {create: true}, 
 		function(tilesetDirEntry){
 			//console.log("---- tilesetDirEntry: " + tilesetDirEntry.fullPath);
@@ -256,23 +254,23 @@ clearCache : function(tileset) {
 	if (TileUtil.debug) {
 		console.log("---- TileUtil.clearCache");
 	}	
-/*	
-	var directoryReader = Arbiter.fileSystem.root.createReader();
-	
-	Arbiter.fileSystem.root.getDirectory(tileset, {create: false}, 
-			function(tilesetDir){
-				tilesetDir.removeRecursively(					
-					function(entry) {
-						// now that the files were removed, remove key value pairs 
-						window.localStorage.setItem("tile_" + finalUrl, tilePath);
-						
-					},
-					function(error) {
-						console.log("====>> Error remove directory recursively failed" + error.source);
-					});
-			}
-		);	
-*/	
+///*	
+//	var directoryReader = Arbiter.fileSystem.root.createReader();
+//	
+//	Arbiter.fileSystem.root.getDirectory(tileset, {create: false}, 
+//			function(tilesetDir){
+//				tilesetDir.removeRecursively(					
+//					function(entry) {
+//						// now that the files were removed, remove key value pairs 
+//						window.localStorage.setItem("tile_" + finalUrl, tilePath);
+//						
+//					},
+//					function(error) {
+//						console.log("====>> Error remove directory recursively failed" + error.source);
+//					});
+//			}
+//		);	
+//
 }, 
 
 getURL: function(bounds) {
@@ -294,17 +292,17 @@ getURL: function(bounds) {
     } else {
     	
 		var saveTileSuccess = function(url, path){
-		}
+		};
 		
 		var saveTileError = function(url, path, error){
 			console.log("========>> saveTileError filename: " + url + ", path: " + path);
 			// if save failed, remove it. 
 			TileUtil.removeTile(url, path);
-		}
+		};
 		
 		tilePath = TileUtil.saveTile(finalUrl, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, saveTileError);
 		
-		if (typeof caching != 'undefined' && typeof caching.counter != 'undefined') {
+		if (typeof caching !== 'undefined' && typeof caching.counter !== 'undefined') {
 			caching.counter = caching.counter + 1;
 		}
 
