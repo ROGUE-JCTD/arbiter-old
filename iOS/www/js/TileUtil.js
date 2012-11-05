@@ -319,7 +319,7 @@ getURL: function(bounds) {
 }, 
 
 addTile: function(url, path) {
-	window.localStorage.setItem("tile_" + finalUrl, tilePath);
+	window.localStorage.setItem("tile_" + url, path);
 
 	// add to global.tiles table: if there already, increment ref counter
 	// add id to project.variablesDatabase.tileIds
