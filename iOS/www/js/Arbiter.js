@@ -228,6 +228,50 @@ var Arbiter = {
 						console.log("global projects table err: ", err);			  
 					});
 
+					// populate the existing servers drop down on the add server page
+					tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
+						var row;
+						var html = '';
+						var contentClass;
+						var leftClass;
+						//var leftPositioning;
+						
+						for(var i = 0;i < res.rows.length;i++){
+							row = res.rows.item(i);
+							contentClass = 'existingServer-contentColumn';
+							leftClass = 'existingServer-leftColumn';
+							
+							if(i == 0){
+								contentClass += ' existingServer-top-right';
+								leftClass += ' existingServer-top-left';
+							}
+							
+							if(i == (res.rows.length - 1)){
+								contentClass += ' existingServer-bottom-right';
+								leftClass += ' existingServer-bottom-left';
+							}
+							
+							//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
+							
+							html += '<div class="existingServer-row">' +
+							'<div class="existingServer-contentWrapper">' +
+							'<div class="' + contentClass + '">' +
+							'<a class="existingServer-name" id="existingServer-' + row.id + '">' + row.name + '</a>' +
+							'</div>' +
+							'</div>' +
+							'<div class="' + leftClass + '">' +
+							'<div class="existingServer-checkbox-container">' +
+							'<input type="checkbox" class="existingServer-checkbox" server-id="' + row.id + '" name="' + row.name +
+							'" id="existingServer-checkbox-' + row.id + '" style="width:20px;height:20px;" />' +
+							'</div>' +
+							'</div>' +
+							'</div>';
+						}
+						
+						jqServersPageContent.html(html);
+						
+					}, arbiter.errorSql, function(){});
+					
 					var createTilesSql = "CREATE TABLE IF NOT EXISTS tiles (" +
 							"id integer primary key autoincrement, " +
 							"tileset text not null, " +
@@ -261,53 +305,6 @@ var Arbiter = {
 						console.log("tilesetsDatabase.tile_ref_counter table err: ", err);
 					});
 				}, arbiter.errorSql, function(){});
-						
-
-						
-				// populate the existing servers drop down on the add server page
-				tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
-					var row;
-					var html = '';
-					var contentClass;
-					var leftClass;
-					//var leftPositioning;
-					
-					for(var i = 0;i < res.rows.length;i++){
-						row = res.rows.item(i);
-						contentClass = 'existingServer-contentColumn';
-						leftClass = 'existingServer-leftColumn';
-						
-						if(i == 0){
-							contentClass += ' existingServer-top-right';
-							leftClass += ' existingServer-top-left';
-						}
-	
-						if(i == (res.rows.length - 1)){
-							contentClass += ' existingServer-bottom-right';
-							leftClass += ' existingServer-bottom-left';
-						}
-						
-						//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
-						
-						html += '<div class="existingServer-row">' +
-									'<div class="existingServer-contentWrapper">' +
-							  			'<div class="' + contentClass + '">' +
-							  				'<a class="existingServer-name" id="existingServer-' + row.id + '">' + row.name + '</a>' +
-										'</div>' +
-									'</div>' +
-							  		'<div class="' + leftClass + '">' +
-							  			'<div class="existingServer-checkbox-container">' +
-											'<input type="checkbox" class="existingServer-checkbox" server-id="' + row.id + '" name="' + row.name +
-							  					'" id="existingServer-checkbox-' + row.id + '" style="width:20px;height:20px;" />' +
-							  			'</div>' +
-							  		'</div>' +
-								'</div>';
-					}
-					
-					jqServersPageContent.html(html);
-
-				}, arbiter.errorSql, function(){});
-				
 				
 			}, function(error){
 				console.log("couldn't create arbiter directory");
@@ -1134,7 +1131,6 @@ var Arbiter = {
 		var id = jqEditServerButton.attr('server-id');
 		
 		var deleteServer = function(){
-			console.log("deleteServer");
 			arbiter.globalDatabase.transaction(function(tx){
 				//delete the server
 				tx.executeSql("DELETE FROM servers WHERE id=?", [id], function(tx, res){
@@ -1166,6 +1162,8 @@ var Arbiter = {
 					}
 					
 					window.history.back();
+							  
+					$('#deleteServerButton').removeClass('ui-btn-active');
 				}, function(tx, err){
 					console.log("delete server err: ", err);			  
 				});								   
