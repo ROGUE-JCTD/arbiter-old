@@ -119,6 +119,8 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 
 // start caching the cacheTile
 startCachingTiles: function() {
+	console.log("---- startCachingTiles");
+	
     var layer = map.baseLayer,
         zoom = map.getZoom();
 
@@ -128,7 +130,8 @@ startCachingTiles: function() {
         center: map.getCenter(),
         buffer: layer.buffer,
         layer: layer, 
-        counter: 0
+        counter: 0,
+        counterEstimatedMax: TileUtils.countTilesInBounds()
     };
     
     var zoom2 = zoom + 1;
@@ -229,6 +232,7 @@ cacheTile: function() {
     var nextZoom = map.getZoom() + 1;
 
     if (nextZoom === layer.numZoomLevels) {
+    	console.log("caching tiles completed: additional " + caching.counter + " cached. estimated max: " + caching.counterEstimatedMax);
         TileUtil.stopCachingTiles();
     } else {
         var extentWidth = caching.extent.getWidth() / map.getResolutionForZoom(nextZoom);
