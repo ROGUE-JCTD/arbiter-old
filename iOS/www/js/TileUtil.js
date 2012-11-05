@@ -1,38 +1,14 @@
-
-//TODO: this is global and looks like is being redefined and reset multiple times... once per js file 
-var application	= null;
-
 var TileUtil = {
+
 debug: false,		
-	
-	//=======
-	// SQLite
-	//=======
-Initialize: function(_app) {
-	if(_app) {
-        application = _app;
-    }
-    
-	window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, 
-		function(fs){
-			fileSystem = fs;
-			if (TileUtil.debug) {
-				console.log("====[ got fileSystem. ");
-			}
-		}, 
-		function(error) {
-			console.log("====>> failed to get fileSystem. error: " + error.code);
-		}
-	);    
-},
 		
 dumpFiles: function() {
 	console.log("---- TileUtil.dumpFiles");
 	window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, 
-		function(fileSystem){
+		function(fs){
 			try {
-				 console.log("---- fileSystem.root: " + fileSystem.root.name);
-				 var directoryReader = fileSystem.root.createReader();
+				 console.log("---- fs.root: " + fs.root.name);
+				 var directoryReader = fs.root.createReader();
 				 directoryReader.readEntries(
 					function(entries) {
 						 var i;
@@ -53,7 +29,7 @@ dumpFiles: function() {
 			}
 		}, 
 		function(error) {
-			console.log("====>> failed to get fileSystem. error: " + error.code);
+			console.log("====>> failed to get fs (fileSystem) error: " + error.code);
 		}
 	);	
 },
@@ -61,7 +37,7 @@ dumpFiles: function() {
 dumpDirectory: function(dir) {
 	console.log("---- TileUtil.dumpDirectory");
 	try {
-		console.log("---- fileSystem.dir: " + dir.name);
+		console.log("---- dir: " + dir.name);
 		var directoryReader = dir.createReader();
 		directoryReader.readEntries(
 				function(entries) {
@@ -90,8 +66,8 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 
 	var extention = fileUrl.substr(fileUrl.lastIndexOf("."));
 	//console.log("---- TileUtil.saveTile.extention: " + extention);
-
-	fileSystem.root.getDirectory(tileset, {create: true}, 
+	
+	Arbiter.fileSystem.root.getDirectory(tileset, {create: true}, 
 		function(tilesetDirEntry){
 			//console.log("---- tilesetDirEntry: " + tilesetDirEntry.fullPath);
 			tilesetDirEntry.getDirectory("" + z, {create: true}, 
@@ -135,7 +111,7 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 		}
 	);
 
-	var filePath2 = fileSystem.root.fullPath + "/" + tileset +"/" + z + "/" + x + "/" + y + extention;
+	var filePath2 = Arbiter.fileSystem.root.fullPath + "/" + tileset +"/" + z + "/" + x + "/" + y + extention;
 	
 	// NOTE: file may not be ready for reading yet since write operation is async
 	return filePath2;
@@ -143,8 +119,6 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 
 // start caching the cacheTile
 startCachingTiles: function() {
-	alert("start caching");
-	console.log("^^^^^^^^^^^^^^^^^^^^^^^^++++++++ startCachingTiles");
     var layer = map.baseLayer,
         zoom = map.getZoom();
 
@@ -250,7 +224,6 @@ countTilesInBounds2: function (){
 
 // cacheTile a zoom level based on the extent at the time startCachingTiles was called
 cacheTile: function() {
-	console.log("^^^^^^^^^^^^^^^^^^^^^^^^  cacheTile");
     var layer = caching.layer;
     var tileWidth = layer.tileSize.w;
     var nextZoom = map.getZoom() + 1;
@@ -267,23 +240,40 @@ cacheTile: function() {
 },
 
 // stop caching (when done or when cacheTile is full)
-stopCachingTiles: function() {
-	console.log("^^^^^^^^^^^^^^^^^^^^^^^^-------- stopCachingTiles");
-    // we're done - restore previous settings
-    caching.layer.events.unregister("loadend", null, TileUtil.cacheTile);
-    caching.layer.buffer = caching.buffer;
-    map.setCenter(caching.center, caching.zoom);
+stopCachingTiles : function() {
+	// we're done - restore previous settings
+	caching.layer.events.unregister("loadend", null, TileUtil.cacheTile);
+	caching.layer.buffer = caching.buffer;
+	map.setCenter(caching.center, caching.zoom);
 
-    alert("stop caching. counter: " + caching.counter);
-         
-    caching = false;
+	caching = false;
+},
+
+// clear entries in db, removed tiles from device
+clearCache : function(tileset) {
+	if (TileUtil.debug) {
+		console.log("---- TileUtil.clearCache");
+	}	
+///*	
+//	var directoryReader = Arbiter.fileSystem.root.createReader();
+//	
+//	Arbiter.fileSystem.root.getDirectory(tileset, {create: false}, 
+//			function(tilesetDir){
+//				tilesetDir.removeRecursively(					
+//					function(entry) {
+//						// now that the files were removed, remove key value pairs 
+//						window.localStorage.setItem("tile_" + finalUrl, tilePath);
+//						
+//					},
+//					function(error) {
+//						console.log("====>> Error remove directory recursively failed" + error.source);
+//					});
+//			}
+//		);	
+//
 }, 
 
 getURL: function(bounds) {
-	
-	//console.log("~~~~ bounds.left: " + bounds.left + ", top: " + bounds.top + ", right: " + bounds.right + ", bottom: " + bounds.bottom);
-	//console.log("~~~~ this.maxExtent.left: " + this.maxExtent.left + ", top: " + this.maxExtent.top + ", right: " + this.maxExtent.right + ", bottom: " + bounds.bottom);
-
 	var xyz = this.getXYZ(bounds);
     var url = this.url;
     if (OpenLayers.Util.isArray(url)) {
@@ -301,18 +291,18 @@ getURL: function(bounds) {
     	}
     } else {
     	
-		var saveTileSuccess = function(url, filename){
-		}
+		var saveTileSuccess = function(url, path){
+		};
 		
-		var saveTileError = function(url, filename, error){
-			console.log("========>> saveTileError filename: " + url + ", filename: " + filename);
+		var saveTileError = function(url, path, error){
+			console.log("========>> saveTileError filename: " + url + ", path: " + path);
 			// if save failed, remove it. 
-			window.localStorage.removeItem("tile_" + url);
-		}
+			TileUtil.removeTile(url, path);
+		};
 		
 		tilePath = TileUtil.saveTile(finalUrl, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, saveTileError);
 		
-		if (typeof caching != 'undefined' && typeof caching.counter != 'undefined') {
+		if (typeof caching !== 'undefined' && typeof caching.counter !== 'undefined') {
 			caching.counter = caching.counter + 1;
 		}
 
@@ -320,11 +310,28 @@ getURL: function(bounds) {
 			console.log("<<<<<<<< ------ cach tile: " + finalUrl + " to: " + tilePath);
 		}
 
-    	//Add it immediately before we have confirmation that it has saved so that we do not download it multiple times
-		window.localStorage.setItem("tile_" + finalUrl, tilePath);			        	
+		
+		//Add it immediately before we have confirmation that it has saved so that we do not download it multiple times
+		TileUtil.addTile(finalUrl, tilePath);
 	}
     
 	return tilePath;
+}, 
+
+addTile: function(url, path) {
+	window.localStorage.setItem("tile_" + url, path);
+
+	// add to global.tiles table: if there already, increment ref counter
+	// add id to project.variablesDatabase.tileIds
+	// TODO: add entry to groutDatabase
+}, 
+
+removeTile: function(url, path) {
+	window.localStorage.removeItem("tile_" + url);
+	
+	// decrement ref counter in global.tiles. if it hits 0, remove file from device
+	// remove from project.variablesDatabase.tileIds
+	// TODO: remove entry from groutDatabase
 }
 
 };
