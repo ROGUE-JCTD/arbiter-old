@@ -1091,7 +1091,6 @@ var Arbiter = {
 		var id = jqEditServerButton.attr('server-id');
 		
 		var deleteServer = function(){
-			console.log("deleteServer");
 			arbiter.globalDatabase.transaction(function(tx){
 				//delete the server
 				tx.executeSql("DELETE FROM servers WHERE id=?", [id], function(tx, res){
@@ -1123,6 +1122,8 @@ var Arbiter = {
 					}
 					
 					window.history.back();
+							  
+					$('#deleteServerButton').removeClass('ui-btn-active');
 				}, function(tx, err){
 					console.log("delete server err: ", err);			  
 				});								   
