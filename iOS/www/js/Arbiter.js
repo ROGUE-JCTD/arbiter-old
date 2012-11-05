@@ -52,7 +52,7 @@ var div_AreaOfInterestPage;
 var div_ArbiterSettingsPage;
 var div_ProjectSettingsPage;
 var div_Popup;
-
+var div_EditServerPage;
 var jqSaveButton;
 var jqAttributesButton;
 var jqAddLayerButton;
@@ -65,6 +65,11 @@ var jqNewPassword;
 var jqNewNickname;
 var jqNewServerURL;
 var jqAddServerButton;
+var jqEditUsername;
+var jqEditPassword;
+var jqEditNickname;
+var jqEditServerURL;
+var jqEditServerButton;
 var jqGoToAddServer;
 var jqAddServerPage;
 var jqServerSelect;
@@ -74,7 +79,7 @@ var jqLayerSubmit;
 var jqProjectsList;
 var jqEditorTab;
 var jqAttributeTab;
-
+var jqExistingServers;
 var jqAddFeature;
 var jqEditFeature;
 var jqSyncUpdates;
@@ -124,6 +129,54 @@ var Arbiter = {
         
 		var arbiter = this;
 		
+		//Save divs for later
+		div_MapPage 		= $('#idMapPage');
+		div_WelcomePage		= $('#idWelcomePage');
+		div_ProjectsPage	= $('#idProjectsPage');
+		div_NewProjectPage	= $('#idNewProjectPage');
+		div_ServersPage		= $('#idServersPage');
+		div_LayersPage		= $('#idLayersPage');
+		div_AreaOfInterestPage = $('#idAreaOfInterestPage');
+		div_ArbiterSettingsPage	= $('#idArbiterSettingsPage');
+		div_ProjectSettingsPage	= $('#idProjectSettingsPage');
+		div_Popup			= $('#popup');
+		div_EditServerPage = $('#idEditServersPage');
+		jqSaveButton = $('#saveButton');
+		jqAttributesButton = $('#attributesButton');
+		jqAddLayerButton = $('#addLayerBtn');
+		jqLayerURL = $('#layerurl');
+		//jqAddLayerSubmit = $('#addLayerSubmit');
+		jqCreateFeature = $('#createFeature');
+		jqNewProjectName = $('#newProjectName');
+		jqToServersButton = $('#toServersButton');
+		jqNewUsername = $('#newUsername');
+		jqNewPassword = $('#newPassword');
+		jqNewNickname = $('#newNickname');
+		jqNewServerURL = $('#newServerURL');
+		jqAddServerButton = $('#addServerButton');
+		jqEditUsername = $('#editUsername');
+		jqEditPassword = $('#editPassword');
+		jqEditNickname = $('#editNickname');
+		jqEditServerURL = $('#editServerURL');
+		jqEditServerButton = $('#editServerButton');
+		jqGoToAddServer = $('#goToAddServer');
+		jqAddServerPage = $('#idAddServerPage');
+		jqServerSelect = $('#serverselect');
+		jqExistingServers = $('#existingServers');
+		jqLayerSelect = $('#layerselect');
+		jqLayerNickname = $('#layernickname');
+		jqLayerSubmit = $('#addLayerSubmit');
+		jqProjectsList = $('ul#idProjectsList');
+		jqEditorTab = $('#editorTab');
+		jqAttributeTab = $('#attributeTab');
+		jqAddFeature	 = $('#addPointFeature');
+		jqEditFeature	 = $('#editPointFeature');
+		jqSyncUpdates	 = $('#syncUpdates');
+		jqServersPageContent = $('#idServersPageContent');
+		div_ProjectsPage.live('pageshow', this.PopulateProjectsList);
+		div_ServersPage.live('pageshow', this.PopulateServersList);
+		div_LayersPage.live('pageshow', this.PopulateLayersList);
+		
 		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(filesystem){
 			arbiter.fileSystem = filesystem;
 			
@@ -148,7 +201,7 @@ var Arbiter = {
 						console.log("global settings err: ", err);		  
 					});
 					
-					var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key, name text not null, url text not null, " +
+					var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key autoincrement, name text not null, url text not null, " +
 												   "username text not null, password text not null);";
 					   
 					tx.executeSql(createServersSql, [], function(tx, res){
@@ -175,7 +228,6 @@ var Arbiter = {
 						console.log("global projects table err: ", err);			  
 					});
 
-
 					var createTilesSql = "CREATE TABLE IF NOT EXISTS tiles (" +
 							"id integer primary key autoincrement, " +
 							"tileset text not null, " +
@@ -195,6 +247,8 @@ var Arbiter = {
 
 				}, arbiter.errorSql, function(){});
 				
+				
+				
 				// create the table that will store the tile sets across all
 				// projects
 				arbiter.tilesetsDatabase = Cordova.openDatabase("Arbiter/tilesets", "1.0", "Tilesets Database", 1000000);
@@ -204,8 +258,54 @@ var Arbiter = {
 					tx.executeSql(createTileRefCounterSql, [], function(tx, res){
 						console.log("tilesetsDatabase.tile_ref_counter table created");
 					}, function(tx, err){
-						console.log("tilesetsDatabase.tile_ref_counter table err: ", err);			  
+						console.log("tilesetsDatabase.tile_ref_counter table err: ", err);
 					});
+				}, arbiter.errorSql, function(){});
+						
+
+						
+				// populate the existing servers drop down on the add server page
+				tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
+					var row;
+					var html = '';
+					var contentClass;
+					var leftClass;
+					//var leftPositioning;
+					
+					for(var i = 0;i < res.rows.length;i++){
+						row = res.rows.item(i);
+						contentClass = 'existingServer-contentColumn';
+						leftClass = 'existingServer-leftColumn';
+						
+						if(i == 0){
+							contentClass += ' existingServer-top-right';
+							leftClass += ' existingServer-top-left';
+						}
+	
+						if(i == (res.rows.length - 1)){
+							contentClass += ' existingServer-bottom-right';
+							leftClass += ' existingServer-bottom-left';
+						}
+						
+						//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
+						
+						html += '<div class="existingServer-row">' +
+									'<div class="existingServer-contentWrapper">' +
+							  			'<div class="' + contentClass + '">' +
+							  				'<a class="existingServer-name" id="existingServer-' + row.id + '">' + row.name + '</a>' +
+										'</div>' +
+									'</div>' +
+							  		'<div class="' + leftClass + '">' +
+							  			'<div class="existingServer-checkbox-container">' +
+											'<input type="checkbox" class="existingServer-checkbox" server-id="' + row.id + '" name="' + row.name +
+							  					'" id="existingServer-checkbox-' + row.id + '" style="width:20px;height:20px;" />' +
+							  			'</div>' +
+							  		'</div>' +
+								'</div>';
+					}
+					
+					jqServersPageContent.html(html);
+
 				}, arbiter.errorSql, function(){});
 				
 				
@@ -222,46 +322,6 @@ var Arbiter = {
 		//LanguageSelected
 		//CurrentLanguage
 
-		//Save divs for later
-		div_MapPage 		= $('#idMapPage');
-		div_WelcomePage		= $('#idWelcomePage');
-		div_ProjectsPage	= $('#idProjectsPage');
-		div_NewProjectPage	= $('#idNewProjectPage');
-		div_ServersPage		= $('#idServersPage');
-		div_LayersPage		= $('#idLayersPage');
-		div_AreaOfInterestPage = $('#idAreaOfInterestPage');
-		div_ArbiterSettingsPage	= $('#idArbiterSettingsPage');
-		div_ProjectSettingsPage	= $('#idProjectSettingsPage');
-		div_Popup			= $('#popup');
-		
-		jqSaveButton = $('#saveButton');
-		jqAttributesButton = $('#attributesButton');
-		jqAddLayerButton = $('#addLayerBtn');
-		jqLayerURL = $('#layerurl');
-		//jqAddLayerSubmit = $('#addLayerSubmit');
-		jqCreateFeature = $('#createFeature');
-		jqNewProjectName = $('#newProjectName');
-		jqToServersButton = $('#toServersButton');
-		jqNewUsername = $('#newUsername');
-		jqNewPassword = $('#newPassword');
-		jqNewNickname = $('#newNickname');
-		jqNewServerURL = $('#newServerURL');
-		jqAddServerButton = $('#addServerButton');
-		jqGoToAddServer = $('#goToAddServer');
-		jqAddServerPage = $('#idAddServerPage');
-		jqServerSelect = $('#serverselect');
-		jqLayerSelect = $('#layerselect');
-		jqLayerNickname = $('#layernickname');
-		jqLayerSubmit = $('#addLayerSubmit');
-		jqProjectsList = $('ul#idProjectsList');
-		jqEditorTab = $('#editorTab');
-		jqAttributeTab = $('#attributeTab');
-		jqAddFeature	 = $('#addPointFeature');
-		jqEditFeature	 = $('#editPointFeature');
-		jqSyncUpdates	 = $('#syncUpdates');
-		div_ProjectsPage.live('pageshow', this.PopulateProjectsList);
-		div_ServersPage.live('pageshow', this.PopulateServersList);
-		div_LayersPage.live('pageshow', this.PopulateLayersList);
 		
 		//Start on the Language Select screen if this is the users first time.
 		//Otherwise move to the Projects page.
@@ -459,6 +519,9 @@ var Arbiter = {
 			arbiter.getFeatureTypesOnServer($(this).val());
 		});
 		
+		jqLayerSelect.change(function(event){
+			jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
+		});
 		/*jqAddLayerSubmit.mouseup(function(event){
 			// featureNS, serverUrl, typeName, srsName, layernickname
 			
@@ -525,6 +588,55 @@ var Arbiter = {
 		
 		$(".server-list-item").mouseup(function(event){
 			arbiter.populateAddServerDialog($(this).text());
+		});
+		
+		$(".existingServer-checkbox").live('click', function(event){
+			var element = $(this);
+			var id = element.attr('server-id');			
+			var name = element.attr('name');
+										   
+			if(element.is(":checked")){ // if checked, add the server to the projects serverList
+				arbiter.globalDatabase.transaction(function(tx){
+					tx.executeSql("SELECT * FROM servers WHERE id=?;", [id], function(tx, res){
+						if(res.rows.length){
+							var row = res.rows.item(0);
+								  
+							arbiter.currentProject.serverList[row.name] = {
+								layers: {},
+								password: row.password,
+								url: row.url,
+								username: row.username,
+								serverId: row.id
+							};
+						}
+					}, function(tx, err){
+																 
+					});
+				}, arbiter.errorSql, function(){});
+			}else{
+				delete arbiter.currentProject.serverList[name];								
+			}
+		});
+		
+		$('.existingServer-contentColumn').live('mouseup', function(event){
+			var element = $(this);
+			var name = element.find('a').text();
+												
+			arbiter.globalDatabase.transaction(function(tx){
+				tx.executeSql("SELECT * FROM servers WHERE name=?;", [name], function(tx, res){
+					if(res.rows.length){
+						var row = res.rows.item(0);
+							  
+						jqEditUsername.val(row.username);
+						jqEditPassword.val(row.password);
+						jqEditNickname.val(row.name);
+						jqEditServerURL.val(row.url);
+						jqEditServerButton.attr('server-id', row.id);
+					}
+							  
+					$.mobile.changePage('#idEditServerPage', 'pop');
+				});
+			}, arbiter.errorSql, function(){});
 		});
 		
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
@@ -779,105 +891,97 @@ var Arbiter = {
 		return size;
 	},
 	
-	onClick_EditServers: function() {
-		//TODO: Make the servers List editable
-		console.log("User wants to edit his/her servers.");
-	},
-	
-	validateAddServerFields: function(){
-		var username = jqNewUsername.val();
-		var password = jqNewPassword.val();
-		var nickname = jqNewNickname.val();
-		var url = jqNewServerURL.val();
+	/*
+	 * args: {
+	 *		jqusername,
+	 *		jqpassword,
+	 *		jqurl,
+	 *		jqnickname,
+	 *		func //either insert or update
+	 * }
+	 */
+	validateAddServerFields: function(args){
+		var username = args.jqusername.val();
+		var password = args.jqpassword.val();
+		var nickname = args.jqnickname.val();
+		var url = args.jqurl.val();
 		var valid = true;
 		
 		if(!username){
-			jqNewUsername.addClass('invalid-field');
+			args.jqusername.addClass('invalid-field');
 			valid = false;
 		}else
-			jqNewUsername.removeClass('invalid-field');
+			args.jqusername.removeClass('invalid-field');
 		
 		if(!password){
-			jqNewPassword.addClass('invalid-field');
+			args.jqpassword.addClass('invalid-field');
 			valid = false;
 		}else
-			jqNewPassword.removeClass('invalid-field');
+			args.jqpassword.removeClass('invalid-field');
 		
 		if(!nickname){
-			jqNewNickname.addClass('invalid-field');
+			args.jqnickname.addClass('invalid-field');
 			valid = false;
-		}else if(this.currentProject.serverList[nickname]){
-			jqNewNickname.addClass('invalid-field');
-			jqNewNickname.val("");
-			jqNewNickname.attr("placeholder", "Choose another Nickname *");
+		}else if(this.currentProject.serverList[nickname]){ //TODO: need to check the global db now
+			args.jqnickname.addClass('invalid-field');
+			args.jqnickname.val("");
+			args.jqnickname.attr("placeholder", "Choose another Nickname *");
 			valid = false;
 		}else{
-			jqNewNickname.removeClass('invalid-field');
+			args.jqnickname.removeClass('invalid-field');
 		}
 		
 		if(!url){
-			jqNewServerURL.addClass('invalid-field');
+			args.jqurl.addClass('invalid-field');
 			valid = false;
 		}else
-			jqNewServerURL.removeClass('invalid-field');
+			args.jqurl.removeClass('invalid-field');
 		
 		return valid;
 	},
 	
 	//This should be checking the JSESSIONID cookie instead, but it doesn't seem like
 	//we're getting it back even after authenticating
-	checkCacheControl: function(cacheControl, url, username, password){
+	/*
+	 * args: {
+	 *		jqusername,
+	 *		jqpassword,
+	 *		jqurl,
+	 *		jqnickname,
+	 *		func //either insert or update
+	 * }
+	 */
+	checkCacheControl: function(cacheControl, args){
 		 // Not authenticated
 		if(cacheControl && (cacheControl.indexOf("must-revalidate") != -1)){
-			jqNewUsername.addClass('invalid-field');
-			jqNewPassword.addClass('invalid-field');
-			jqNewPassword.val("");
+			args.jqusername.addClass('invalid-field');
+			args.jqpassword.addClass('invalid-field');
+			args.jqpassword.val("");
 		}else{ //authenticated
-			var arbiter = this;
-			var name = jqNewNickname.val();
-			
-			//It's a new server so add it to the global servers table
-			arbiter.globalDatabase.transaction(function(tx){
-				var insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES (" +
-					arbiter.squote(name) + ", " + arbiter.squote(url) + ", " + arbiter.squote(username) + ", " + arbiter.squote(password) + ");";
-											   
-				tx.executeSql(insertServerSql, [], function(tx, res){
-					jqNewUsername.removeClass('invalid-field');
-					jqNewPassword.removeClass('invalid-field');
-					
-					arbiter.currentProject.serverList[name] = {
-						url: url,
-					  	username: username,
-					  	password: password,
-						serverId: res.insertId,
-					  	layers: {}
-					};
-					
-					$("ul#idServersList").append("<li><a href='#' serverid='" + res.insertId + 
-							"' class='server-list-item'>" + name + "</a></li>").listview('refresh');
-							  
-					//want the index into the serverList, which is the server's name
-					var option = '<option value="' + name + '">' + name + '</option>';
-					jqServerSelect.append(option);
-					
-					if(jqServerSelect.parent().parent().hasClass('ui-select'))
-						jqServerSelect.selectmenu('refresh', true);
-					  
-					jqAddServerButton.removeClass('ui-btn-active');
-					  
-					window.history.back();
-				});
-			}, arbiter.errorSql, function(){});
+			args.func.call(this);	
 		}
 	},
 	
-	authenticateServer: function(url, username, password){
+	/*
+	 * args: {
+	 *		jqusername,
+	 *		jqpassword,
+	 *		jqurl,
+	 *		jqnickname,
+	 *		func //either insert or update
+	 * }
+	 */
+	authenticateServer: function(args){
 		var arbiter = this;
+		var username = args.jqusername.val();
+		var password = args.jqpassword.val();
+		var url = args.jqurl.val();
+		
 		$.post(url + "/j_spring_security_check", {username: username, password: password}, function(results, textStatus, jqXHR){
-			arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), url, username, password);
+			arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
 		}).error(function(err){ //seems to require request to the server before it actually can find it
 			$.post(url + "/j_spring_security_check", {username: username, password: password}, function(results, textStatus, jqXHR){
-				arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), url, username, password);
+				arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
 			});
 		});
 	},
@@ -885,13 +989,213 @@ var Arbiter = {
 	onClick_AddServer: function() {
 		//TODO: Add the new server to the server list
 		console.log("User wants to submit a new servers.");
-		var url = jqNewServerURL.val();
-		var username = jqNewUsername.val();
-		var password = jqNewPassword.val();
+
+		var args = {
+			jqusername: jqNewUsername,
+			jqpassword: jqNewPassword,
+			jqurl: jqNewServerURL,
+			jqnickname: jqNewNickname
+		};
 		
-		if(this.validateAddServerFields()){
-			this.authenticateServer(url, username, password);
+		args.func = function(){
+			console.log("func called");
+			var arbiter = this;
+			var name = jqNewNickname.val();
+			var url = jqNewServerURL.val();
+			var username = jqNewUsername.val();
+			var password = jqNewPassword.val();
+			
+			//It's a new server so add it to the global servers table
+			arbiter.globalDatabase.transaction(function(tx){
+			   var insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES (" +
+			   arbiter.squote(name) + ", " + arbiter.squote(url) + ", " + arbiter.squote(username) + ", " + arbiter.squote(password) + ");";
+			   
+			   tx.executeSql(insertServerSql, [], function(tx, res){
+					jqNewUsername.removeClass('invalid-field');
+					jqNewPassword.removeClass('invalid-field');
+							 
+					arbiter.currentProject.serverList[name] = {
+						url: url,
+						username: username,
+						password: password,
+						serverId: res.insertId,
+						layers: {}
+					};
+					
+					//remove the bottom class from the previously last row
+					$('.existingServer-bottom-left').removeClass('existingServer-bottom-left');
+					$('.existingServer-bottom-right').removeClass('existingServer-bottom-right');
+							 
+					//if are no existingServer-row elements yet, then this is the top
+					var contentClass = 'existingServer-contentColumn';
+					var leftClass = 'existingServer-leftColumn';
+							 
+					if($('.existingServer-row').length == 0){
+						contentClass += ' existingServer-top-right';
+						leftClass += ' existingServer-top-left';
+					}
+							 
+					contentClass += ' existingServer-bottom-right';
+					leftClass += ' existingServer-bottom-left';
+							 
+							 //var leftPositioning = -1 * (((name.length * 16) / 2) - 40);
+							 
+					var html = '<div class="existingServer-row">' +
+							 		'<div class="existingServer-contentWrapper">' +
+							 			'<div class="' + contentClass + '">' +
+							 				'<a class="existingServer-name" id="existingServer-' + res.insertId + '" style="font-weight:bold;">' + name + '</a>' +
+							 			'</div>' +
+							 		'</div>' +
+							 		'<div class="' + leftClass + '">' +
+							 			'<div class="existingServer-checkbox-container" style="left:8px;top:8px;">' +
+							 				'<input type="checkbox" checked class="existingServer-checkbox" server-id="' + res.insertId + '" name="' + name + 
+							 					'" id="existingServer-checkbox-' + res.insertId + '" style="width:20px;height:20px;" />' +
+							 			'</div>' +
+							 		'</div>' +
+							 	'</div>';
+							 
+					jqServersPageContent.append(html);
+							 
+					jqAddServerButton.removeClass('ui-btn-active');
+							 
+					window.history.back();
+				});
+			}, arbiter.errorSql, function(){});
+		};
+		
+		if(this.validateAddServerFields(args)){
+			this.authenticateServer(args);
 		}
+	},
+	
+	onClick_EditServer: function() {
+		//TODO: Add the new server to the server list
+		var args = {
+			jqusername: jqEditUsername,
+			jqpassword: jqEditPassword,
+			jqurl: jqEditServerURL,
+			jqnickname: jqEditNickname
+		};
+		
+		var arbiter = this;
+		args.func = function(){
+			var username = jqEditUsername.val();
+			var password = jqEditPassword.val();
+			var name = jqEditNickname.val();
+			var url = jqEditServerURL.val();
+			var id = jqEditServerButton.attr('server-id');	
+		
+			arbiter.globalDatabase.transaction(function(tx){
+				var updatesql = "UPDATE servers SET name=?, username=?, password=?, url=? WHERE id=?";
+				tx.executeSql(updatesql,[name, username, password, url, id], function(tx, res){
+							  console.log("server update success");
+					jqEditUsername.removeClass('invalid-field');
+					jqEditPassword.removeClass('invalid-field');
+					
+					//get the old name
+					var oldname = $('#existingServer-' + id).text();
+					
+					//TODO: need to check to see if the server is being used
+					
+					if(arbiter.currentProject.serverList[oldname]){
+						//delete the old object
+						delete arbiter.currentProject.serverList[oldname];
+						
+						arbiter.currentProject.serverList[name] = {
+							url: url,
+							username: username,
+							password: password,
+							serverId: id,
+							layers: {}
+						};
+					}
+					//change the name of the server in the list
+					$('#existingServer-' + id).text(name);
+					$('#existingServer-checkbox-' + id).attr('name', name);
+							  
+					jqEditServerButton.removeClass('ui-btn-active');
+							  
+					window.history.back();
+				});
+			}, arbiter.errorSql, function(){});
+		};
+		
+		if(this.validateAddServerFields(args)){
+			this.authenticateServer(args);
+		}
+	},
+	
+	onClick_DeleteServer: function(){
+		console.log("onClick_DeleteServer");
+		//TODO: check to see if the server is being used
+		var arbiter = this;
+		var id = jqEditServerButton.attr('server-id');
+		
+		var deleteServer = function(){
+			console.log("deleteServer");
+			arbiter.globalDatabase.transaction(function(tx){
+				//delete the server
+				tx.executeSql("DELETE FROM servers WHERE id=?", [id], function(tx, res){
+					//handle after delete - remove server usage info?
+					
+					//remove from the currentProject object
+					var serverName = $('#existingServer-' + id).text();
+					delete arbiter.currentProject.serverList[serverName];
+					
+					//remove from the serverList
+					$('#existingServer-' + id).parent().parent().parent().remove();
+							  
+					//set the existing server list styling just in case the top is being removed
+					if(!$('.existingServer-top-left').length){
+						var firstChild = jqServersPageContent.children(':first-child');
+						if(firstChild.length){
+							firstChild.find('.existingServer-contentColumn').addClass('existingServer-top-right');
+							firstChild.find('.existingServer-leftColumn').addClass('existingServer-top-left');
+						}
+					}
+					
+					//set the existing server list styling just in case the bottom is being removed
+					if(!$('.existingServer-bottom-left').length){
+						var lastChild = jqServersPageContent.children(':last-child');
+						if(lastChild.length){
+							lastChild.find('.existingServer-contentColumn').addClass('existingServer-bottom-right');
+							lastChild.find('.existingServer-leftColumn').addClass('existingServer-bottom-left');
+						}	  
+					}
+					
+					window.history.back();
+				}, function(tx, err){
+					console.log("delete server err: ", err);			  
+				});								   
+			}, arbiter.errorSql, function(){});
+		};
+		
+		arbiter.globalDatabase.transaction(function(tx){
+										   
+			tx.executeSql("SELECT * FROM server_usage WHERE server_id=?", [id], function(tx, res){
+				var ans;
+				if(res.rows.length){
+					if(res.rows.length > 1)
+						  ans = confirm("The server is being used in " + res.rows.length + " projects! Are you sure you want to delete it?!");
+					else
+						  ans = confirm("The server is being used in " + res.rows.length + " project! Are you sure you want to delete it?!");
+						  
+					if(ans){
+						//delete the server
+						deleteServer.call(arbiter);
+					}
+				}else{
+					ans = confirm("Are you sure you want to delete the server?");
+						  
+					if(ans){
+						//delete the server
+						deleteServer.call(arbiter);
+					}	  
+				}
+			}, function(tx, err){
+						  console.log("check server_usage err:", err);			  
+			});
+		}, arbiter.errorSql, function(){});
 	},
 	
 	PopulateLayersList: function() {
@@ -979,9 +1283,6 @@ var Arbiter = {
 							layer = serverList[name].layers[y];
 								  
 							insertLayerSql = "INSERT INTO layers (server_id, layername, f_table_name, featureNS, typeWithPrefix) VALUES (?,?,?,?,?);";
-									/* + serverId + 
-								  ", " + arbiter.squote(y) + ", " + arbiter.squote(layer.featureType) + ", " + arbiter.squote(layer.featureNS) + 
-								  ", " + arbiter.squote(layer.typeName) + ");";*/
 							
 							arbiter.currentProject.variablesDatabase.transaction(function(tx){
 								tx.executeSql(insertLayerSql, [serverId, y, layer.featureType, layer.featureNS, layer.typeName]);															   
@@ -990,10 +1291,6 @@ var Arbiter = {
 							arbiter.currentProject.dataDatabase.transaction(function(tx){
 								insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
 									"f_geometry_column, geometry_type, srid) VALUES (?,?,?,?)";
-				
-									/* + arbiter.squote(layer.featureType) + 
-									", " + arbiter.squote(layer.geomName) + ", " + arbiter.squote(layer.geometryType) + 
-									", " + arbiter.squote(layer.srsName) + ");";*/
 																			
 								//made fid not unique to be able to handle multiple inserts while offline.
 								//fid is null until the server knows about the feature
@@ -1080,8 +1377,6 @@ var Arbiter = {
 		var error = function(error){
 			console.log("error creating directory");
 		};
-		
-		console.log('"' + this.currentProject.name + '"');
 					
 		this.fileSystem.root.getDirectory("Arbiter/Projects/" + this.currentProject.name, {create: true, exclusive: false}, writeToDatabases, error);
 	},
@@ -1311,11 +1606,13 @@ var Arbiter = {
 							}
 						}
 						
-						options += '<option layersrs="' + layersrs + '" value="' + 
+						options +=  '<option layersrs="' + layersrs + '" value="' + 
 							layer.name + '">' + layer.title + '</option>';
 					}
 												 
 					jqLayerSelect.html(options).selectmenu('refresh', true);
+					
+					jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
 					
 					arbiter.enableLayerSelectAndNickname();
 				}

@@ -7,6 +7,7 @@
 		"newProject": "Spanish New Project",
 		"servers": "Spanish Server",
 		"newServer": "Spanish New Server",
+		"editServer": "Edita el servidor",
 		"layers": "Spanish Layers",
 		"newLayer": "Spanish New Layer",
 		"area": "Spanish Area of Interest"
@@ -35,6 +36,8 @@
 		"next": "Spanish Next",
 		"newServer": "Spanish Add a new server.",
 		"addServer": "Spanish Add Server",
+		"editServer": "Edita el servidor",
+		"deleteServer": "Elimina el servidor",
 		"newLayer": "Spanish Add a new layer.",
 		"addLayer": "Spanish Add Layer",
 		"finish": "Spanish Finish",
