@@ -259,7 +259,7 @@ getURL: function(bounds) {
 			}
 			
 			if (res.rows.length === 0){
-				if (caching) { 
+				if (typeof caching !== 'undefined') { 
 					var saveTileSuccess = function(url, path){
 						if (typeof caching !== 'undefined' && typeof caching.counterCached !== 'undefined') {
 							caching.counterCached += 1;
