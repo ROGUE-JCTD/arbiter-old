@@ -57,7 +57,6 @@ var div_Popup;
 var div_EditServerPage;
 var jqSaveButton;
 var jqAttributesButton;
-var jqAddLayerButton;
 var jqLayerURL;
 var jqCreateFeature;
 var jqNewProjectName;
@@ -77,7 +76,9 @@ var jqAddServerPage;
 var jqServerSelect;
 var jqEditServerSelect;
 var jqLayerSelect;
+var jqEditLayerSelect;
 var jqLayerNickname;
+var jqEditLayerNickname;
 var jqLayerSubmit;
 var jqProjectsList;
 var jqEditorTab;
@@ -86,6 +87,8 @@ var jqExistingServers;
 var jqAddFeature;
 var jqEditFeature;
 var jqSyncUpdates;
+
+var tempLayerToEdit = null;
 
 var fileSystem = null;
 /* ============================ *
@@ -140,6 +143,7 @@ var Arbiter = {
 		div_NewProjectPage	= $('#idNewProjectPage');
 		div_ServersPage		= $('#idServersPage');
 		div_LayersPage		= $('#idLayersPage');
+		div_AddLayersPage	= $('#idAddLayerPage');
 		div_EditLayersPage	= $('#idEditLayerPage');
 		div_AreaOfInterestPage = $('#idAreaOfInterestPage');
 		div_ArbiterSettingsPage	= $('#idArbiterSettingsPage');
@@ -148,7 +152,6 @@ var Arbiter = {
 		div_EditServerPage = $('#idEditServersPage');
 		jqSaveButton = $('#saveButton');
 		jqAttributesButton = $('#attributesButton');
-		jqAddLayerButton = $('#addLayerBtn');
 		jqLayerURL = $('#layerurl');
 		jqCreateFeature = $('#createFeature');
 		jqNewProjectName = $('#newProjectName');
@@ -169,7 +172,9 @@ var Arbiter = {
 		jqEditServerSelect = $('#Edit_serverselect');
 		jqExistingServers = $('#existingServers');
 		jqLayerSelect = $('#layerselect');
+		jqEditLayerSelect = $('#Edit_layerselect');
 		jqLayerNickname = $('#layernickname');
+		jqEditLayerNickname = $('#Edit_layernickname');
 		jqLayerSubmit = $('#addLayerSubmit');
 		jqProjectsList = $('ul#idProjectsList');
 		jqEditorTab = $('#editorTab');
@@ -281,8 +286,8 @@ var Arbiter = {
 			console.log("requestFileSystem failed with error code: " + error.code);					 
 		});
 		
-		//div_AddLayersPage.live('pageshow', this.addServersToLayerDropdown);
-		//div_EditLayersPage.live('pageshow', this.addServersToLayerDropdown);
+		div_AddLayersPage.live('pageshow', this.resetAddLayersPage);
+		div_EditLayersPage.live('pageshow', this.resetEditLayersPage);
 		
 		//Start on the Language Select screen if this is the users first time.
 		//Otherwise move to the Projects page.
@@ -468,10 +473,6 @@ var Arbiter = {
 			}
 		});
 		
-		jqAddLayerButton.mouseup(function(event){
-			arbiter.populateAddLayerDialog(null);
-		});
-		
 		jqServerSelect.change(function(event){
 			//var serverUrl = $(this).val();
 							  console.log($(this).val());
@@ -485,7 +486,11 @@ var Arbiter = {
 		});
 
 		jqLayerSelect.change(function(event){
-			jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
+			//jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
+		});
+		
+		jqEditLayerSelect.change(function(event){
+			//jqEditLayerNickname.val(jqEditLayerSelect.find('option:selected').text());
 		});
 
 		/*jqAddLayerSubmit.mouseup(function(event){
@@ -1034,7 +1039,30 @@ var Arbiter = {
 		}
 	},
 	
-	addServersToLayerDropdown: function() {
+	resetAddLayersPage: function() {
+		console.log("Reset Add Layers");
+		Arbiter.addServersToLayerDropdown();
+		Arbiter.disableLayerSelectAndNickname();
+	},
+	
+	resetEditLayersPage: function() {
+		console.log("Reset Edit Layers");
+		//Arbiter.addServersToLayerDropdown();
+		//Arbiter.disableLayerSelectAndNickname();
+		
+		if(tempLayerToEdit) {
+			console.log("Change Layer - " + tempLayerToEdit);
+			jqEditLayerSelect.val(tempLayerToEdit).change();
+			tempLayerToEdit = null;
+		}
+		
+		if(jqEditLayerSelect.parent().parent().hasClass('ui-select')) {
+			console.log("Refresh Layer Select");
+			jqEditLayerSelect.selectmenu('refresh', true);
+		}
+	},
+	
+	addServersToLayerDropdown: function(_serverName) {
 		var arbiter = Arbiter;
 		console.log("Testing stuff");
 		console.log(arbiter.currentProject.serverList);
@@ -1053,6 +1081,12 @@ var Arbiter = {
 			option = '<option value="' + index + '">' + index + '</option>';
 			jqServerSelect.append(option);
 			jqEditServerSelect.append(option);
+		}
+		
+		if(_serverName) {
+			console.log("Select server");
+			jqServerSelect.val(_serverName).change();
+			jqEditServerSelect.val(_serverName).change();
 		}
 		
 		if(jqServerSelect.parent().parent().hasClass('ui-select')) {
@@ -1128,7 +1162,7 @@ var Arbiter = {
 	
 		//TODO: Load layers that are available
 		// - add them to the LayersList
-		arbiter.addServersToLayerDropdown();
+		//arbiter.addServersToLayerDropdown();
 	},
 	
 	onClick_EditLayers: function() {
@@ -1392,7 +1426,8 @@ var Arbiter = {
 						attributes: layerattributes
 					};
 						
-					var li = "<li><a onClick='Arbiter.editLayer(\"" + layernickname + "\", " + serverInfo.serverId + ")' class='layer-list-item'>" + layernickname + "</a></li>";
+					var layerName = selectedOption.html();
+					var li = "<li><a onClick='Arbiter.editLayer(\"" + typeName + "\", \"" + layernickname + "\", " + serverInfo.serverId + ")' class='layer-list-item'>" + layernickname + "</a></li>";
 													 
 					$("ul#layer-list").append(li).listview("refresh");
 													 
@@ -1403,26 +1438,35 @@ var Arbiter = {
 		}
 	},
 	
-	editLayer: function(_layerNickname, _serverID){
+	editLayer: function(_layerName, _layerNickname, _serverID){
 		var arbiter = this;
 		
-		console.log("Layer to edit: " + _layerNickname + " - " + _serverID);
+		console.log("Layer to edit: " + _layerName + " - " + _serverID);
 	
-		//console.log("Edit Server " + _serverID);
-		//var serverIndex;
+		console.log("Edit Server " + _serverID);
+		var serverIndex;
 	
-		//for(var index in arbiter.currentProject.serverList) {
-		//	console.log("Current Server to check:");
-		//	console.log(arbiter.currentProject.serverList[index]);
-		//	if(_serverID == arbiter.currentProject.serverList[index].serverId) {
-		//		serverIndex = index;
-		//		console.log("Server Found!");
-		//	}
-		//}
+		for(var index in arbiter.currentProject.serverList) {
+			console.log("Current Server to check:");
+			console.log(arbiter.currentProject.serverList[index]);
+			if(_serverID == arbiter.currentProject.serverList[index].serverId) {
+				serverIndex = index;
+				console.log("Server Found! - " + serverIndex);
+				break;
+			}
+		}
 		
-		arbiter.addServersToLayerDropdown();
+		console.log("Setting Server to " + serverIndex);
+		arbiter.addServersToLayerDropdown(serverIndex);
+		tempLayerToEdit = _layerName;
+		console.log("Setting Nickname to " + _layerNickname);
+		jqEditLayerNickname.val(_layerNickname);
 		
 		arbiter.changePage_Pop(div_EditLayersPage);
+	},
+	
+	saveLayer: function() {
+		console.log("Saving disabled for the time being.");
 	},
 	
 	populateAddServerDialog: function(serverName){
@@ -1441,27 +1485,6 @@ var Arbiter = {
 		}
 		
 		this.changePage_Pop(jqAddServerPage);
-	},
-	
-	populateAddLayerDialog: function(layername){
-		console.log("layername: " + layername);
-		if(layername){
-			var layers = map.getLayersByName(layername + "-wfs");
-			if(layers.length){
-				var protocol = layers[0].protocol;
-				$("#featureNS").val(protocol.featureNS);
-				$("#layerurl").val(protocol.url.substring(0, protocol.url.length - 4));
-				$("#featureType").val(protocol.featureType);
-				$("#layernickname").val(layername);
-			}
-		}else{
-			$("#featureNS").val("");
-			$("#layerurl").val("");
-			$("#featureType").val("");
-			$("#layernickname").val("");
-		}
-		
-		$.mobile.changePage("#addLayerDialog", "pop");
 	},
 	
 	//override: Bool, should override
@@ -1516,13 +1539,30 @@ var Arbiter = {
 		jqLayerSelect.removeAttr('aria-disabled disabled').removeClass('mobile-selectmenu-disabled ui-state-disabled');
 		
 		jqLayerNickname.removeAttr('disabled');
+		
+		jqEditLayerSelect.parent().removeClass('ui-disabled').removeAttr('aria-disabled');
+		jqEditLayerSelect.removeAttr('aria-disabled disabled').removeClass('mobile-selectmenu-disabled ui-state-disabled');
+		
+		jqEditLayerNickname.removeAttr('disabled');
 	},
 	
 	disableLayerSelectAndNickname: function(){
+		//Clear the list
+		jqLayerSelect.empty();
+		
+		//Choose your server option
+		var option = '<option value="" data-localize="label.chooseALayer">Choose a layer...</option>';
+		jqLayerSelect.append(option);
+		
 		jqLayerSelect.parent().addClass('ui-disabled').attr('aria-disabled', 'true');
 		jqLayerSelect.attr('disabled', 'disabled').attr('aria-disabled', 'true').addClass('mobile-selectmenu-disabled ui-state-disabled');
 		
+		jqLayerNickname.val("");
 		jqLayerNickname.attr('disabled', 'disabled');
+		
+		if(jqLayerSelect.parent().parent().hasClass('ui-select')) {
+			jqLayerSelect.selectmenu('refresh', true);
+		}
 	},
 	
 	getFeatureTypesOnServer: function(serverName){
@@ -1555,8 +1595,14 @@ var Arbiter = {
 						options +=  '<option layersrs="' + layersrs + '" value="' + 
 							layer.name + '">' + layer.title + '</option>';
 					}
-												 
-					jqLayerSelect.html(options).selectmenu('refresh', true);
+							
+					if(jqLayerSelect.parent().parent().hasClass('ui-select')) {
+						jqLayerSelect.html(options).selectmenu('refresh', true);
+					}
+					
+					if(jqEditLayerSelect.parent().parent().hasClass('ui-select')) {
+						jqEditLayerSelect.html(options).selectmenu('refresh', true);
+					}
 					
 					arbiter.enableLayerSelectAndNickname();
 				}
