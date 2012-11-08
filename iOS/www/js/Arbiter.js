@@ -107,7 +107,6 @@ var Arbiter = {
 	
 	globalDatabase: null,
 	
-	//grout tilesets db. primarily used to import grout tiles into global.tiles table since unlike grout's this table is optimized for access 
 	tilesetsDatabase: null, 
 	
 	serverList: {},
