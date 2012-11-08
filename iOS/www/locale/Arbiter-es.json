@@ -38,6 +38,8 @@
 		"next": "Spanish Next",
 		"newServer": "Spanish Add a new server.",
 		"addServer": "Spanish Add Server",
+		"editServer": "Edita el servidor",
+		"deleteServer": "Elimina el servidor",
 		"newLayer": "Spanish Add a new layer.",
 		"addLayer": "Spanish Add Layer",
 		"finish": "Spanish Finish",

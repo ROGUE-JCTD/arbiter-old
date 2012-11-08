@@ -88,9 +88,10 @@ var jqAddFeature;
 var jqEditFeature;
 var jqSyncUpdates;
 
-var tempLayerToEdit = null;
 
+var tempLayerToEdit = null;
 var fileSystem = null;
+
 /* ============================ *
  * 			 Language
  * ============================ */
@@ -114,6 +115,8 @@ var Arbiter = {
 	
 	globalDatabase: null,
 	
+	tilesetsDatabase: null, 
+	
 	serverList: {},
 	
 	currentProject: {
@@ -127,13 +130,10 @@ var Arbiter = {
 	isOnline: false,
 	
     Initialize: function() {
-		console.log("What will you have your Arbiter do?"); //http://www.youtube.com/watch?v=nhcHoUj4GlQ
-		
-        TileUtil.Initialize(this);
-        TileUtil.dumpFiles();
+		console.log("What will you have your Arbiter do?"); // http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
 		Cordova.Initialize(this);
-		
+        
 		var arbiter = this;
 		
 		//Save divs for later
@@ -191,49 +191,54 @@ var Arbiter = {
 			arbiter.fileSystem = filesystem;
 			
 			arbiter.fileSystem.root.getDirectory("Arbiter", {create: true, exclusive: false}, function(dir){
-										 console.log("created arbiter directory");
+				console.log("created arbiter directory");
+				
 				arbiter.fileSystem.root.getDirectory("Arbiter/Projects", {create: true, exclusive: false}, function(dir){
-											 console.log("created projects directory");
+					console.log("created projects directory");
 					arbiter.InitializeProjectList(dir);
 				}, function(error){
 					console.log("error getting projects");
 				});
+				
 								
 				arbiter.globalDatabase = Cordova.openDatabase("Arbiter/global", "1.0", "Global Database", 1000000);
 				arbiter.globalDatabase.transaction(function(tx){
-					tx.executeSql("CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);", [], function(tx, res){
+					
+					var createSettingsSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);";
+					tx.executeSql(createSettingsSql, [], function(tx, res){
 						console.log("global settings table created");											 
 					}, function(tx, err){
 						console.log("global settings err: ", err);		  
 					});
 					
-					var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key, name text not null, url text not null, " +
+					var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key autoincrement, name text not null, url text not null, " +
 												   "username text not null, password text not null);";
-					
-					var createServerUsageSql = "CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, dirty integer, " +
-												   "FOREIGN KEY(server_id) REFERENCES servers(id));";
-					
-					var createProjectsSql = "CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);";
-												   
+					   
 					tx.executeSql(createServersSql, [], function(tx, res){
 						console.log("global servers table created");											 
 					}, function(tx, err){
 						console.log("global servers err: ", err);		  
 					});
 												   
+					var createServerUsageSql = "CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, dirty integer, " +
+												"FOREIGN KEY(server_id) REFERENCES servers(id));";
+
 					tx.executeSql(createServerUsageSql, [], function(tx, res){
 						console.log("global server_usage table created");											 
 					}, function(tx, err){
 						console.log("global server_usage err: ", err);		  
 					});
-												   
+
+					
+					var createProjectsSql = "CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);";
+
 					tx.executeSql(createProjectsSql, [], function(tx, res){
 						console.log("global projects table created");
 					}, function(tx, err){
 						console.log("global projects table err: ", err);			  
 					});
-					
-					//populate the existing servers drop down on the add server page
+
+					// populate the existing servers drop down on the add server page
 					tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
 						var row;
 						var html = '';
@@ -250,7 +255,7 @@ var Arbiter = {
 								contentClass += ' existingServer-top-right';
 								leftClass += ' existingServer-top-left';
 							}
-		
+							
 							if(i == (res.rows.length - 1)){
 								contentClass += ' existingServer-bottom-right';
 								leftClass += ' existingServer-bottom-left';
@@ -259,29 +264,62 @@ var Arbiter = {
 							//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
 							
 							html += '<div class="existingServer-row">' +
-										'<div class="existingServer-contentWrapper">' +
-								  			'<div class="' + contentClass + '">' +
-								  				'<a class="existingServer-name" id="existingServer-' + row.id + '">' + row.name + '</a>' +
-											'</div>' +
-										'</div>' +
-								  		'<div class="' + leftClass + '">' +
-								  			'<div class="existingServer-checkbox-container">' +
-												'<input type="checkbox" class="existingServer-checkbox" server-id="' + row.id + '" name="' + row.name +
-								  					'" id="existingServer-checkbox-' + row.id + '" style="width:20px;height:20px;" />' +
-								  			'</div>' +
-								  		'</div>' +
-									'</div>';
+							'<div class="existingServer-contentWrapper">' +
+							'<div class="' + contentClass + '">' +
+							'<a class="existingServer-name" id="existingServer-' + row.id + '">' + row.name + '</a>' +
+							'</div>' +
+							'</div>' +
+							'<div class="' + leftClass + '">' +
+							'<div class="existingServer-checkbox-container">' +
+							'<input type="checkbox" class="existingServer-checkbox" server-id="' + row.id + '" name="' + row.name +
+							'" id="existingServer-checkbox-' + row.id + '" style="width:20px;height:20px;" />' +
+							'</div>' +
+							'</div>' +
+							'</div>';
 						}
 						
 						jqServersPageContent.html(html);
-					}, function(tx, err){
 						
+					}, arbiter.errorSql, function(){});
+					
+					var createTilesSql = "CREATE TABLE IF NOT EXISTS tiles (" +
+							"id integer primary key autoincrement, " +
+							"tileset text not null, " +
+							"z integer not null, " +
+							"x integer not null, " +
+							"y integer not null, " +
+							"path text not null, " +
+							"url text not null, " +
+							"ref_counter integer not null);";
+   
+					tx.executeSql(createTilesSql, [], function(tx, res){
+						console.log("global tiles table created");
+					}, function(tx, err){
+						console.log("global tiles table err: ", err);			  
+					});
+					
+
+				}, arbiter.errorSql, function(){});
+				
+				
+				
+				// create the table that will store the tile sets across all
+				// projects
+				arbiter.tilesetsDatabase = Cordova.openDatabase("Arbiter/tilesets", "1.0", "Tilesets Database", 1000000);
+				arbiter.tilesetsDatabase.transaction(function(tx){
+					var createTileRefCounterSql = "CREATE TABLE IF NOT EXISTS tilesets (tilelevel_table text PRIMARY KEY, title text not null);";
+					   
+					tx.executeSql(createTileRefCounterSql, [], function(tx, res){
+						console.log("tilesetsDatabase.tile_ref_counter table created");
+					}, function(tx, err){
+						console.log("tilesetsDatabase.tile_ref_counter table err: ", err);
 					});
 				}, arbiter.errorSql, function(){});
+				
 			}, function(error){
-										 console.log("couldn't create arbiter directory");
-										 
+				console.log("couldn't create arbiter directory");
 			});
+			
 		}, function(error){
 			console.log("requestFileSystem failed with error code: " + error.code);					 
 		});
@@ -430,6 +468,17 @@ var Arbiter = {
 				});
 			}
 		});
+
+		$('#idAddLayerPage').live('pagebeforeshow', function(){
+			//populate the servers drop down from the currentProject.serverList
+			var html = '<option value="" data-localize="label.chooseAServer">Choose a Server...</option>';
+			
+			for(var x in arbiter.currentProject.serverList){
+				html += '<option value="' + x + '">' + x + '</option>';
+			}
+			
+			jqServerSelect.html(html);
+		});
 		
 		jqSaveButton.mouseup(function(event){
 			map.layers[map.layers.length - 1].strategies[0].save();
@@ -474,9 +523,15 @@ var Arbiter = {
 		});
 		
 		jqServerSelect.change(function(event){
-			//var serverUrl = $(this).val();
-							  console.log($(this).val());
-			arbiter.getFeatureTypesOnServer($(this).val());
+			var serverName = $(this).val();
+			if(serverName)
+				arbiter.getFeatureTypesOnServer(serverName);
+			else{
+				jqLayerSelect.html('<option value="" data-localize="label.chooseALayer">Choose a layer...</option>');
+				jqLayerSelect.selectmenu('refresh', true);
+				jqLayerNickname.val('');
+				arbiter.disableLayerSelectAndNickname();
+			}
 		});
 
 		jqEditServerSelect.change(function(event){
@@ -492,30 +547,6 @@ var Arbiter = {
 		jqEditLayerSelect.change(function(event){
 			//jqEditLayerNickname.val(jqEditLayerSelect.find('option:selected').text());
 		});
-
-		/*jqAddLayerSubmit.mouseup(function(event){
-			// featureNS, serverUrl, typeName, srsName, layernickname
-			
-			var args = {
-				featureNS: "http://opengeo.org",
-				serverUrl: $("#layerurl").val(),
-				typeName: $("#layerselect").val(),
-				srsName: "EPSG:4326",
-				layernickname: "hospitals"
-			};
-									 
-			arbiter.submitLayer(args);
-		});*/
-		
-		/*jqCreateFeature.mouseup(function(event){
-			if(addFeatureControl.active){
-				addFeatureControl.deactivate();
-				$(this).removeClass("ui-btn-active");
-			}else{
-				addFeatureControl.activate();
-				$(this).addClass("ui-btn-active");
-			}
-		});*/
 		
 		jqAddFeature.mouseup(function(event){
 			console.log("Add Feature");
@@ -542,6 +573,8 @@ var Arbiter = {
 			for(var i = 0; i < layers.length;i++){
 				layers[i].strategies[0].save();
 			}
+			
+			TileUtil.startCachingTiles();
 		});
 		
 		jqEditorTab.mouseup(function(event){
@@ -1124,7 +1157,7 @@ var Arbiter = {
 					//get the old name
 					var oldname = $('#existingServer-' + id).text();
 					
-					//TODO: need to check to see if the servers being used
+					//TODO: need to check to see if the server is being used
 					
 					if(arbiter.currentProject.serverList[oldname]){
 						//delete the old object
@@ -1152,6 +1185,80 @@ var Arbiter = {
 		if(this.validateAddServerFields(args)){
 			this.authenticateServer(args);
 		}
+	},
+	
+	onClick_DeleteServer: function(){
+		console.log("onClick_DeleteServer");
+		//TODO: check to see if the server is being used
+		var arbiter = this;
+		var id = jqEditServerButton.attr('server-id');
+		
+		var deleteServer = function(){
+			arbiter.globalDatabase.transaction(function(tx){
+				//delete the server
+				tx.executeSql("DELETE FROM servers WHERE id=?", [id], function(tx, res){
+					//handle after delete - remove server usage info?
+					
+					//remove from the currentProject object
+					var serverName = $('#existingServer-' + id).text();
+					delete arbiter.currentProject.serverList[serverName];
+					
+					//remove from the serverList
+					$('#existingServer-' + id).parent().parent().parent().remove();
+							  
+					//set the existing server list styling just in case the top is being removed
+					if(!$('.existingServer-top-left').length){
+						var firstChild = jqServersPageContent.children(':first-child');
+						if(firstChild.length){
+							firstChild.find('.existingServer-contentColumn').addClass('existingServer-top-right');
+							firstChild.find('.existingServer-leftColumn').addClass('existingServer-top-left');
+						}
+					}
+					
+					//set the existing server list styling just in case the bottom is being removed
+					if(!$('.existingServer-bottom-left').length){
+						var lastChild = jqServersPageContent.children(':last-child');
+						if(lastChild.length){
+							lastChild.find('.existingServer-contentColumn').addClass('existingServer-bottom-right');
+							lastChild.find('.existingServer-leftColumn').addClass('existingServer-bottom-left');
+						}	  
+					}
+					
+					window.history.back();
+							  
+					$('#deleteServerButton').removeClass('ui-btn-active');
+				}, function(tx, err){
+					console.log("delete server err: ", err);			  
+				});								   
+			}, arbiter.errorSql, function(){});
+		};
+		
+		arbiter.globalDatabase.transaction(function(tx){
+										   
+			tx.executeSql("SELECT * FROM server_usage WHERE server_id=?", [id], function(tx, res){
+				var ans;
+				if(res.rows.length){
+					if(res.rows.length > 1)
+						  ans = confirm("The server is being used in " + res.rows.length + " projects! Are you sure you want to delete it?!");
+					else
+						  ans = confirm("The server is being used in " + res.rows.length + " project! Are you sure you want to delete it?!");
+						  
+					if(ans){
+						//delete the server
+						deleteServer.call(arbiter);
+					}
+				}else{
+					ans = confirm("Are you sure you want to delete the server?");
+						  
+					if(ans){
+						//delete the server
+						deleteServer.call(arbiter);
+					}	  
+				}
+			}, function(tx, err){
+						  console.log("check server_usage err:", err);			  
+			});
+		}, arbiter.errorSql, function(){});
 	},
 	
 	PopulateLayersList: function() {
@@ -1241,9 +1348,6 @@ var Arbiter = {
 							layer = serverList[name].layers[y];
 								  
 							insertLayerSql = "INSERT INTO layers (server_id, layername, f_table_name, featureNS, typeWithPrefix) VALUES (?,?,?,?,?);";
-									/* + serverId + 
-								  ", " + arbiter.squote(y) + ", " + arbiter.squote(layer.featureType) + ", " + arbiter.squote(layer.featureNS) + 
-								  ", " + arbiter.squote(layer.typeName) + ");";*/
 							
 							arbiter.currentProject.variablesDatabase.transaction(function(tx){
 								tx.executeSql(insertLayerSql, [serverId, y, layer.featureType, layer.featureNS, layer.typeName]);															   
@@ -1252,10 +1356,6 @@ var Arbiter = {
 							arbiter.currentProject.dataDatabase.transaction(function(tx){
 								insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
 									"f_geometry_column, geometry_type, srid) VALUES (?,?,?,?)";
-				
-									/* + arbiter.squote(layer.featureType) + 
-									", " + arbiter.squote(layer.geomName) + ", " + arbiter.squote(layer.geometryType) + 
-									", " + arbiter.squote(layer.srsName) + ");";*/
 																			
 								//made fid not unique to be able to handle multiple inserts while offline.
 								//fid is null until the server knows about the feature
@@ -1295,6 +1395,24 @@ var Arbiter = {
 					});	  
 				}, arbiter.errorSql, function(){});
 			}
+			
+			// every project has a list of tiles it uses so that:
+			// - when the project is removed, the global tile's reference counter can be decremented.
+			// - when a project's tiles need to updated, we can potentially used this list... though normally, they will pull data in area of interest. 
+			var createTileIdsSql = "CREATE TABLE IF NOT EXISTS tileIds (id integer not null primary key);";  
+
+			tx.executeSql(createTileIdsSql, [], function(tx, res){
+				console.log("project tileIds table created");
+				
+				console.log("starting to cache tiles");
+				// cache tiles when new project is created. 
+				// TileUtil.startCachingTiles();
+				//TODO: try throwing exception and printing e.stack for more infor on error
+				// http://www.eriwen.com/javascript/js-stack-trace/
+			}, function(tx, err){
+				console.log("project tileIds table err: ", err);			  
+			});
+
 		};
 		
 		var writeToDatabases = function(dir){
@@ -1331,8 +1449,6 @@ var Arbiter = {
 		var error = function(error){
 			console.log("error creating directory");
 		};
-		
-		console.log('"' + this.currentProject.name + '"');
 					
 		this.fileSystem.root.getDirectory("Arbiter/Projects/" + this.currentProject.name, {create: true, exclusive: false}, writeToDatabases, error);
 	},
