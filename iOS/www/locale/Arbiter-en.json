@@ -10,6 +10,8 @@
 		"editServer": "Edit Server",
 		"layers": "Layers",
 		"newLayer": "New Layer",
+		"editLayer": "Edit Layer",
+		"saveLayer": "Save Layer",
 		"area": "Area of Interest"
 	},
 	"button" : {
@@ -21,7 +23,8 @@
 	},
 	"label" : {
 		"name": "Name your Project *",
-		"nickname": "Give it a Nickname *",
+		"serverNickname": "Give server a nickname *",
+		"layerNickname": "Give layer a nickname *",
 		"serverURL": "Server URL *",
 		"username": "Username *",
 		"password": "Password *",

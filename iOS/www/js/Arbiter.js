@@ -48,14 +48,14 @@ var div_ProjectsPage;
 var div_NewProjectPage;
 var div_ServersPage;
 var div_LayersPage;
+var div_AddLayersPage;
+var div_EditLayersPage;
 var div_AreaOfInterestPage;
 var div_ArbiterSettingsPage;
 var div_ProjectSettingsPage;
 var div_Popup;
 var div_EditServerPage;
 var jqSaveButton;
-var jqAttributesButton;
-var jqAddLayerButton;
 var jqLayerURL;
 var jqCreateFeature;
 var jqNewProjectName;
@@ -73,8 +73,11 @@ var jqEditServerButton;
 var jqGoToAddServer;
 var jqAddServerPage;
 var jqServerSelect;
+var jqEditServerSelect;
 var jqLayerSelect;
+var jqEditLayerSelect;
 var jqLayerNickname;
+var jqEditLayerNickname;
 var jqLayerSubmit;
 var jqProjectsList;
 var jqEditorTab;
@@ -84,6 +87,10 @@ var jqAddFeature;
 var jqEditFeature;
 var jqSyncUpdates;
 var jqProjectPageContent;
+
+
+var tempLayerToEdit = null;
+var fileSystem = null;
 
 /* ============================ *
  * 			 Language
@@ -107,8 +114,6 @@ var Arbiter = {
 	
 	globalDatabase: null,
 	
-	savedProjectElement: null,
-	
 	//grout tilesets db. primarily used to import grout tiles into global.tiles table since unlike grout's this table is optimized for access 
 	tilesetsDatabase: null, 
 	
@@ -127,7 +132,7 @@ var Arbiter = {
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); // http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
-		Cordova.Initialize(this);
+		Cordova.Initialize(Arbiter);
 		
 		//Save divs for later
 		div_MapPage 		= $('#idMapPage');
@@ -136,16 +141,15 @@ var Arbiter = {
 		div_NewProjectPage	= $('#idNewProjectPage');
 		div_ServersPage		= $('#idServersPage');
 		div_LayersPage		= $('#idLayersPage');
+		div_AddLayersPage	= $('#idAddLayerPage');
+		div_EditLayersPage	= $('#idEditLayerPage');
 		div_AreaOfInterestPage = $('#idAreaOfInterestPage');
 		div_ArbiterSettingsPage	= $('#idArbiterSettingsPage');
 		div_ProjectSettingsPage	= $('#idProjectSettingsPage');
 		div_Popup			= $('#popup');
 		div_EditServerPage = $('#idEditServersPage');
 		jqSaveButton = $('#saveButton');
-		jqAttributesButton = $('#attributesButton');
-		jqAddLayerButton = $('#addLayerBtn');
 		jqLayerURL = $('#layerurl');
-		//jqAddLayerSubmit = $('#addLayerSubmit');
 		jqCreateFeature = $('#createFeature');
 		jqNewProjectName = $('#newProjectName');
 		jqToServersButton = $('#toServersButton');
@@ -162,9 +166,12 @@ var Arbiter = {
 		jqGoToAddServer = $('#goToAddServer');
 		jqAddServerPage = $('#idAddServerPage');
 		jqServerSelect = $('#serverselect');
+		jqEditServerSelect = $('#Edit_serverselect');
 		jqExistingServers = $('#existingServers');
 		jqLayerSelect = $('#layerselect');
+		jqEditLayerSelect = $('#Edit_layerselect');
 		jqLayerNickname = $('#layernickname');
+		jqEditLayerNickname = $('#Edit_layernickname');
 		jqLayerSubmit = $('#addLayerSubmit');
 		jqProjectsList = $('ul#idProjectsList');
 		jqEditorTab = $('#editorTab');
@@ -174,9 +181,9 @@ var Arbiter = {
 		jqSyncUpdates	 = $('#syncUpdates');
 		jqProjectPageContent = $('#idProjectPageContent');
 		jqServersPageContent = $('.ServersPageContent');
-		div_ProjectsPage.live('pageshow', this.PopulateProjectsList);
-		div_ServersPage.live('pageshow', this.PopulateServersList);
-		div_LayersPage.live('pageshow', this.PopulateLayersList);
+		div_ProjectsPage.live('pageshow', Arbiter.PopulateProjectsList);
+		div_ServersPage.live('pageshow', Arbiter.PopulateServersList);
+		div_LayersPage.live('pageshow', Arbiter.PopulateLayersList);
 		
 		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(filesystem){
 			Arbiter.fileSystem = filesystem;
@@ -316,17 +323,14 @@ var Arbiter = {
 			console.log("requestFileSystem failed with error code: " + error.code);					 
 		});
 		
-
-		//Load saved variables
-		//LanguageSelected
-		//CurrentLanguage
-
+		div_AddLayersPage.live('pageshow', Arbiter.resetAddLayersPage);
+		div_EditLayersPage.live('pageshow', Arbiter.resetEditLayersPage);
 		
 		//Start on the Language Select screen if this is the users first time.
 		//Otherwise move to the Projects page.
 		if(!isFirstTime) {
 			UpdateLocale();
-			this.changePage_Pop(div_ProjectsPage);
+			Arbiter.changePage_Pop(div_ProjectsPage);
 		}
 		
 		//Initialize Projections
@@ -463,7 +467,7 @@ var Arbiter = {
 				});
 			}
 		});
-		
+
 		$('#idAddLayerPage').live('pagebeforeshow', function(){
 			//populate the servers drop down from the currentProject.serverList
 			var html = '<option value="" data-localize="label.chooseAServer">Choose a Server...</option>';
@@ -475,14 +479,8 @@ var Arbiter = {
 			jqServerSelect.html(html);
 		});
 		
-	//	var arbiter = this; // this is initialized earlier in this method
-		
 		jqSaveButton.mouseup(function(event){
 			map.layers[map.layers.length - 1].strategies[0].save();
-		});
-		
-		jqAttributesButton.mouseup(function(event){
-			this.changePage($("#popup"));
 		});
 		
 		jqToServersButton.mouseup(function(event){
@@ -519,10 +517,6 @@ var Arbiter = {
 			}
 		});
 		
-		jqAddLayerButton.mouseup(function(event){
-			Arbiter.populateAddLayerDialog(null);
-		});
-		
 		jqServerSelect.change(function(event){
 			var serverName = $(this).val();
 			if(serverName)
@@ -534,9 +528,19 @@ var Arbiter = {
 				Arbiter.disableLayerSelectAndNickname();
 			}
 		});
-		
+
+		jqEditServerSelect.change(function(event){
+			//var serverUrl = $(this).val();
+							  console.log($(this).val());
+			Arbiter.getFeatureTypesOnServer($(this).val());
+		});
+
 		jqLayerSelect.change(function(event){
-			jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
+			//jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
+		});
+		
+		jqEditLayerSelect.change(function(event){
+			//jqEditLayerNickname.val(jqEditLayerSelect.find('option:selected').text());
 		});
 		
 		jqAddFeature.mouseup(function(event){
@@ -672,17 +676,17 @@ var Arbiter = {
 	
 	ToggleEditorMenu: function() {
 		if(!editorTabOpen) {
-			this.OpenEditorMenu();
+			Arbiter.OpenEditorMenu();
 		} else {
-			this.CloseEditorMenu();
+			Arbiter.CloseEditorMenu();
 		}
 	},
 	
 	ToggleAttributeMenu: function() {
 		if(!attributeTab) {
-			this.OpenAttributesMenu();
+			Arbiter.OpenAttributesMenu();
 		} else {
-			this.CloseAttributesMenu();
+			Arbiter.CloseAttributesMenu();
 			
 			if(attributeTab) {
 				if(selectedFeature) {
@@ -697,7 +701,7 @@ var Arbiter = {
 		$("#idEditorMenu").animate({ "left": "72px" }, 50);
 		var width;
 		
-		if(this.isOrientationPortrait()) {
+		if(Arbiter.isOrientationPortrait()) {
 			width = screen.width - 72;
 		} else {
 			width = screen.height - 72;
@@ -718,7 +722,7 @@ var Arbiter = {
 		$("#idAttributeMenu").animate({ "left": "72px" }, 50);
 		var width;
 		
-		if(this.isOrientationPortrait()) {
+		if(Arbiter.isOrientationPortrait()) {
 			width = screen.width - 72;
 		} else {
 			width = screen.height - 72;
@@ -726,7 +730,7 @@ var Arbiter = {
 		$("#attributeTab").animate({ "right": width }, 50);
 		$("#editorTab").animate({ "opacity": "0.0" }, 0);
 		
-		this.PopulatePopup();
+		Arbiter.PopulatePopup();
 	},
 	
 	CloseAttributesMenu: function() {
@@ -1143,7 +1147,7 @@ var Arbiter = {
 		if(!nickname){
 			args.jqnickname.addClass('invalid-field');
 			valid = false;
-		}else if(this.currentProject.serverList[nickname]){ //TODO: need to check the global db now
+		}else if(Arbiter.currentProject.serverList[nickname]){ //TODO: need to check the global db now
 			args.jqnickname.addClass('invalid-field');
 			args.jqnickname.val("");
 			args.jqnickname.attr("placeholder", "Choose another Nickname *");
@@ -1253,8 +1257,67 @@ var Arbiter = {
 			}, Arbiter.errorSql, function(){});
 		};
 		
-		if(this.validateAddServerFields(args)){
-			this.authenticateServer(args);
+		if(Arbiter.validateAddServerFields(args)){
+			Arbiter.authenticateServer(args);
+		}
+	},
+	
+	resetAddLayersPage: function() {
+		console.log("Reset Add Layers");
+		Arbiter.addServersToLayerDropdown();
+		Arbiter.disableLayerSelectAndNickname();
+	},
+	
+	resetEditLayersPage: function() {
+		console.log("Reset Edit Layers");
+		//Arbiter.addServersToLayerDropdown();
+		//Arbiter.disableLayerSelectAndNickname();
+		
+		if(tempLayerToEdit) {
+			console.log("Change Layer - " + tempLayerToEdit);
+			jqEditLayerSelect.val(tempLayerToEdit).change();
+			tempLayerToEdit = null;
+		}
+		
+		if(jqEditLayerSelect.parent().parent().hasClass('ui-select')) {
+			console.log("Refresh Layer Select");
+			jqEditLayerSelect.selectmenu('refresh', true);
+		}
+	},
+	
+	addServersToLayerDropdown: function(_serverName) {
+		var arbiter = Arbiter;
+		console.log("Testing stuff");
+		console.log(arbiter.currentProject.serverList);
+		
+		//Clear the list
+		jqServerSelect.empty();
+		jqEditServerSelect.empty();
+		
+		//Choose your server option
+		var option = '<option value="" data-localize="label.chooseAServer">Choose a server...</option>';
+			jqServerSelect.append(option);
+			jqEditServerSelect.append(option);
+
+		//Add all the servers to the list
+		for(var index in arbiter.currentProject.serverList) {
+			option = '<option value="' + index + '">' + index + '</option>';
+			jqServerSelect.append(option);
+			jqEditServerSelect.append(option);
+		}
+		
+		if(_serverName) {
+			console.log("Select server");
+			jqServerSelect.val(_serverName).change();
+			jqEditServerSelect.val(_serverName).change();
+		}
+		
+		if(jqServerSelect.parent().parent().hasClass('ui-select')) {
+			jqServerSelect.selectmenu('refresh', true);
+		}
+		
+		if(jqEditServerSelect.parent().parent().hasClass('ui-select')) {
+			jqEditServerSelect.selectmenu('refresh', true);
 		}
 	},
 	
@@ -1309,8 +1372,8 @@ var Arbiter = {
 			}, Arbiter.errorSql, function(){});
 		};
 		
-		if(this.validateAddServerFields(args)){
-			this.authenticateServer(args);
+		if(Arbiter.validateAddServerFields(args)){
+			Arbiter.authenticateServer(args);
 		}
 	},
 	
@@ -1395,9 +1458,11 @@ var Arbiter = {
 		//Fill the servers list (id=idLayersList) with the ones that are available.
 		// - Make the div's id = to some number...idk;
 		console.log("PopulateLayersList");
+		var arbiter = Arbiter;
 	
 		//TODO: Load layers that are available
 		// - add them to the LayersList
+		//arbiter.addServersToLayerDropdown();
 	},
 	
 	onClick_EditLayers: function() {
@@ -1443,7 +1508,7 @@ var Arbiter = {
 		
 		//Write the project to the databases
 		
-		this.currentProject.aoi = aoiMap.getExtent();
+		Arbiter.currentProject.aoi = aoiMap.getExtent();
 		
 		var insertCurrentProject = function(tx, projectId){
 			var serverList = Arbiter.currentProject.serverList;
@@ -1529,9 +1594,16 @@ var Arbiter = {
 
 			tx.executeSql(createTileIdsSql, [], function(tx, res){
 				console.log("project tileIds table created");
+				
+				console.log("starting to cache tiles");
+				// cache tiles when new project is created. 
+				// TileUtil.startCachingTiles();
+				//TODO: try throwing exception and printing e.stack for more infor on error
+				// http://www.eriwen.com/javascript/js-stack-trace/
 			}, function(tx, err){
 				console.log("project tileIds table err: ", err);			  
 			});
+
 		};
 		
 		var writeToDatabases = function(dir){
@@ -1568,11 +1640,11 @@ var Arbiter = {
 			console.log("error creating directory");
 		};
 					
-		this.fileSystem.root.getDirectory("Arbiter/Projects/" + this.currentProject.name, {create: true, exclusive: false}, writeToDatabases, error);
+		Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + Arbiter.currentProject.name, {create: true, exclusive: false}, writeToDatabases, error);
 	},
 	
 	getProjectDirectory: function(_projectName, _successCallback, _errorCallback) {
-		this.fileSystem.root.getDirectory(_projectName, null, _successCallback, _errorCallback);
+		Arbiter.fileSystem.root.getDirectory(_projectName, null, _successCallback, _errorCallback);
 	},
 	
 	failedGetProjectDirectory: function(error) {
@@ -1611,10 +1683,12 @@ var Arbiter = {
 	},
 	
 	submitLayer: function(){
-		var valid = this.validateAddLayerSubmit();
+		console.log("Submiting Time! ARBITER SMASH!");
+		var valid = Arbiter.validateAddLayerSubmit();
 		
+		console.log(valid);
 		if(valid){
-			var serverInfo = this.currentProject.serverList[jqServerSelect.val()];
+			var serverInfo = Arbiter.currentProject.serverList[jqServerSelect.val()];
 			var typeName = jqLayerSelect.val();
 			
 			var request = new OpenLayers.Request.GET({
@@ -1657,7 +1731,8 @@ var Arbiter = {
 						attributes: layerattributes
 					};
 						
-					var li = "<li><a href='#' class='layer-list-item'>" + layernickname + "</a></li>";
+					var layerName = selectedOption.html();
+					var li = "<li><a onClick='Arbiter.editLayer(\"" + typeName + "\", \"" + layernickname + "\", " + serverInfo.serverId + ")' class='layer-list-item'>" + layernickname + "</a></li>";
 													 
 					$("ul#layer-list").append(li).listview("refresh");
 													 
@@ -1668,12 +1743,41 @@ var Arbiter = {
 		}
 	},
 	
+	editLayer: function(_layerName, _layerNickname, _serverID){
+		console.log("Layer to edit: " + _layerName + " - " + _serverID);
+	
+		console.log("Edit Server " + _serverID);
+		var serverIndex;
+	
+		for(var index in Arbiter.currentProject.serverList) {
+			console.log("Current Server to check:");
+			console.log(Arbiter.currentProject.serverList[index]);
+			if(_serverID == Arbiter.currentProject.serverList[index].serverId) {
+				serverIndex = index;
+				console.log("Server Found! - " + serverIndex);
+				break;
+			}
+		}
+		
+		console.log("Setting Server to " + serverIndex);
+		Arbiter.addServersToLayerDropdown(serverIndex);
+		tempLayerToEdit = _layerName;
+		console.log("Setting Nickname to " + _layerNickname);
+		jqEditLayerNickname.val(_layerNickname);
+		
+		Arbiter.changePage_Pop(div_EditLayersPage);
+	},
+	
+	saveLayer: function() {
+		console.log("Saving disabled for the time being.");
+	},
+	
 	populateAddServerDialog: function(serverName){
 		if(serverName){
 			jqNewNickname.val(serverName);
-			jqNewServerURL.val(this.currentProject.serverList[serverName].url);
-			jqNewUsername.val(this.currentProject.serverList[serverName].username);
-			jqNewPassword.val(this.currentProject.serverList[serverName].password);
+			jqNewServerURL.val(Arbiter.currentProject.serverList[serverName].url);
+			jqNewUsername.val(Arbiter.currentProject.serverList[serverName].username);
+			jqNewPassword.val(Arbiter.currentProject.serverList[serverName].password);
 		}else{
 			jqNewNickname.val("");
 			jqNewServerURL.val("");
@@ -1683,28 +1787,7 @@ var Arbiter = {
 			jqGoToAddServer.removeClass('ui-btn-active');
 		}
 		
-		this.changePage_Pop(jqAddServerPage);
-	},
-	
-	populateAddLayerDialog: function(layername){
-		console.log("layername: " + layername);
-		if(layername){
-			var layers = map.getLayersByName(layername + "-wfs");
-			if(layers.length){
-				var protocol = layers[0].protocol;
-				$("#featureNS").val(protocol.featureNS);
-				$("#layerurl").val(protocol.url.substring(0, protocol.url.length - 4));
-				$("#featureType").val(protocol.featureType);
-				$("#layernickname").val(layername);
-			}
-		}else{
-			$("#featureNS").val("");
-			$("#layerurl").val("");
-			$("#featureType").val("");
-			$("#layernickname").val("");
-		}
-		
-		$.mobile.changePage("#addLayerDialog", "pop");
+		Arbiter.changePage_Pop(jqAddServerPage);
 	},
 	
 	//override: Bool, should override
@@ -1758,13 +1841,30 @@ var Arbiter = {
 		jqLayerSelect.removeAttr('aria-disabled disabled').removeClass('mobile-selectmenu-disabled ui-state-disabled');
 		
 		jqLayerNickname.removeAttr('disabled');
+		
+		jqEditLayerSelect.parent().removeClass('ui-disabled').removeAttr('aria-disabled');
+		jqEditLayerSelect.removeAttr('aria-disabled disabled').removeClass('mobile-selectmenu-disabled ui-state-disabled');
+		
+		jqEditLayerNickname.removeAttr('disabled');
 	},
 	
 	disableLayerSelectAndNickname: function(){
+		//Clear the list
+		jqLayerSelect.empty();
+		
+		//Choose your server option
+		var option = '<option value="" data-localize="label.chooseALayer">Choose a layer...</option>';
+		jqLayerSelect.append(option);
+		
 		jqLayerSelect.parent().addClass('ui-disabled').attr('aria-disabled', 'true');
 		jqLayerSelect.attr('disabled', 'disabled').attr('aria-disabled', 'true').addClass('mobile-selectmenu-disabled ui-state-disabled');
 		
+		jqLayerNickname.val("");
 		jqLayerNickname.attr('disabled', 'disabled');
+		
+		if(jqLayerSelect.parent().parent().hasClass('ui-select')) {
+			jqLayerSelect.selectmenu('refresh', true);
+		}
 	},
 	
 	getFeatureTypesOnServer: function(serverName){
@@ -1797,10 +1897,14 @@ var Arbiter = {
 						options +=  '<option layersrs="' + layersrs + '" value="' + 
 							layer.name + '">' + layer.title + '</option>';
 					}
-												 
-					jqLayerSelect.html(options).selectmenu('refresh', true);
+							
+					if(jqLayerSelect.parent().parent().hasClass('ui-select')) {
+						jqLayerSelect.html(options).selectmenu('refresh', true);
+					}
 					
-					jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
+					if(jqEditLayerSelect.parent().parent().hasClass('ui-select')) {
+						jqEditLayerSelect.html(options).selectmenu('refresh', true);
+					}
 					
 					Arbiter.enableLayerSelectAndNickname();
 				}
@@ -1820,8 +1924,8 @@ var Arbiter = {
 		CurrentLanguage = LanguageType[language];
 		
 		console.log("Language selected: " + CurrentLanguage.name);
-		this.UpdateLocale();
-		this.changePage_Pop(div_ProjectsPage);
+		Arbiter.UpdateLocale();
+		Arbiter.changePage_Pop(div_ProjectsPage);
 	},
 	
 	UpdateLocale: function() {
@@ -1851,12 +1955,12 @@ var Arbiter = {
 			if(addComma){
 				lists.propertiesWithType += ', ' + x + ' TEXT';
 				lists.properties += ', ' + x;
-				lists.values += ', ' + this.squote(object[x]);
+				lists.values += ', ' + Arbiter.squote(object[x]);
 				
 			}else{
 				lists.propertiesWithType += x + ' TEXT';
 				lists.properties += x;
-				lists.values += this.squote(object[x]);
+				lists.values += Arbiter.squote(object[x]);
 				addComma = true;
 			}
 		}
@@ -2106,7 +2210,7 @@ var Arbiter = {
 			 
 			// Set the attributes of the feature from the form
 			for(var x in selectedFeature.attributes){
-				selectedFeature.attributes[x] = this.decodeChars($("#textinput-" + x).val());
+				selectedFeature.attributes[x] = Arbiter.decodeChars($("#textinput-" + x).val());
 							  console.log(selectedFeature.attributes[x]);
 			}
 			
@@ -2117,7 +2221,7 @@ var Arbiter = {
 			}
 			//features, f_table_name, geomName, srsName, isEdit
 			var protocol = selectedFeature.layer.protocol;
-			this.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
+			Arbiter.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
 		}
 		
 		//$.mobile.changePage("#idMapPage", {transition: "slide", reverse: true});
@@ -2133,7 +2237,7 @@ var Arbiter = {
 					li += attr;
 					li += "</label>";
 					li += "<input name='' id='textinput-" + attr + "' placeholder='' value='";
-					li += this.encodeChars(selectedFeature.attributes[attr]);
+					li += Arbiter.encodeChars(selectedFeature.attributes[attr]);
 					li += "' type='text'></div></li>";
 			}
 
@@ -2153,7 +2257,7 @@ var Arbiter = {
 				metadata.geomName + "', '" + metadata.srsName + "', '" + metadata.geoserverURL + "', '" + metadata.nickname + "');");
 		};
 		
-		db.transaction(query, this.errorSql, function(){});
+		db.transaction(query, Arbiter.errorSql, function(){});
 	},
 	
 	/*
@@ -2323,7 +2427,7 @@ var Arbiter = {
 	 Returns true if the application is in Landscape mode.
 	 */
 	isOrientationLandscape: function() {
-		if(this.getOrientation() == 90 || this.getOrientation() == -90)
+		if(Arbiter.getOrientation() == 90 || Arbiter.getOrientation() == -90)
 			return true;
 		else
 			return false;
@@ -2333,14 +2437,14 @@ var Arbiter = {
 	 Returns true if the application is in Portrait mode.
 	 */
 	isOrientationPortrait: function() {
-		if(this.getOrientation() == 0 || this.getOrientation() == 180)
+		if(Arbiter.getOrientation() == 0 || Arbiter.getOrientation() == 180)
 			return true;
 		else
 			return false;
 	},
 	
 	setSyncColor: function() {
-		if(this.isOnline) {
+		if(Arbiter.isOnline) {
 			$('#syncUpdates').css("background-color", "rgba(0, 136, 0, 0.496094)");
 		} else {
 			$('#syncUpdates').css("background-color", "rgba(136, 0, 0, 0.496094)");
@@ -2360,20 +2464,20 @@ var Arbiter = {
 	
 	onOnline: function() {
 		console.log("Arbiter: Online");
-		if(!this.isOnline){
-			this.isOnline = true;
+		if(!Arbiter.isOnline){
+			Arbiter.isOnline = true;
 		}
 		
-		this.setSyncColor();
+		Arbiter.setSyncColor();
 	},
 	
 	onOffline: function() {
 		console.log("Arbiter: Offline");
-		if(this.isOnline){
-			this.isOnline = false;
+		if(Arbiter.isOnline){
+			Arbiter.isOnline = false;
 		}
 		
-		this.setSyncColor();
+		Arbiter.setSyncColor();
 	},
 	
 	onBatteryCritical: function(info) {
