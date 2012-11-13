@@ -92,7 +92,7 @@ countTilesInBounds: function (bounds){
     var tileWidth = layer.tileSize.w;
     var tileHeight = layer.tileSize.h;
 
-    var zoomLevel = map.getZoomForExtent(bounds, true);;
+    var zoomLevel = map.getZoomForExtent(bounds, true);
     
     var totalTiles = 0;
     
@@ -308,6 +308,9 @@ getURL: function(bounds) {
 			
 		}, Arbiter.errorSql, function(){});	
 		
+	} else {
+		//TODO: if not chached, if we have connection, just return URL aka finalUrl
+		//      so that if they have not cached anything, they can still browse around
 	}
 	
 	if (TileUtil.debug) {
@@ -373,6 +376,10 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 },
 
 addTile : function(url, path, tileset, z, x, y) {
+	
+    if (TileUtil.debug) {
+    	console.log("---- TileUtil.addTile");
+    }
 
 	Arbiter.globalDatabase.transaction(function(tx) {
 
@@ -518,8 +525,10 @@ clearCache : function(tileset, successCallback, errorCallback) {
 }, 
 
 deleteTileIds: function(){
-	console.log("---- TileUtil.deleteTileIds");
-	
+    if (TileUtil.debug) {
+    	console.log("---- TileUtil.deleteTileIds");
+    }
+
 	// Remove everything from tileIds table
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 		var statement = "DELETE FROM tileIds;";
@@ -530,7 +539,9 @@ deleteTileIds: function(){
 },
 
 insertIntoTileIds: function(id) {
-	console.log("---- TileUtil.addToTileIds. id: " + id);
+    if (TileUtil.debug) {
+    	console.log("---- TileUtil.addToTileIds. id: " + id);
+    }
 	
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
 		var statement = "INSERT INTO tileIds (id) VALUES (?);";
@@ -548,55 +559,50 @@ insertIntoTileIds: function(id) {
  * and delete the actual tile from the device. 
  */
 removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal) {
-	
-	console.log("---- TileUtil.removeTileById: " + id);
-	
-	console.log("yaya 1");
+    if (TileUtil.debug) {
+    	console.log("---- TileUtil.removeTileById: " + id);
+    }
 	
 	//TODO: use txProject, txGlobal if provided
-	//window.localStorage.removeItem("tile_" + url);
 	
 	Arbiter.globalDatabase.transaction(function(tx){
-		console.log("yaya 2");
 		var statement = "SELECT id, url, path, ref_counter FROM tiles WHERE id=?;";
 		tx.executeSql(statement, [id], function(tx, res){
-			console.log("yaya 3. rows:");
-			console.log(TileUtil.rowsToString(res.rows));
+			
+		    if (TileUtil.debug) {
+				console.log("TileUtil.removeTileById. rows to remove:");
+				console.log(TileUtil.rowsToString(res.rows));
+		    }
 
 			// we should only have one tile for this url
 			if (res.rows.length === 1){
-				console.log("yaya 4");
 
 				var tileEntry = res.rows.item(0);
 				
 				// if the counter is only at 1, we can delete the file from disk
 				if (tileEntry.ref_counter === 1){
-					console.log("yaya 5");
 
 					Arbiter.globalDatabase.transaction(function(tx){
-						//TODO: delete entry from tiles
+
 						var statement = "DELETE FROM tiles WHERE id=?;";
 						tx.executeSql(statement, [id], function(tx, res){
-							console.log("yaya 6");
 	
 							// remove tile from disk
-							//TODO: is tileEntry safe in this callback since it was from a loop item?
-							//TODO: remove part of the path that is before the root dir??!!
 							Arbiter.fileSystem.root.getFile(tileEntry.path, {create: false},
 								function(fileEntry){
 									fileEntry.remove(
 										function(fileEntry){
-											console.log("yaya 8");
 	
-											//TODO: is fileEntry.fullpath still valid?
-											console.log("-- removed tile from disk: " + tileEntry.path);
+										    if (TileUtil.debug) {
+										    	console.log("-- TileUtil.removeTileById. removed tile from disk: " + tileEntry.path);
+										    }
 											
 											if (successCallback){
 												successCallback();
 											}
 										},
 										function(err){
-											console.log("-- removed tile from disk: " + tileEntry.path + ", err: " + err);
+											console.log("====> Error: TileUtil.removeTileById. Error removing tile from disk: " + tileEntry.path + ", err: " + err);
 											alert("failed to delete tile from disk!");
 										}
 									);
@@ -610,19 +616,15 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 					}, Arbiter.errorSql, function(){});							
 					
 				} else if (tileEntry.ref_counter > 1){
-					console.log("yaya 100");
-					console.log("ref_counter:" + tileEntry.ref_counter);
-					console.log("id:" + id);
-					console.log("yaya 100.2");
-
-					// NOTE: hmm, had to make another transaction
 					Arbiter.globalDatabase.transaction(function(tx){
-						console.log("yaya 101");
 						// decrement ref_counter
 						var statement = "UPDATE tiles SET ref_counter=? WHERE id=?;";
 						tx.executeSql(statement, [(tileEntry.ref_counter - 1), id], function(tx, res){
-							console.log("yaya 102");
-							console.log("-- decremented ref_counter to: " + (tileEntry.ref_counter - 1));
+						    
+							if (TileUtil.debug) {
+						    	console.log("-- decremented ref_counter to: " + (tileEntry.ref_counter - 1));
+						    }
+						    
 							if (successCallback){
 								successCallback();
 							}
@@ -630,7 +632,7 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 					}, Arbiter.errorSql, function(){});	
 					
 				} else {
-					alert("something is wrong!");
+					alert("Error: tileEntry.ref_counter <= 0");
 				}
 				
 			} else if (res.rows.length === 0){
