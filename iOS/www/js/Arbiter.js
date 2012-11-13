@@ -555,7 +555,21 @@ var Arbiter = {
 				}
 			}
 			
-			TileUtil.cacheTiles();
+
+			// if the TileIds table is empty, cache tiles. 
+			Arbiter.currentProject.variablesDatabase.transaction(
+				function(tx) {
+					var statement = "SELECT * FROM tileIds;";
+					tx.executeSql(statement, [], function(tx, res) {
+						if (res.rows.length === 0){
+							TileUtil.cacheTiles();
+						} else {
+							console.log("---->> tile have been cached already. not re-caching");
+						}
+					}, Arbiter.errorSql);
+				}, Arbiter.errorSql, function() {
+			});
+			
 		});
 		
 		jqEditorTab.mouseup(function(event){
