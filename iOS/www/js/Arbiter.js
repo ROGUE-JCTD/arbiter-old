@@ -546,11 +546,11 @@ var Arbiter = {
 				}
 			}
 			
-			TileUtil.clearCache("osm", function(){
+			/*TileUtil.clearCache("osm", function(){
 				
 				// once all the cache for this project is cleared, start caching again. 
 				TileUtil.startCachingTiles();
-			});
+			});*/
 			//TODO: WARNING: the above should be done before we do this... make it a call back
 		});
 		
@@ -2239,6 +2239,10 @@ var Arbiter = {
 														
 								tx.executeSql(updateSql, sqlObject.params, function(tx, res){
 									console.log("update success");
+									$("#saveAttributesSucceeded").fadeIn(1000, function(){
+										$(this).fadeOut(3000);
+									});
+											  
 								  	if(feature.fid){						
 								  		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 											var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid) VALUES (?,?);";
@@ -2253,9 +2257,9 @@ var Arbiter = {
 								  	}
 								}, function(tx, err){
 									console.log("update err: ", err);
-									if(err == SQLError.CONSTRAINT_ERR){
-												  
-									}
+									$("#saveAttributesFailed").fadeIn(1000, function(){
+										$(this).fadeOut(3000);
+									});
 								});
 							}, Arbiter.errorSql, function(){});
 						}else{
@@ -2352,6 +2356,10 @@ var Arbiter = {
 		
 		return true;
 	},
+	
+	countCharInString: function(str, char){
+		return str;					  
+	},
 							  
 	SubmitAttributes: function(){
 		if(selectedFeature){
@@ -2366,8 +2374,12 @@ var Arbiter = {
 				//insertFeaturesIntoTable uses the feature.attributes for getting the values
 				for(var x in selectedFeature.attributes){
 					value = $("#textinput-" + x).val();
-					if(selectedFeature.layer.attributeTypes[x].type == "time")
-						value += ":00";
+					if(selectedFeature.layer.attributeTypes[x].type == "time"){ 
+					   	console.log(value);
+						//if seconds aren't there, add them
+					   	if(value.replace(/[^:]/g, "").length < 2)
+							value += ":00";
+					}
 					selectedFeature.attributes[x] = Arbiter.decodeChars(value);
 				}
 							  
@@ -2379,7 +2391,9 @@ var Arbiter = {
 				var protocol = selectedFeature.layer.protocol;
 				Arbiter.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
 			}else{
-							  
+				$("#saveAttributesFailed").fadeIn(1000, function(){
+					$(this).fadeOut(3000);
+				});		  
 			}
 		}
 		
@@ -2434,6 +2448,14 @@ var Arbiter = {
 			}
 			
 			$("ul#attribute-list").empty().append(li).listview("refresh");
+			$("#attributeMenuContent").append('<div id="saveAttributesSucceeded" style="display:none;">' +
+											  	'<span style="color:green;font-size:24px;">&#x2713;</span>' +
+												'<span style="color:green;">Save Succeeded</span>' +
+											  '</div>' +
+											'<div id="saveAttributesFailed" style="display:none;">' +
+											  	'<span style="color:red;font-size:24px;">&#x2716;</span>' +
+												'<span style="color:red;">Save Failed</span>' +
+											'</div>');
 		}
 	},
 	
