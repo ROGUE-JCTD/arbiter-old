@@ -372,87 +372,73 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 	return filePath2;
 },
 
-addTile: function(url, path, tileset, z, x, y) {
-	
-	
-	Arbiter.globalDatabase.transaction(function(tx){
-		
+addTile : function(url, path, tileset, z, x, y) {
+
+	Arbiter.globalDatabase.transaction(function(tx) {
+
 		var insertTilesSql = "SELECT id, ref_counter FROM tiles WHERE url=?;";
-							    
-		tx.executeSql(insertTilesSql, [url], function(tx, res){
-			
-			
-			console.log("tiles items with url: " + url + " items: "+ TileUtil.rowsToString(res.rows));
-			
+
+		tx.executeSql(insertTilesSql, [ url ], function(tx, res) {
+
+			console.log("tiles items with url: " + url + " items: " + TileUtil.rowsToString(res.rows));
+
 			var resTiles = res;
 
 			if (res.rows.length === 0) {
-				//alert("inserted tile. id: " + res.insertId);
-				Arbiter.globalDatabase.transaction(function(tx){
-					var statement = "INSERT INTO tiles (tileset, z, x, y, path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?, ?);";
-					tx.executeSql(statement, [tileset, z, x, y, path, url, 1], function(tx, res){
-						console.log("inserted new url in tiles" + res.insertId);
-						
-						Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-							var statement = "INSERT INTO tileIds (id) VALUES (?);";
-							tx.executeSql(statement, [res.insertId], function(tx, res){
-								console.log("inserted in tileIds" + res.insertId);
+				// alert("inserted tile. id: " + res.insertId);
+				Arbiter.globalDatabase.transaction(
+					function(tx) {
+						var statement = "INSERT INTO tiles (tileset, z, x, y, path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?, ?);";
+						tx.executeSql(statement, [ tileset, z, x, y, path, url, 1 ], function(tx, res) {
+							
+							//TODO: why does the first insert return id null??
+							console.log("inserted new url in tiles. res.insertId: " + res.insertId);
+	
+						    TileUtil.insertIntoTileIds(res.insertId);
+						});
+					}, Arbiter.errorSql, function() {
+				});
 
-							}, Arbiter.errorSql);
-						}, Arbiter.errorSql, function(){});	
-						
-					});
-				}, Arbiter.errorSql, function(){});	
-				
 			} else if (res.rows.length === 1) {
 				console.log("chk1");
 				console.log(resTiles);
 				console.log("chk2");
-				
+
 				console.log("found tile in global.tiles. TileUtil.rowsToString(resTiles.rows): " + TileUtil.rowsToString(resTiles.rows));
-				console.log("found tile in global.tiles. (resTiles.rows[0].ref_counter + 1 ): " + (resTiles.rows.item(0).ref_counter + 1 ));
-				
-				Arbiter.globalDatabase.transaction(function(tx){
-					
+				console.log("found tile in global.tiles. (resTiles.rows[0].ref_counter + 1 ): " + (resTiles.rows.item(0).ref_counter + 1));
+
+				Arbiter.globalDatabase.transaction(function(tx) {
+
 					console.log("chk3");
-					//var statement = "INSERT INTO tiles (tileset, z, x, y, path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?, ?);";
+					// var statement = "INSERT INTO tiles (tileset, z, x, y,
+					// path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?,
+					// ?);";
 					var statement = "UPDATE tiles SET ref_counter=? WHERE url=?;";
-					tx.executeSql(statement, [(resTiles.rows.item(0).ref_counter + 1 ), url], function(tx, res){
+					tx.executeSql(statement, [ (resTiles.rows.item(0).ref_counter + 1), url ], function(tx, res) {
 						console.log("chk4");
 
-						console.log("updated tiles. for url : " + url );
-						
-						Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-							console.log("chk5");
-							console.log("id to insert into tileIds: ");
-							console.log(resTiles.rows.item(0).id);
+						console.log("updated tiles. for url : " + url);
 
-							var statement = "INSERT INTO tileIds (id) VALUES (?);";
-							tx.executeSql(statement, [resTiles.rows.item(0).id], function(tx, res){
-								console.log("chk6");
+						Arbiter.currentProject.variablesDatabase.transaction(
+							function(tx) {
+							    TileUtil.insertIntoTileIds(resTiles.rows.item(0).id);
+							}, Arbiter.errorSql, function() {
+						});
 
-								console.log("inserted in tileIds" + res.insertId);
-
-							}, function(err){
-								// will fail if it is a duplicate
-								console.log("sql exec error: ");
-								console.log(err);
-							});
-						}, Arbiter.errorSql, function(){});	
-						
 					});
-				}, Arbiter.errorSql, function(){});	
-				
+				}, Arbiter.errorSql, function() {
+				});
+
 			} else {
 				console.log("TileUtil.addTile rows length not 0 not 1: " + TileUtil.rowsToString(res.rows))
 				alert("tiles has duplicate entry for a given url. see console");
 			}
-			
+
 		}, Arbiter.errorSql);
-		
-			
-	}, Arbiter.errorSql, function(){});	
-	
+
+	}, Arbiter.errorSql, function() {
+	});
+
 }, 
 
 //BUG: it always inserts! either not supported in sqlite or plugin bug
@@ -471,15 +457,7 @@ addTileReplaceBug: function(url, path, tileset, z, x, y) {
 		
 		//TODO: does the second url get replaced as expected?
 		tx.executeSql(insertTilesSql, [tileset, z, x, y, path, url, url], function(tx, res){
-			
-			//alert("inserted tile. id: " + res.insertId);
-			Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-				var insertTileIdsSql = "INSERT INTO tileIds (id)" + "VALUES (?);";
-				tx.executeSql(insertTileIdsSql, [res.insertId], function(tx, res){
-					//alert("inserted in tileIds: " + res.insertId);
-				}, Arbiter.errorSql);
-			}, Arbiter.errorSql, function(){});	
-				
+		    TileUtil.insertIntoTileIds(res.insertId);
 		}, Arbiter.errorSql);
 		
 			
@@ -488,50 +466,6 @@ addTileReplaceBug: function(url, path, tileset, z, x, y) {
 	// add id to project.variablesDatabase.tileIds
 	// TODO: add entry to groutDatabase
 }, 
-
-addTileHard: function(url, path, tileset, z, x, y) {
-
-	var x=20805;
-	var path="/Users/syrusmesdaghi/Library/Application Support/iPhone Simulator/5.0/Applications/A97D3731-B291-4E0A-B379-2855C87F0D5F/Documents/osm/17/20805/48492.png";
-	var y=48492;
-	var id=1;
-	var tileset="osm";
-	var z=17;
-	//var ref_counter=1;
-	var url="http://b.tile.openstreetmap.org/17/20805/48492.png"
-		
-	// add to global.tiles table. if already exists, increment ref counter
-	Arbiter.globalDatabase.transaction(function(tx){
-		var insertTilesSql = "INSERT OR REPLACE INTO tiles (tileset, z, x, y, path, url, ref_counter)" +
-							"VALUES (?, ?, ?, ?, ?, ?, " +  
-							  "COALESCE(" +
-							    "(SELECT ref_counter FROM tiles WHERE url=?), " +
-							    "0) + 1);";
-							    
-	    console.log("SQL: "+ insertTilesSql);
-		
-		//TODO: does the second url get replaced as expected?
-		tx.executeSql(insertTilesSql, [tileset, z, x, y, path, url, url], function(tx, res){
-			
-			console.log("DONE addTileHard");
-/*			
-			//alert("inserted tile. id: " + res.insertId);
-			Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-				var insertTileIdsSql = "INSERT INTO tileIds (id)" + "VALUES (?);";
-				tx.executeSql(insertTileIdsSql, [res.insertId], function(tx, res){
-					//alert("inserted in tileIds: " + res.insertId);
-				}, Arbiter.errorSql);
-			}, Arbiter.errorSql, function(){});	
-*/				
-		}, Arbiter.errorSql);
-		
-			
-	}, Arbiter.errorSql, function(){});	
-
-	// add id to project.variablesDatabase.tileIds
-	// TODO: add entry to groutDatabase
-}, 
-
 
 //clear entries in db, removed tiles from device
 clearCache : function(tileset, successCallback, errorCallback) {
@@ -548,33 +482,64 @@ clearCache : function(tileset, successCallback, errorCallback) {
 		tx.executeSql(sql, [], function(tx, res){
 			console.log("chk 3");
 			
-			for(var i = 0; i < res.rows.length; i++){
-				console.log("chk 4");
-
-				var tileId = res.rows.item(i).id;
+			if (res.rows.length > 0) {
+			
+				var removeCounter = 0;
 				
-				TileUtil.removeTileById(tileId);
-				console.log("chk 5");
+				var removeCounterCallback = function() {
+					removeCounter += 1;
+					console.log("removeCounterCallback: " + removeCounter + " row.length: " + res.rows.length);
+					
+					if (removeCounter === res.rows.length) {
+						console.log("removeCounterCallback, counter met!");
+						TileUtil.deleteTileIds();
+						if (successCallback){
+							successCallback();
+						}
+					}
+				};
 				
-				// decrement from tiles table or remove 
-				
-				//TODO: consider collect all the delete statement and execute one command against tileIds
-				//TileUtil.removeTileById(tileId);
+				for(var i = 0; i < res.rows.length; i++){
+					console.log("chk 4");
+	
+					var tileId = res.rows.item(i).id;
+					
+					TileUtil.removeTileById(tileId, removeCounterCallback);
+					console.log("chk 5");
+				}
+			} else {
+				if (successCallback){
+					successCallback();
+				}				
 			}
-			
-			// Remove everything from tileIds table
-			Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-				var statement = "DELETE FROM tileIds;";
-				tx.executeSql(statement, [], function(tx, res){
-					console.log("deleted everything from tileIds");
-				}, Arbiter.errorSql);					
-			}, Arbiter.errorSql, function(){});
-			
-			//TODO: delete all entried in a table DELETE FROM employee;
+
 		}, Arbiter.errorSql);
 	}, Arbiter.errorSql, function(){});		
 }, 
 
+deleteTileIds: function(){
+	console.log("---- TileUtil.deleteTileIds");
+	
+	// Remove everything from tileIds table
+	Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+		var statement = "DELETE FROM tileIds;";
+		tx.executeSql(statement, [], function(tx, res){
+			console.log("---- TileUtil.deleteTileIds done");
+		}, Arbiter.errorSql);					
+	}, Arbiter.errorSql, function(){});	
+},
+
+insertIntoTileIds: function(id) {
+	console.log("---- TileUtil.addToTileIds. id: " + id);
+	
+	Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
+		var statement = "INSERT INTO tileIds (id) VALUES (?);";
+		tx.executeSql(statement, [id], function(tx, res) {
+			console.log("inserted in tileIds. id: " + id);
+		}, Arbiter.errorSql);
+	}, Arbiter.errorSql, function() {
+	});
+},
 
 /**
  * given a tileId, remove it from the project's tileIds table
@@ -590,11 +555,6 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 	
 	//TODO: use txProject, txGlobal if provided
 	//window.localStorage.removeItem("tile_" + url);
-
-//	var statement = "DELETE FROM tileIds WHERE id=?;";
-//	tx.executeSql(statement, [id], function(tx, res){
-//		console.log("--removed id from tileIds. id: " + id);
-//	}, Arbiter.errorSql);
 	
 	Arbiter.globalDatabase.transaction(function(tx){
 		console.log("yaya 2");
@@ -629,10 +589,14 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 											console.log("yaya 8");
 	
 											//TODO: is fileEntry.fullpath still valid?
-											console.log("-- removed tile from disk: " + fileEntry.fullPath);
+											console.log("-- removed tile from disk: " + tileEntry.path);
+											
+											if (successCallback){
+												successCallback();
+											}
 										},
 										function(err){
-											console.log("-- removed tile from disk: " + fileEntry.fullPath + ", err: " + err);
+											console.log("-- removed tile from disk: " + tileEntry.path + ", err: " + err);
 											alert("failed to delete tile from disk!");
 										}
 									);
@@ -658,8 +622,10 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 						var statement = "UPDATE tiles SET ref_counter=? WHERE id=?;";
 						tx.executeSql(statement, [(tileEntry.ref_counter - 1), id], function(tx, res){
 							console.log("yaya 102");
-	
 							console.log("-- decremented ref_counter to: " + (tileEntry.ref_counter - 1));
+							if (successCallback){
+								successCallback();
+							}
 						}, Arbiter.errorSql);
 					}, Arbiter.errorSql, function(){});	
 					
@@ -678,19 +644,8 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 	}, Arbiter.errorSql, function(){});	
 	
 
-	// TODO: remove entry from groutDatabase
 }, 
-/*
-removeTileByUrl: function(url) {
-	window.localStorage.removeItem("tile_" + url);
-	
-	//TODO: bring section from clear cache into this function 
-	
-	// decrement ref counter in global.tiles. if it hits 0, remove file from device
-	// remove from project.variablesDatabase.tileIds
-	// TODO: remove entry from groutDatabase
-}, 
-*/
+
 dumpTableNames: function(database){
 	console.log("---- TileUtil.dumpTable");
 	database.transaction(function(tx){
