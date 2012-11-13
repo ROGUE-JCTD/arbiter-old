@@ -574,7 +574,9 @@ var Arbiter = {
 				layers[i].strategies[0].save();
 			}
 			
-			TileUtil.startCachingTiles();
+			//TileUtil.clearCache();
+			//TODO: WARNING: the above should be done before we do this... make it a call back
+			//TileUtil.startCachingTiles();
 		});
 		
 		jqEditorTab.mouseup(function(event){
