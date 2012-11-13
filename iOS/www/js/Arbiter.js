@@ -56,7 +56,6 @@ var div_ProjectSettingsPage;
 var div_Popup;
 var div_EditServerPage;
 var jqSaveButton;
-var jqAttributesButton;
 var jqLayerURL;
 var jqCreateFeature;
 var jqNewProjectName;
@@ -87,6 +86,7 @@ var jqExistingServers;
 var jqAddFeature;
 var jqEditFeature;
 var jqSyncUpdates;
+var jqProjectPageContent;
 
 
 var tempLayerToEdit = null;
@@ -109,12 +109,12 @@ var tabOpen = false;
 var editorTabOpen = false;
 var attributeTabOpen = false;
 
-var Arbiter = {
-	
+var Arbiter = { 	
 	fileSystem: null,
 	
 	globalDatabase: null,
 	
+	//grout tilesets db. primarily used to import grout tiles into global.tiles table since unlike grout's this table is optimized for access 
 	tilesetsDatabase: null, 
 	
 	serverList: {},
@@ -132,9 +132,7 @@ var Arbiter = {
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); // http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
-		Cordova.Initialize(this);
-        
-		var arbiter = this;
+		Cordova.Initialize(Arbiter);
 		
 		//Save divs for later
 		div_MapPage 		= $('#idMapPage');
@@ -151,7 +149,6 @@ var Arbiter = {
 		div_Popup			= $('#popup');
 		div_EditServerPage = $('#idEditServersPage');
 		jqSaveButton = $('#saveButton');
-		jqAttributesButton = $('#attributesButton');
 		jqLayerURL = $('#layerurl');
 		jqCreateFeature = $('#createFeature');
 		jqNewProjectName = $('#newProjectName');
@@ -182,27 +179,28 @@ var Arbiter = {
 		jqAddFeature	 = $('#addPointFeature');
 		jqEditFeature	 = $('#editPointFeature');
 		jqSyncUpdates	 = $('#syncUpdates');
-		jqServersPageContent = $('#idServersPageContent');
-		div_ProjectsPage.live('pageshow', this.PopulateProjectsList);
-		div_ServersPage.live('pageshow', this.PopulateServersList);
-		div_LayersPage.live('pageshow', this.PopulateLayersList);
+		jqProjectPageContent = $('#idProjectPageContent');
+		jqServersPageContent = $('.ServersPageContent');
+		div_ProjectsPage.live('pageshow', Arbiter.PopulateProjectsList);
+		div_ServersPage.live('pageshow', Arbiter.PopulateServersList);
+		div_LayersPage.live('pageshow', Arbiter.PopulateLayersList);
 		
 		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(filesystem){
-			arbiter.fileSystem = filesystem;
+			Arbiter.fileSystem = filesystem;
 			
-			arbiter.fileSystem.root.getDirectory("Arbiter", {create: true, exclusive: false}, function(dir){
+			Arbiter.fileSystem.root.getDirectory("Arbiter", {create: true, exclusive: false}, function(dir){
 				console.log("created arbiter directory");
 				
-				arbiter.fileSystem.root.getDirectory("Arbiter/Projects", {create: true, exclusive: false}, function(dir){
+				Arbiter.fileSystem.root.getDirectory("Arbiter/Projects", {create: true, exclusive: false}, function(dir){
 					console.log("created projects directory");
-					arbiter.InitializeProjectList(dir);
+					Arbiter.InitializeProjectList(dir);
 				}, function(error){
 					console.log("error getting projects");
 				});
 				
 								
-				arbiter.globalDatabase = Cordova.openDatabase("Arbiter/global", "1.0", "Global Database", 1000000);
-				arbiter.globalDatabase.transaction(function(tx){
+				Arbiter.globalDatabase = Cordova.openDatabase("Arbiter/global", "1.0", "Global Database", 1000000);
+				Arbiter.globalDatabase.transaction(function(tx){
 					
 					var createSettingsSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);";
 					tx.executeSql(createSettingsSql, [], function(tx, res){
@@ -220,8 +218,8 @@ var Arbiter = {
 						console.log("global servers err: ", err);		  
 					});
 												   
-					var createServerUsageSql = "CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, dirty integer, " +
-												"FOREIGN KEY(server_id) REFERENCES servers(id));";
+					var createServerUsageSql = "CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, project_id integer, " +
+												"FOREIGN KEY(server_id) REFERENCES servers(id), FOREIGN KEY(project_id) REFERENCES projects(id));";
 
 					tx.executeSql(createServerUsageSql, [], function(tx, res){
 						console.log("global server_usage table created");											 
@@ -278,9 +276,10 @@ var Arbiter = {
 							'</div>';
 						}
 						
-						jqServersPageContent.html(html);
+						for(var i = 0; i < jqServersPageContent.length;i++)
+							$(jqServersPageContent[i]).html(html);
 						
-					}, arbiter.errorSql, function(){});
+					}, Arbiter.errorSql, function(){});
 					
 					var createTilesSql = "CREATE TABLE IF NOT EXISTS tiles (" +
 							"id integer primary key autoincrement, " +
@@ -299,14 +298,14 @@ var Arbiter = {
 					});
 					
 
-				}, arbiter.errorSql, function(){});
+				}, Arbiter.errorSql, function(){});
 				
 				
 				
 				// create the table that will store the tile sets across all
 				// projects
-				arbiter.tilesetsDatabase = Cordova.openDatabase("Arbiter/tilesets", "1.0", "Tilesets Database", 1000000);
-				arbiter.tilesetsDatabase.transaction(function(tx){
+				Arbiter.tilesetsDatabase = Cordova.openDatabase("Arbiter/tilesets", "1.0", "Tilesets Database", 1000000);
+				Arbiter.tilesetsDatabase.transaction(function(tx){
 					var createTileRefCounterSql = "CREATE TABLE IF NOT EXISTS tilesets (tilelevel_table text PRIMARY KEY, title text not null);";
 					   
 					tx.executeSql(createTileRefCounterSql, [], function(tx, res){
@@ -314,7 +313,7 @@ var Arbiter = {
 					}, function(tx, err){
 						console.log("tilesetsDatabase.tile_ref_counter table err: ", err);
 					});
-				}, arbiter.errorSql, function(){});
+				}, Arbiter.errorSql, function(){});
 				
 			}, function(error){
 				console.log("couldn't create arbiter directory");
@@ -324,14 +323,14 @@ var Arbiter = {
 			console.log("requestFileSystem failed with error code: " + error.code);					 
 		});
 		
-		div_AddLayersPage.live('pageshow', this.resetAddLayersPage);
-		div_EditLayersPage.live('pageshow', this.resetEditLayersPage);
+		div_AddLayersPage.live('pageshow', Arbiter.resetAddLayersPage);
+		div_EditLayersPage.live('pageshow', Arbiter.resetEditLayersPage);
 		
 		//Start on the Language Select screen if this is the users first time.
 		//Otherwise move to the Projects page.
 		if(!isFirstTime) {
 			UpdateLocale();
-			this.changePage_Pop(div_ProjectsPage);
+			Arbiter.changePage_Pop(div_ProjectsPage);
 		}
 		
 		//Initialize Projections
@@ -382,7 +381,7 @@ var Arbiter = {
 					zoom: 15
 				});
 				
-				var serverList = arbiter.currentProject.serverList;
+				var serverList = Arbiter.currentProject.serverList;
 				var url;
 				var username;
 				var password;
@@ -394,7 +393,7 @@ var Arbiter = {
 					layers = serverList[x].layers;
 					for(var y in layers){
 						//add the wms and wfs layers to the map
-						arbiter.AddLayer({
+						Arbiter.AddLayer({
 							featureNS: layers[y].featureNS,
 							url: serverList[x].url,
 							geomName: layers[y].geomName,
@@ -414,8 +413,8 @@ var Arbiter = {
 						
 						if(radioNumber == 1) {
 							li += "checked='checked'/>";
-							arbiter.currentProject.activeLayer = y;
-							arbiter.currentProject.modifyControls[arbiter.currentProject.activeLayer].modifyControl.activate();
+							Arbiter.currentProject.activeLayer = y;
+							Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 						} else {
 						 	li += "/>";
 						}
@@ -425,7 +424,7 @@ var Arbiter = {
 						radioNumber++;
 						 
 						//add the data from local storage
-						arbiter.readLayerFromDb(layers[y].featureType, y, layers[y].geomName, layers[y].srsName);
+						Arbiter.readLayerFromDb(layers[y].featureType, y, layers[y].geomName, layers[y].srsName);
 					}
 				}
 						 
@@ -435,14 +434,14 @@ var Arbiter = {
 					console.log("Radio Change");
 					console.log($("input[type=radio]:checked").attr('id'));
 					
-					arbiter.currentProject.modifyControls[arbiter.currentProject.activeLayer].modifyControl.deactivate();
-					arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
-					arbiter.currentProject.modifyControls[arbiter.currentProject.activeLayer].modifyControl.activate();
+					Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.deactivate();
+					Arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
+					Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 				});
 			}
 			
-			$('#projectName').text(arbiter.currentProject.name);
-			arbiter.setSyncColor();
+			$('#projectName').text(Arbiter.currentProject.name);
+			Arbiter.setSyncColor();
 		});
 		
 		div_AreaOfInterestPage.live('pageshow', function(){
@@ -473,7 +472,7 @@ var Arbiter = {
 			//populate the servers drop down from the currentProject.serverList
 			var html = '<option value="" data-localize="label.chooseAServer">Choose a Server...</option>';
 			
-			for(var x in arbiter.currentProject.serverList){
+			for(var x in Arbiter.currentProject.serverList){
 				html += '<option value="' + x + '">' + x + '</option>';
 			}
 			
@@ -482,10 +481,6 @@ var Arbiter = {
 		
 		jqSaveButton.mouseup(function(event){
 			map.layers[map.layers.length - 1].strategies[0].save();
-		});
-		
-		jqAttributesButton.mouseup(function(event){
-			this.changePage($("#popup"));
 		});
 		
 		jqToServersButton.mouseup(function(event){
@@ -504,8 +499,8 @@ var Arbiter = {
 			var projectDoesntExist = function(error){
 				//Keep going when the file wasn't found
 				if(error.code == FileError.NOT_FOUND_ERR){
-					arbiter.currentProject.name = newName;
-					arbiter.changePage_Pop(div_ServersPage);
+					Arbiter.currentProject.name = newName;
+					Arbiter.changePage_Pop(div_ServersPage);
 					jqNewProjectName.removeClass('invalid-field');
 					jqNewProjectName.attr('placeholder', 'Name your Project *');
 					jqToServersButton.removeClass('ui-btn-active');
@@ -515,7 +510,7 @@ var Arbiter = {
 		  	};
 			
 			if(newName)
-				arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + jqNewProjectName.val(), null, projectAlreadyExists, projectDoesntExist);
+				Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + jqNewProjectName.val(), null, projectAlreadyExists, projectDoesntExist);
 			else{
 				jqNewProjectName.addClass('invalid-field');
 				jqToServersButton.removeClass('ui-btn-active');
@@ -525,19 +520,19 @@ var Arbiter = {
 		jqServerSelect.change(function(event){
 			var serverName = $(this).val();
 			if(serverName)
-				arbiter.getFeatureTypesOnServer(serverName);
+				Arbiter.getFeatureTypesOnServer(serverName);
 			else{
 				jqLayerSelect.html('<option value="" data-localize="label.chooseALayer">Choose a layer...</option>');
 				jqLayerSelect.selectmenu('refresh', true);
 				jqLayerNickname.val('');
-				arbiter.disableLayerSelectAndNickname();
+				Arbiter.disableLayerSelectAndNickname();
 			}
 		});
 
 		jqEditServerSelect.change(function(event){
 			//var serverUrl = $(this).val();
 							  console.log($(this).val());
-			arbiter.getFeatureTypesOnServer($(this).val());
+			Arbiter.getFeatureTypesOnServer($(this).val());
 		});
 
 		jqLayerSelect.change(function(event){
@@ -550,8 +545,8 @@ var Arbiter = {
 		
 		jqAddFeature.mouseup(function(event){
 			console.log("Add Feature");
-			if(arbiter.currentProject.activeLayer){
-				var addFeatureControl = arbiter.currentProject.modifyControls[arbiter.currentProject.activeLayer].insertControl;
+			if(Arbiter.currentProject.activeLayer){
+				var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
 				if(addFeatureControl.active){
 					addFeatureControl.deactivate();
 					$(this).removeClass("ui-btn-active");
@@ -581,19 +576,19 @@ var Arbiter = {
 		
 		jqEditorTab.mouseup(function(event){
 			//arbiter.pullFeatures(false);
-			arbiter.ToggleEditorMenu();
+			Arbiter.ToggleEditorMenu();
 		});
 		
 		jqAttributeTab.mouseup(function(event){
-			arbiter.ToggleAttributeMenu();
+			Arbiter.ToggleAttributeMenu();
 		});
 		
 		$(".layer-list-item").mouseup(function(event){
-			arbiter.populateAddLayerDialog($(this).text());
+			Arbiter.populateAddLayerDialog($(this).text());
 		});
 		
 		$(".server-list-item").mouseup(function(event){
-			arbiter.populateAddServerDialog($(this).text());
+			Arbiter.populateAddServerDialog($(this).text());
 		});
 		
 		$(".existingServer-checkbox").live('click', function(event){
@@ -602,12 +597,12 @@ var Arbiter = {
 			var name = element.attr('name');
 										   
 			if(element.is(":checked")){ // if checked, add the server to the projects serverList
-				arbiter.globalDatabase.transaction(function(tx){
+				Arbiter.globalDatabase.transaction(function(tx){
 					tx.executeSql("SELECT * FROM servers WHERE id=?;", [id], function(tx, res){
 						if(res.rows.length){
 							var row = res.rows.item(0);
 								  
-							arbiter.currentProject.serverList[row.name] = {
+							Arbiter.currentProject.serverList[row.name] = {
 								layers: {},
 								password: row.password,
 								url: row.url,
@@ -618,9 +613,29 @@ var Arbiter = {
 					}, function(tx, err){
 																 
 					});
-				}, arbiter.errorSql, function(){});
+				}, Arbiter.errorSql, function(){});
 			}else{
-				delete arbiter.currentProject.serverList[name];								
+				delete Arbiter.currentProject.serverList[name];								
+			}
+		});
+		
+		$('.project-name').live('mouseup', function(event){
+			if(!$('.project-checkbox').is(':visible'))
+				Arbiter.setCurrentProject($(this).text(), Arbiter);
+			else{
+				var oldname = $(this).text();
+				var editProjectNameInput = '<div data-role="fieldcontain" class="ui-hide-label edit-project-name" style="top:-5px;width:100%;position:absolute;">' +
+												'<label for="' + oldname + '-edit-name"></label>' +
+												'<input name="' + oldname + '-edit-name" id="' + 
+													oldname + '-edit-name" autocomplete="off" autocapitalize="off" placeholder="' + oldname + '"/>' +
+											'</div>';
+				
+				$(this).before('<div class="ui-icon ui-icon-delete" edit-name="' + oldname + '" ' +
+							   'onclick="Arbiter.cancelEditProject(true, this);" style="position:absolute;right:5px;top:15px;z-index:20;"></div>');
+				$(this).replaceWith(editProjectNameInput);
+										 
+				$('#idProjectPageContent input').textinput();
+				$('#' + oldname + '-edit-name').focus();
 			}
 		});
 		
@@ -628,7 +643,7 @@ var Arbiter = {
 			var element = $(this);
 			var name = element.find('a').text();
 												
-			arbiter.globalDatabase.transaction(function(tx){
+			Arbiter.globalDatabase.transaction(function(tx){
 				tx.executeSql("SELECT * FROM servers WHERE name=?;", [name], function(tx, res){
 					if(res.rows.length){
 						var row = res.rows.item(0);
@@ -642,30 +657,42 @@ var Arbiter = {
 							  
 					$.mobile.changePage('#idEditServerPage', 'pop');
 				});
-			}, arbiter.errorSql, function(){});
+			}, Arbiter.errorSql, function(){});
 		});
 		
+		$('.project-checkbox').live('mouseup', function(event){
+				console.log("delete");
+				
+				var ans = confirm("Are you sure you want to delete this project?!");
+				
+				if(ans){
+					var name = $(this).attr('name');
+					$('#' + name + '-row').remove();
+					Arbiter.setProjectRoundedCorners();
+					Arbiter.deleteProject(name);
+				}
+		});
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
     },
 	
 	ToggleEditorMenu: function() {
 		if(!editorTabOpen) {
-			this.OpenEditorMenu();
+			Arbiter.OpenEditorMenu();
 		} else {
-			this.CloseEditorMenu();
+			Arbiter.CloseEditorMenu();
 		}
 	},
 	
 	ToggleAttributeMenu: function() {
 		if(!attributeTab) {
-			this.OpenAttributesMenu();
+			Arbiter.OpenAttributesMenu();
 		} else {
-			this.CloseAttributesMenu();
+			Arbiter.CloseAttributesMenu();
 			
 			if(attributeTab) {
 				if(selectedFeature) {
-					arbiter.newWFSLayer.unselected(selectedFeature);
+					Arbiter.newWFSLayer.unselected(selectedFeature);
 				}
 			}
 		}
@@ -676,7 +703,7 @@ var Arbiter = {
 		$("#idEditorMenu").animate({ "left": "72px" }, 50);
 		var width;
 		
-		if(this.isOrientationPortrait()) {
+		if(Arbiter.isOrientationPortrait()) {
 			width = screen.width - 72;
 		} else {
 			width = screen.height - 72;
@@ -697,7 +724,7 @@ var Arbiter = {
 		$("#idAttributeMenu").animate({ "left": "72px" }, 50);
 		var width;
 		
-		if(this.isOrientationPortrait()) {
+		if(Arbiter.isOrientationPortrait()) {
 			width = screen.width - 72;
 		} else {
 			width = screen.height - 72;
@@ -705,7 +732,7 @@ var Arbiter = {
 		$("#attributeTab").animate({ "right": width }, 50);
 		$("#editorTab").animate({ "opacity": "0.0" }, 0);
 		
-		this.PopulatePopup();
+		Arbiter.PopulatePopup();
 	},
 	
 	CloseAttributesMenu: function() {
@@ -729,6 +756,41 @@ var Arbiter = {
 	onClick_EditProjects: function() {
 		//TODO: Make the Projects List editable
 		console.log("User wants to edit his/her projects.");
+		var projectDeleteButtons = $('.project-checkbox');
+		
+		var editButton = $('#idProjectsPage .ui-btn-right').find('.ui-btn-text');
+		//transitions are funny with current layout
+		if(!projectDeleteButtons.is(':visible')){
+			projectDeleteButtons.css('display', 'block');
+			editButton.text('Done');
+		}else{
+			$('.edit-project-name').each(function(index){
+				Arbiter.cancelEditProject(false, $(this).prev());
+			});
+			
+			projectDeleteButtons.css('display', 'none');
+			editButton.text('Edit');
+		}
+	},
+	
+	setProjectRoundedCorners: function(){
+		var rows = jqProjectPageContent.find('.project-row');
+		if(!jqProjectPageContent.find('.project-top-left').length && rows.length){
+			var firstChild = $(rows[0]);
+			if(firstChild.length){
+				firstChild.find('.project-contentColumn').addClass('project-top-right');
+				firstChild.find('.project-leftColumn').addClass('project-top-left');
+			}
+		}
+		
+		//set the existing server list styling just in case the bottom is being removed
+		if(!jqProjectPageContent.find('.project-bottom-left').length && rows.length){
+			var lastChild = $(rows[rows.length - 1]);
+			if(lastChild.length){
+				lastChild.find('.project-contentColumn').addClass('project-bottom-right');
+				lastChild.find('.project-leftColumn').addClass('project-bottom-left');
+			}	  
+		}
 	},
 	
 	PopulateServersList: function() {
@@ -740,31 +802,190 @@ var Arbiter = {
 		// - add them to the ServersList
 	},
 	
-	appendToListView: function(_item, _listview, _mouseup){
-		$(_item).appendTo(_listview).mouseup(_mouseup);
+	//cancel == true if cancelling
+	cancelEditProject: function(cancel, element){
+		var oldname = $(element).attr('edit-name');
+		var row = $('#' + oldname + '-row');
+		var editInput = row.find('.edit-project-name');
+		var newName = editInput.find('input').val();
+		console.log("cancel edit project: " + oldname);
+		editInput.prev().remove();
+		if(!cancel && newName){
+			//set the text and the id of the "a" element
+			var newA = '<a class="project-name" id="project-' + newName + '"><span style="position:absolute;top:10px;left:10px;">' + newName + '</span></a>';
+			editInput.replaceWith(newA);
+			row.find('.project-checkbox').attr('name', newName).attr('id', 'project-checkbox-' + newName);
+			row.attr('id', newName + '-row');
+			Arbiter.commitEditProject(oldname, newName);
+		}else{
+			var oldA = '<a class="project-name" id="project-' + oldname + '"><span style="position:absolute;top:10px;left:10px;">' + oldname + '</span></a>';
+			editInput.replaceWith(oldA);
+		}
+	},
+	
+	commitEditProject: function(oldName, newName){
+		console.log('oldname - ' + oldName + ', newname - ' + newName);
+		//get the old directory
+		Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + oldName, {create: false, exclusive: false}, function(dir){
+			//get the parent directory
+			dir.getParent(function(parentEntry){
+				//move the directory to the new name
+				dir.moveTo(parentEntry, newName, function(dir){
+					//change the name of the project in the global database
+					Arbiter.globalDatabase.transaction(function(tx){
+													   console.log("update project name: " + oldName);
+						tx.executeSql('UPDATE projects SET name=? WHERE name=?;', [newName, oldName], function(tx, res){
+							console.log("update project name success");											 
+						});
+					}, Arbiter.errorSql, function(){});
+				}, function(err){
+					console.log("error moving directory:", err);	
+				});
+			}, function(err){
+							console.log("error getting metadata: ", err);										 
+			});
+		}, function(error){
+			console.log("error getting projects");
+		});
+	},
+	
+	deleteProject: function(projectName){
+		//get the projects directory
+		Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + projectName, {create: false, exclusive: false}, function(dir){
+			dir.removeRecursively(function(){
+				console.log(projectName + " project deleted");
+				Arbiter.globalDatabase.transaction(function(tx){
+					tx.executeSql("SELECT id FROM projects WHERE name=?;", [projectName], function(tx, res){
+						if(res.rows.length){
+							var projectId = res.rows.item(0).id;
+							Arbiter.globalDatabase.transaction(function(tx){
+								tx.executeSql("DELETE FROM server_usage WHERE project_id=?", [projectId],
+							  function(tx, res){
+								console.log("deletion success: " + projectId);
+							  }, function(tx, err){
+											  console.log("deletion failure: " + projectId);
+							  });
+															   
+								tx.executeSql("DELETE FROM projects WHERE id=?", [projectId],
+									function(tx, res){
+										console.log("deletion success: " + projectId);
+									}, function(tx, err){
+										console.log("deletion failure: " + projectId);
+									});
+							}, Arbiter.errorSql, function(){});
+						}
+					}, function(tx, err){
+								  
+					});
+				}, Arbiter.errorSql, function(){});
+			}, function(){
+				console.log(projectName + " project deletion failed");					  
+			});									 
+		});
+	},
+	
+	//listname = existingServer or project
+	appendToListView: function(listname, id, name, leftplaceholder){
+		/*$(_item).appendTo(_listview).mouseup(_mouseup);
 		
 		if(_listview.hasClass('ui-listview'))
 			_listview.listview("refresh");
 		
 		_listview.children(':first-child').addClass('ui-corner-top');
-		_listview.children(':last-child').addClass('ui-corner-bottom');
+		_listview.children(':last-child').addClass('ui-corner-bottom');*/
+		
+		//remove the bottom class from the previously last row
+		$('.' + listname + '-bottom-left').removeClass(listname + '-bottom-left');
+		$('.' + listname + '-bottom-right').removeClass(listname + '-bottom-right');
+		
+		//if are no existingServer-row elements yet, then this is the top
+		var contentClass = listname + '-contentColumn';
+		var leftClass = listname + '-leftColumn';
+		
+		if($('.' + listname + '-row').length == 0){
+			contentClass += ' ' + listname + '-top-right';
+			leftClass += ' ' + listname + '-top-left';
+		}
+		
+		contentClass += ' ' + listname + '-bottom-right';
+		leftClass += ' ' + listname + '-bottom-left';
+		
+		if(listname == 'existingServer')
+			aElement = '<a class="' + listname + '-name" id="' + listname + '-' + id + '" style="font-weight:bold;">' + name + '</a>';
+		else
+			aElement = '<a class="' + listname + '-name" id="' + listname + '-' + id + '"><span style="position:absolute;top:10px;left:10px;font-weight:bold;">' + name + '</span></a>';
+		//var leftPositioning = -1 * (((name.length * 16) / 2) - 40);
+		
+		var html = '<div class="' + listname + '-row" id="' + name + '-row">' +
+		'<div class="' + listname + '-contentWrapper">' +
+		'<div class="' + contentClass + '">' +
+		aElement +
+		'</div>' +
+		'</div>' +
+		'<div class="' + leftClass + '">' +
+		'<div class="' + listname + '-checkbox-container" style="left:8px;top:8px;">' +
+		leftplaceholder +
+		'</div>' +
+		'</div>' +
+		'</div>';
+		
+		if(listname == 'existingServer'){
+			for(var i = 0; i < jqServersPageContent.length;i++)
+				$(jqServersPageContent[i]).append(html);
+		}else{ //projects
+			$('#idProjectPageContent').append(html);
+		}
 	},
 	
 	InitializeProjectList: function(dirEntry){
-		var arbiter = this;
 		
 		var directoryReader = dirEntry.createReader();
 		
 		
 		var success = function(entries){
-			var li;
+			var entry;
+			var html = '';
+			var contentClass;
+			var leftClass;
+			var leftplaceholder;
 			
-			for(var i = 0; i < entries.length;i++){
-				li = '<li><a class="project-list-view">' + entries[i].name + '</a></li>';
+			for(var i = 0;i < entries.length;i++){
+				entry = entries[i];
+				contentClass = 'project-contentColumn';
+				leftClass = 'project-leftColumn';
+				leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + entry.name +
+					'" id="project-checkbox-' + entry.name + '"></div>';
 				
-				arbiter.appendToListView(li, jqProjectsList, function(event){
-					arbiter.setCurrentProject($(this).find('a').text(), arbiter);
-				});
+				if(i == 0){
+					contentClass += ' project-top-right';
+					leftClass += ' project-top-left';
+				}
+				
+				if(i == (entries.length - 1)){
+					contentClass += ' project-bottom-right';
+					leftClass += ' project-bottom-left';
+				}
+				
+				//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
+				
+				html += '<div class="project-row" id="' + entry.name +'-row">' +
+				'<div class="project-contentWrapper">' +
+				'<div class="' + contentClass + '">' +
+				'<a class="project-name" id="project-' + entry.name + '"><span style="position:absolute;top:10px;left:10px;font-weight:bold;">' + entry.name + '</span></a>' +
+				'</div>' +
+				'</div>' +
+				'<div class="' + leftClass + '">' +
+				'<div class="project-checkbox-container">' +
+				leftplaceholder +
+				'</div>' +
+				'</div>' +
+				'</div>';
+			}
+			
+			if(html){
+				var instructions = '<div data-localize="label.selectProject" style="text-align:center;margin-bottom:15px;font-weight:bold;">Select a project to begin working</div>';
+				
+				$("#idProjectPageContent").html(instructions + html);
 			}
 		};
 		
@@ -775,19 +996,19 @@ var Arbiter = {
 		directoryReader.readEntries(success, fail);
 	},
 	
-	setCurrentProject: function(projectName, arbiter){
+	setCurrentProject: function(projectName){
 		console.log("setcurrentproject: " + projectName + ".");
-		arbiter.currentProject = {};
+		Arbiter.currentProject = {};
 		
-		arbiter.currentProject.name = projectName;
-		arbiter.currentProject.serverList = {};
-		arbiter.currentProject.modifyControls = {};
+		Arbiter.currentProject.name = projectName;
+		Arbiter.currentProject.serverList = {};
+		Arbiter.currentProject.modifyControls = {};
 		
 		//set dataDatabase and variablesDatabase
-		arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
-		arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
+		Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
+		Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
 		
-		arbiter.currentProject.variablesDatabase.transaction(function(tx){
+		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 			//select servers and add to the project
 			tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
 				var serverObj;
@@ -797,11 +1018,11 @@ var Arbiter = {
 					console.log("before setting serverList");
 					
 					//query the global server table to get the server info
-					arbiter.globalDatabase.transaction(function(tx){
+					Arbiter.globalDatabase.transaction(function(tx){
 						tx.executeSql("SELECT * FROM servers WHERE id=" + serverObj.server_id + ";", [], function(tx, res){
 							if(res.rows.length){ //There should be one row that matches
 								var serverObj = res.rows.item(0);
-								arbiter.currentProject.serverList[serverObj.name] = {
+								Arbiter.currentProject.serverList[serverObj.name] = {
 									layers: {},
 									password: serverObj.password,
 									url: serverObj.url,
@@ -811,7 +1032,7 @@ var Arbiter = {
 							  
 							  	//select layers and add to the appropriate server
 								var _serverId = serverObj.id;
-								arbiter.currentProject.variablesDatabase.transaction(function(tx){
+								Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 									var serverName = serverObj.name;
 									var serverId = serverObj.id;												 
 									console.log("server: " + serverName + " - " + serverId);
@@ -822,7 +1043,7 @@ var Arbiter = {
 										for(var j = 0; j < res.rows.length; j++){
 											console.log("server name: " + serverName + " - " + serverId);
 											layer = res.rows.item(j);
-											arbiter.currentProject.serverList[serverName].layers[layer.layername] = {
+											Arbiter.currentProject.serverList[serverName].layers[layer.layername] = {
 												featureNS: layer.featureNS,
 												featureType: layer.f_table_name,
 												typeName: layer.typeWithPrefix,
@@ -830,20 +1051,20 @@ var Arbiter = {
 											};
 														 
 											//get the geometry name, type, and srs of the layer
-											arbiter.currentProject.dataDatabase.transaction(function(tx){
+											Arbiter.currentProject.dataDatabase.transaction(function(tx){
 												var layerObj = layer;
 												var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name='" + layerObj.f_table_name + "';";
 															 
 												tx.executeSql(geomColumnsSql, [], function(tx, res){
 													var geomName;
-													var server = arbiter.currentProject.serverList[serverName];
+													var server = Arbiter.currentProject.serverList[serverName];
 													var serverLayer = server.layers[layerObj.layername];
 															   
 													if(res.rows.length){ //should only be 1 right now
 														geomName = res.rows.item(0).f_geometry_column;
 															   
 														//get the attributes of the layer
-														arbiter.currentProject.dataDatabase.transaction(function(tx){
+														Arbiter.currentProject.dataDatabase.transaction(function(tx){
 															var tableSelectSql = "PRAGMA table_info (" + layerObj.f_table_name + ");";
 																   
 															serverLayer.geomName = geomName;
@@ -859,19 +1080,19 @@ var Arbiter = {
 																		serverLayer.attributes.push(res.rows.item(h).name);
 																}
 															});													  
-														}, arbiter.errorSql, function(){});
+														}, Arbiter.errorSql, function(){});
 													}
 												});
-											}, arbiter.errorSql, function(){});
+											}, Arbiter.errorSql, function(){});
 										}
 														 
-										arbiter.changePage_Pop(div_MapPage);
+										Arbiter.changePage_Pop(div_MapPage);
 									});
 										   
-								}, arbiter.errorSql, function(){});
+								}, Arbiter.errorSql, function(){});
 							}
 						});
-					}, arbiter.errorSql, function(){});
+					}, Arbiter.errorSql, function(){});
 			}
 		});
 															 
@@ -880,13 +1101,13 @@ var Arbiter = {
 				//should only be 1 row
 				if(res.rows.length){
 					var settings = res.rows.item(0);
-					arbiter.currentProject.aoi = new OpenLayers.Bounds(
+					Arbiter.currentProject.aoi = new OpenLayers.Bounds(
 						settings.aoi_left, settings.aoi_bottom, settings.aoi_right, settings.aoi_top
 					);
 				}
 			});
 												
-		}, arbiter.errorSql, function(){});
+		}, Arbiter.errorSql, function(){});
 	},
 	
 	getAssociativeArraySize: function(obj) {
@@ -928,7 +1149,7 @@ var Arbiter = {
 		if(!nickname){
 			args.jqnickname.addClass('invalid-field');
 			valid = false;
-		}else if(this.currentProject.serverList[nickname]){ //TODO: need to check the global db now
+		}else if(Arbiter.currentProject.serverList[nickname]){ //TODO: need to check the global db now
 			args.jqnickname.addClass('invalid-field');
 			args.jqnickname.val("");
 			args.jqnickname.attr("placeholder", "Choose another Nickname *");
@@ -964,7 +1185,7 @@ var Arbiter = {
 			args.jqpassword.addClass('invalid-field');
 			args.jqpassword.val("");
 		}else{ //authenticated
-			args.func.call(this);	
+			args.func.call(Arbiter);	
 		}
 	},
 	
@@ -978,16 +1199,15 @@ var Arbiter = {
 	 * }
 	 */
 	authenticateServer: function(args){
-		var arbiter = this;
 		var username = args.jqusername.val();
 		var password = args.jqpassword.val();
 		var url = args.jqurl.val();
 		
 		$.post(url + "/j_spring_security_check", {username: username, password: password}, function(results, textStatus, jqXHR){
-			arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
+			Arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
 		}).error(function(err){ //seems to require request to the server before it actually can find it
 			$.post(url + "/j_spring_security_check", {username: username, password: password}, function(results, textStatus, jqXHR){
-				arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
+				Arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
 			});
 		});
 	},
@@ -1005,72 +1225,42 @@ var Arbiter = {
 		
 		args.func = function(){
 			console.log("func called");
-			var arbiter = this;
 			var name = jqNewNickname.val();
 			var url = jqNewServerURL.val();
 			var username = jqNewUsername.val();
 			var password = jqNewPassword.val();
 			
 			//It's a new server so add it to the global servers table
-			arbiter.globalDatabase.transaction(function(tx){
+			Arbiter.globalDatabase.transaction(function(tx){
 			   var insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES (" +
-			   arbiter.squote(name) + ", " + arbiter.squote(url) + ", " + arbiter.squote(username) + ", " + arbiter.squote(password) + ");";
+			   Arbiter.squote(name) + ", " + Arbiter.squote(url) + ", " + Arbiter.squote(username) + ", " + Arbiter.squote(password) + ");";
 			   
 			   tx.executeSql(insertServerSql, [], function(tx, res){
 					jqNewUsername.removeClass('invalid-field');
 					jqNewPassword.removeClass('invalid-field');
 							 
-					arbiter.currentProject.serverList[name] = {
+					Arbiter.currentProject.serverList[name] = {
 						url: url,
 						username: username,
 						password: password,
 						serverId: res.insertId,
 						layers: {}
 					};
-					
-					//remove the bottom class from the previously last row
-					$('.existingServer-bottom-left').removeClass('existingServer-bottom-left');
-					$('.existingServer-bottom-right').removeClass('existingServer-bottom-right');
+				   
+				   var leftplaceholder = '<input type="checkbox" checked class="existingServer-checkbox" server-id="' + res.insertId + '" name="' + name + 
+				   		'" id="existingServer-checkbox-' + res.insertId + '" style="width:20px;height:20px;" />';
+						
+				   Arbiter.appendToListView('existingServer', res.insertId, name, leftplaceholder);
+				
+				   jqAddServerButton.removeClass('ui-btn-active');
 							 
-					//if are no existingServer-row elements yet, then this is the top
-					var contentClass = 'existingServer-contentColumn';
-					var leftClass = 'existingServer-leftColumn';
-							 
-					if($('.existingServer-row').length == 0){
-						contentClass += ' existingServer-top-right';
-						leftClass += ' existingServer-top-left';
-					}
-							 
-					contentClass += ' existingServer-bottom-right';
-					leftClass += ' existingServer-bottom-left';
-							 
-							 //var leftPositioning = -1 * (((name.length * 16) / 2) - 40);
-							 
-					var html = '<div class="existingServer-row">' +
-							 		'<div class="existingServer-contentWrapper">' +
-							 			'<div class="' + contentClass + '">' +
-							 				'<a class="existingServer-name" id="existingServer-' + res.insertId + '" style="font-weight:bold;">' + name + '</a>' +
-							 			'</div>' +
-							 		'</div>' +
-							 		'<div class="' + leftClass + '">' +
-							 			'<div class="existingServer-checkbox-container" style="left:8px;top:8px;">' +
-							 				'<input type="checkbox" checked class="existingServer-checkbox" server-id="' + res.insertId + '" name="' + name + 
-							 					'" id="existingServer-checkbox-' + res.insertId + '" style="width:20px;height:20px;" />' +
-							 			'</div>' +
-							 		'</div>' +
-							 	'</div>';
-							 
-					jqServersPageContent.append(html);
-							 
-					jqAddServerButton.removeClass('ui-btn-active');
-							 
-					window.history.back();
+				   window.history.back();
 				});
-			}, arbiter.errorSql, function(){});
+			}, Arbiter.errorSql, function(){});
 		};
 		
-		if(this.validateAddServerFields(args)){
-			this.authenticateServer(args);
+		if(Arbiter.validateAddServerFields(args)){
+			Arbiter.authenticateServer(args);
 		}
 	},
 	
@@ -1142,14 +1332,14 @@ var Arbiter = {
 			jqnickname: jqEditNickname
 		};
 		
-		var arbiter = this;		args.func = function(){
+		args.func = function(){
 			var username = jqEditUsername.val();
 			var password = jqEditPassword.val();
 			var name = jqEditNickname.val();
 			var url = jqEditServerURL.val();
 			var id = jqEditServerButton.attr('server-id');	
 		
-			arbiter.globalDatabase.transaction(function(tx){
+			Arbiter.globalDatabase.transaction(function(tx){
 				var updatesql = "UPDATE servers SET name=?, username=?, password=?, url=? WHERE id=?";
 				tx.executeSql(updatesql,[name, username, password, url, id], function(tx, res){
 							  console.log("server update success");
@@ -1161,11 +1351,11 @@ var Arbiter = {
 					
 					//TODO: need to check to see if the server is being used
 					
-					if(arbiter.currentProject.serverList[oldname]){
+					if(Arbiter.currentProject.serverList[oldname]){
 						//delete the old object
-						delete arbiter.currentProject.serverList[oldname];
+						delete Arbiter.currentProject.serverList[oldname];
 						
-						arbiter.currentProject.serverList[name] = {
+						Arbiter.currentProject.serverList[name] = {
 							url: url,
 							username: username,
 							password: password,
@@ -1181,61 +1371,64 @@ var Arbiter = {
 							  
 					window.history.back();
 				});
-			}, arbiter.errorSql, function(){});
+			}, Arbiter.errorSql, function(){});
 		};
 		
-		if(this.validateAddServerFields(args)){
-			this.authenticateServer(args);
+		if(Arbiter.validateAddServerFields(args)){
+			Arbiter.authenticateServer(args);
 		}
 	},
 	
 	onClick_DeleteServer: function(){
 		console.log("onClick_DeleteServer");
 		//TODO: check to see if the server is being used
-		var arbiter = this;
 		var id = jqEditServerButton.attr('server-id');
 		
 		var deleteServer = function(){
-			arbiter.globalDatabase.transaction(function(tx){
+			Arbiter.globalDatabase.transaction(function(tx){
 				//delete the server
 				tx.executeSql("DELETE FROM servers WHERE id=?", [id], function(tx, res){
 					//handle after delete - remove server usage info?
+					var existingServerButton;
 					
 					//remove from the currentProject object
-					var serverName = $('#existingServer-' + id).text();
-					delete arbiter.currentProject.serverList[serverName];
-					
-					//remove from the serverList
-					$('#existingServer-' + id).parent().parent().parent().remove();
-							  
-					//set the existing server list styling just in case the top is being removed
-					if(!$('.existingServer-top-left').length){
-						var firstChild = jqServersPageContent.children(':first-child');
-						if(firstChild.length){
-							firstChild.find('.existingServer-contentColumn').addClass('existingServer-top-right');
-							firstChild.find('.existingServer-leftColumn').addClass('existingServer-top-left');
+					for(var i = 0; i < jqServersPageContent.length;i++){
+						existingServerButton = $(jqServersPageContent[i]).find('#existingServer-' + id);
+						var serverName = existingServerButton.text();
+						if(Arbiter.currentProject.serverList[serverName])
+							delete Arbiter.currentProject.serverList[serverName];
+						
+						//remove from the serverList
+						existingServerButton.parent().parent().parent().remove();
+								  
+						//set the existing server list styling just in case the top is being removed
+						if(!$(jqServersPageContent[i]).find('.existingServer-top-left').length){
+							var firstChild = $(jqServersPageContent[i]).children(':first-child');
+							if(firstChild.length){
+								firstChild.find('.existingServer-contentColumn').addClass('existingServer-top-right');
+								firstChild.find('.existingServer-leftColumn').addClass('existingServer-top-left');
+							}
+						}
+						
+						//set the existing server list styling just in case the bottom is being removed
+						if(!$(jqServersPageContent[i]).find('.existingServer-bottom-left').length){
+							var lastChild = $(jqServersPageContent[i]).children(':last-child');
+							if(lastChild.length){
+								lastChild.find('.existingServer-contentColumn').addClass('existingServer-bottom-right');
+								lastChild.find('.existingServer-leftColumn').addClass('existingServer-bottom-left');
+							}	  
 						}
 					}
-					
-					//set the existing server list styling just in case the bottom is being removed
-					if(!$('.existingServer-bottom-left').length){
-						var lastChild = jqServersPageContent.children(':last-child');
-						if(lastChild.length){
-							lastChild.find('.existingServer-contentColumn').addClass('existingServer-bottom-right');
-							lastChild.find('.existingServer-leftColumn').addClass('existingServer-bottom-left');
-						}	  
-					}
-					
 					window.history.back();
 							  
 					$('#deleteServerButton').removeClass('ui-btn-active');
 				}, function(tx, err){
 					console.log("delete server err: ", err);			  
 				});								   
-			}, arbiter.errorSql, function(){});
+			}, Arbiter.errorSql, function(){});
 		};
 		
-		arbiter.globalDatabase.transaction(function(tx){
+		Arbiter.globalDatabase.transaction(function(tx){
 										   
 			tx.executeSql("SELECT * FROM server_usage WHERE server_id=?", [id], function(tx, res){
 				var ans;
@@ -1247,20 +1440,20 @@ var Arbiter = {
 						  
 					if(ans){
 						//delete the server
-						deleteServer.call(arbiter);
+						deleteServer.call(Arbiter);
 					}
 				}else{
 					ans = confirm("Are you sure you want to delete the server?");
 						  
 					if(ans){
 						//delete the server
-						deleteServer.call(arbiter);
+						deleteServer.call(Arbiter);
 					}	  
 				}
 			}, function(tx, err){
 						  console.log("check server_usage err:", err);			  
 			});
-		}, arbiter.errorSql, function(){});
+		}, Arbiter.errorSql, function(){});
 	},
 	
 	PopulateLayersList: function() {
@@ -1317,23 +1510,21 @@ var Arbiter = {
 		
 		//Write the project to the databases
 		
-		this.currentProject.aoi = aoiMap.getExtent();
-		
-		var arbiter = this;
+		Arbiter.currentProject.aoi = aoiMap.getExtent();
 		
 		var insertCurrentProject = function(tx, projectId){
-			var serverList = arbiter.currentProject.serverList;
+			var serverList = Arbiter.currentProject.serverList;
 			
 			var insertSettingsSql = "INSERT INTO settings (aoi_left, aoi_bottom, aoi_right, aoi_top) VALUES (" + 
-			arbiter.squote(arbiter.currentProject.aoi.left) + ", " + arbiter.squote(arbiter.currentProject.aoi.bottom) +
-			", " + arbiter.squote(arbiter.currentProject.aoi.right) + ", " + arbiter.squote(arbiter.currentProject.aoi.top) + ");";
+			Arbiter.squote(Arbiter.currentProject.aoi.left) + ", " + Arbiter.squote(Arbiter.currentProject.aoi.bottom) +
+			", " + Arbiter.squote(Arbiter.currentProject.aoi.right) + ", " + Arbiter.squote(Arbiter.currentProject.aoi.top) + ");";
 			
 			tx.executeSql(insertSettingsSql);
 			
 			for(var x in serverList){
 				var _serverId = serverList[x].serverId;
 				var insertServerSql = "INSERT INTO servers (server_id) VALUES (" + _serverId +");";
-				arbiter.currentProject.variablesDatabase.transaction(function(tx){
+				Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 					
 					console.log(insertServerSql);
 					var name = x;
@@ -1351,11 +1542,11 @@ var Arbiter = {
 								  
 							insertLayerSql = "INSERT INTO layers (server_id, layername, f_table_name, featureNS, typeWithPrefix) VALUES (?,?,?,?,?);";
 							
-							arbiter.currentProject.variablesDatabase.transaction(function(tx){
+							Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 								tx.executeSql(insertLayerSql, [serverId, y, layer.featureType, layer.featureNS, layer.typeName]);															   
-							}, arbiter.errorSql, function(){});
+							}, Arbiter.errorSql, function(){});
 								  
-							arbiter.currentProject.dataDatabase.transaction(function(tx){
+							Arbiter.currentProject.dataDatabase.transaction(function(tx){
 								insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
 									"f_geometry_column, geometry_type, srid) VALUES (?,?,?,?)";
 																			
@@ -1382,20 +1573,20 @@ var Arbiter = {
 								var password = serverList[name].password;
 																			
 								tx.executeSql(createFeatureTableSql, [], function(tx, res){
-									arbiter.pullFeatures(typeName, geomName, featureType, srsName, url, username, password);														  
+									Arbiter.pullFeatures(typeName, geomName, featureType, srsName, url, username, password);														  
 								});
-							}, arbiter.errorSql, function(){});
+							}, Arbiter.errorSql, function(){});
 						}
 					});
-				}, arbiter.errorSql, function(){});
+				}, Arbiter.errorSql, function(){});
 				
-				arbiter.globalDatabase.transaction(function(tx){
+				Arbiter.globalDatabase.transaction(function(tx){
 					var insertUsageSql = "INSERT INTO server_usage (project_id, server_id) VALUES (" + 
 						projectId + ", " + serverList[x].serverId + ");";
 					tx.executeSql(insertUsageSql, [], function(tx, res){
 						console.log("insert usage successful");
 					});	  
-				}, arbiter.errorSql, function(){});
+				}, Arbiter.errorSql, function(){});
 			}
 			
 			// every project has a list of tiles it uses so that:
@@ -1420,30 +1611,29 @@ var Arbiter = {
 		var writeToDatabases = function(dir){
 			
 			//Create the databases for that project
-			arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
-			arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
+			Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
+			Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
 			
 			//Create the initial tables in each database
-			arbiter.currentProject.variablesDatabase.transaction(arbiter.createMetaTables, arbiter.errorSql, function(){
-				arbiter.currentProject.dataDatabase.transaction(arbiter.createDataTables, arbiter.errorSql, function(){
-					arbiter.globalDatabase.transaction(function(tx){
-						tx.executeSql("INSERT INTO projects (name) VALUES (" + arbiter.squote(arbiter.currentProject.name) + ");", [], function(tx, res){
+			Arbiter.currentProject.variablesDatabase.transaction(Arbiter.createMetaTables, Arbiter.errorSql, function(){
+				Arbiter.currentProject.dataDatabase.transaction(Arbiter.createDataTables, Arbiter.errorSql, function(){
+					Arbiter.globalDatabase.transaction(function(tx){
+						tx.executeSql("INSERT INTO projects (name) VALUES (" + Arbiter.squote(Arbiter.currentProject.name) + ");", [], function(tx, res){
 							//Transaction succeeded so both metadata and data tables exist
-								arbiter.currentProject.variablesDatabase.transaction(function(tx){
-									insertCurrentProject(tx, res.insertId);													   
-								}, arbiter.errorSql, function(){
+								Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+									var projectId = res.insertId;
+									insertCurrentProject(tx, projectId);													   
+								}, Arbiter.errorSql, function(){
 																					 
-								//add to the list of projects on success
-							   	var li = "<li><a class='project-list-item'>" + arbiter.currentProject.name + "</a></li>";
+							 	var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
+							 		'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';
+									
+								Arbiter.appendToListView("project", res.insertId, Arbiter.currentProject.name, leftplaceholder);
 							   
-							   	arbiter.appendToListView(li, jqProjectsList, function(event){
-									arbiter.setCurrentProject($(this).find('a').text(), arbiter);
-								});
-							   
-							   	arbiter.changePage_Pop(div_ProjectsPage);
+							   	Arbiter.changePage_Pop(div_ProjectsPage);
 							});
 						});
-					}, arbiter.errorSql, function(){});
+					}, Arbiter.errorSql, function(){});
 				});
 			});
 		};
@@ -1452,11 +1642,11 @@ var Arbiter = {
 			console.log("error creating directory");
 		};
 					
-		this.fileSystem.root.getDirectory("Arbiter/Projects/" + this.currentProject.name, {create: true, exclusive: false}, writeToDatabases, error);
+		Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + Arbiter.currentProject.name, {create: true, exclusive: false}, writeToDatabases, error);
 	},
 	
 	getProjectDirectory: function(_projectName, _successCallback, _errorCallback) {
-		this.fileSystem.root.getDirectory(_projectName, null, _successCallback, _errorCallback);
+		Arbiter.fileSystem.root.getDirectory(_projectName, null, _successCallback, _errorCallback);
 	},
 	
 	failedGetProjectDirectory: function(error) {
@@ -1496,12 +1686,11 @@ var Arbiter = {
 	
 	submitLayer: function(){
 		console.log("Submiting Time! ARBITER SMASH!");
-		var valid = this.validateAddLayerSubmit();
+		var valid = Arbiter.validateAddLayerSubmit();
 		
 		console.log(valid);
 		if(valid){
-			var arbiter = this;
-			var serverInfo = this.currentProject.serverList[jqServerSelect.val()];
+			var serverInfo = Arbiter.currentProject.serverList[jqServerSelect.val()];
 			var typeName = jqLayerSelect.val();
 			
 			var request = new OpenLayers.Request.GET({
@@ -1557,17 +1746,15 @@ var Arbiter = {
 	},
 	
 	editLayer: function(_layerName, _layerNickname, _serverID){
-		var arbiter = this;
-		
 		console.log("Layer to edit: " + _layerName + " - " + _serverID);
 	
 		console.log("Edit Server " + _serverID);
 		var serverIndex;
 	
-		for(var index in arbiter.currentProject.serverList) {
+		for(var index in Arbiter.currentProject.serverList) {
 			console.log("Current Server to check:");
-			console.log(arbiter.currentProject.serverList[index]);
-			if(_serverID == arbiter.currentProject.serverList[index].serverId) {
+			console.log(Arbiter.currentProject.serverList[index]);
+			if(_serverID == Arbiter.currentProject.serverList[index].serverId) {
 				serverIndex = index;
 				console.log("Server Found! - " + serverIndex);
 				break;
@@ -1575,12 +1762,12 @@ var Arbiter = {
 		}
 		
 		console.log("Setting Server to " + serverIndex);
-		arbiter.addServersToLayerDropdown(serverIndex);
+		Arbiter.addServersToLayerDropdown(serverIndex);
 		tempLayerToEdit = _layerName;
 		console.log("Setting Nickname to " + _layerNickname);
 		jqEditLayerNickname.val(_layerNickname);
 		
-		arbiter.changePage_Pop(div_EditLayersPage);
+		Arbiter.changePage_Pop(div_EditLayersPage);
 	},
 	
 	saveLayer: function() {
@@ -1590,9 +1777,9 @@ var Arbiter = {
 	populateAddServerDialog: function(serverName){
 		if(serverName){
 			jqNewNickname.val(serverName);
-			jqNewServerURL.val(this.currentProject.serverList[serverName].url);
-			jqNewUsername.val(this.currentProject.serverList[serverName].username);
-			jqNewPassword.val(this.currentProject.serverList[serverName].password);
+			jqNewServerURL.val(Arbiter.currentProject.serverList[serverName].url);
+			jqNewUsername.val(Arbiter.currentProject.serverList[serverName].username);
+			jqNewPassword.val(Arbiter.currentProject.serverList[serverName].password);
 		}else{
 			jqNewNickname.val("");
 			jqNewServerURL.val("");
@@ -1602,14 +1789,13 @@ var Arbiter = {
 			jqGoToAddServer.removeClass('ui-btn-active');
 		}
 		
-		this.changePage_Pop(jqAddServerPage);
+		Arbiter.changePage_Pop(jqAddServerPage);
 	},
 	
 	//override: Bool, should override
 	pullFeatures: function(featureType, geomName, f_table_name, srs, serverUrl, username, password){
-		var arbiter = this;
 		var layerNativeSRS = new OpenLayers.Projection(srs);
-		var currentBounds = arbiter.currentProject.aoi.clone().transform(WGS84_Google_Mercator, layerNativeSRS);
+		var currentBounds = Arbiter.currentProject.aoi.clone().transform(WGS84_Google_Mercator, layerNativeSRS);
 		
 		var postData = '<wfs:GetFeature service="WFS" version="1.0.0" outputFormat="GML2" ' +
 		'xmlns:wfs="http://www.opengis.net/wfs" ' +
@@ -1644,7 +1830,7 @@ var Arbiter = {
 				
 				var features = gmlReader.read(response.responseText);
 				
-				arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false);
+				Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false);
 			},
 			failure: function(response){
 				console.log('something went wrong');
@@ -1684,14 +1870,14 @@ var Arbiter = {
 	},
 	
 	getFeatureTypesOnServer: function(serverName){
-		
-		var arbiter = this;
-		var serverInfo = arbiter.currentProject.serverList[serverName];
+		console.log('getFeaturetypesOnServer');
+		var serverInfo = Arbiter.currentProject.serverList[serverName];
 		var request = new OpenLayers.Request.GET({
 			url: serverInfo.url + "/wms?service=wms&version=1.1.1&request=getCapabilities",
 			user: serverInfo.username,
 			password: serverInfo.password,
 			callback: function(response){
+				console.log('getFeaturetypesOnServer success');
 				var capes = capabilitiesFormatter.read(response.responseText);
 				var options = "";
 				
@@ -1722,7 +1908,7 @@ var Arbiter = {
 						jqEditLayerSelect.html(options).selectmenu('refresh', true);
 					}
 					
-					arbiter.enableLayerSelectAndNickname();
+					Arbiter.enableLayerSelectAndNickname();
 				}
 			}
 		});
@@ -1740,8 +1926,8 @@ var Arbiter = {
 		CurrentLanguage = LanguageType[language];
 		
 		console.log("Language selected: " + CurrentLanguage.name);
-		this.UpdateLocale();
-		this.changePage_Pop(div_ProjectsPage);
+		Arbiter.UpdateLocale();
+		Arbiter.changePage_Pop(div_ProjectsPage);
 	},
 	
 	UpdateLocale: function() {
@@ -1771,12 +1957,12 @@ var Arbiter = {
 			if(addComma){
 				lists.propertiesWithType += ', ' + x + ' TEXT';
 				lists.properties += ', ' + x;
-				lists.values += ', ' + this.squote(object[x]);
+				lists.values += ', ' + Arbiter.squote(object[x]);
 				
 			}else{
 				lists.propertiesWithType += x + ' TEXT';
 				lists.properties += x;
-				lists.values += this.squote(object[x]);
+				lists.values += Arbiter.squote(object[x]);
 				addComma = true;
 			}
 		}
@@ -1804,10 +1990,9 @@ var Arbiter = {
 	},
 		
 	readLayerFromDb: function(tableName, layerName, geomName, srsName){
-		var arbiter = this;
 		var layer = map.getLayersByName(layerName + "-wfs")[0];
 		console.log("readLayerFromDb: " + tableName + ", " + layerName + ", " + geomName + ", " + srsName);
-		arbiter.currentProject.dataDatabase.transaction(function(tx){
+		Arbiter.currentProject.dataDatabase.transaction(function(tx){
 			tx.executeSql("SELECT * FROM " + tableName, [], function(tx, res){
 				for(var i = 0; i < res.rows.length;i++){
 					var row = res.rows.item(i);
@@ -1833,7 +2018,7 @@ var Arbiter = {
 				}
 						  
 				//after the transaction is complete, check to see which features are dirty
-				arbiter.currentProject.variablesDatabase.transaction(function(tx){
+				Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 					tx.executeSql("SELECT * FROM dirty_table where f_table_name='" + tableName + "';", [], function(tx, res){
 						for(var i = 0; i < res.rows.length;i++){
 							var feature = layer.getFeatureByFid(res.rows.item(i).fid);
@@ -1843,9 +2028,9 @@ var Arbiter = {
 					}, function(tx, err){
 								  console.log("err: ", err);			  
 					});
-				}, arbiter.errorSql, function(){});
+				}, Arbiter.errorSql, function(){});
 			});
-		}, arbiter.errorSql, function(){
+		}, Arbiter.errorSql, function(){
 			
 		});
 	},
@@ -1881,7 +2066,6 @@ var Arbiter = {
 	 * srsName: srs for the layer
 	 */
 	getSql: function(table, feature, geomName, isEdit, srsName){
-		var arbiter = this;
 		var insertSql = "INSERT INTO " + table;
 		var updateSql = "UPDATE " + table + " SET ";
 		
@@ -1927,8 +2111,7 @@ var Arbiter = {
 	},
 											
 	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit){
-		var arbiter = this;
-		var db = arbiter.currentProject.dataDatabase;
+		var db = Arbiter.currentProject.dataDatabase;
 		console.log("insertFeaturesIntoTable: ", features);
 		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
 		for(var i = 0; i < features.length; i++){
@@ -1937,7 +2120,7 @@ var Arbiter = {
 				var selectSql;
 				var selectParams;
 				
-				var sqlObject = arbiter.getSql(f_table_name, feature, geomName, isEdit, srsName);
+				var sqlObject = Arbiter.getSql(f_table_name, feature, geomName, isEdit, srsName);
 						   
 				if(feature.fid || feature.rowid){
 					if(feature.fid){
@@ -1965,7 +2148,7 @@ var Arbiter = {
 									console.log("update err: ", err);
 								});
 								if(feature.fid){						
-									arbiter.currentProject.variablesDatabase.transaction(function(tx){
+									Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 										var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid) VALUES (?,?);";
 																												 
 										console.log(insertDirtySql);
@@ -1974,9 +2157,9 @@ var Arbiter = {
 										}, function(tx, err){
 											console.log("insert dirty fail: ", err);
 										});
-									}, arbiter.errorSql, function(){});
+									}, Arbiter.errorSql, function(){});
 								}
-							}, arbiter.errorSql, function(){});
+							}, Arbiter.errorSql, function(){});
 						}else{
 							console.log('new insert');
 							db.transaction(function(tx){
@@ -1992,7 +2175,7 @@ var Arbiter = {
 								}, function(tx, err){
 									console.log("insert err: ", err);
 								});
-							}, arbiter.errorSql, function(){});
+							}, Arbiter.errorSql, function(){});
 						}
 					}, function(tx, err){
 						console.log("err: ", err);
@@ -2018,9 +2201,9 @@ var Arbiter = {
 						}, function(tx, err){
 							console.log("insert err: ", err);
 						});
-					}, arbiter.errorSql, function(){});	
+					}, Arbiter.errorSql, function(){});	
 				}
-			}, arbiter.errorSql, function(){});
+			}, Arbiter.errorSql, function(){});
 		}
 	},
 	
@@ -2029,7 +2212,7 @@ var Arbiter = {
 			 
 			// Set the attributes of the feature from the form
 			for(var x in selectedFeature.attributes){
-				selectedFeature.attributes[x] = this.decodeChars($("#textinput-" + x).val());
+				selectedFeature.attributes[x] = Arbiter.decodeChars($("#textinput-" + x).val());
 							  console.log(selectedFeature.attributes[x]);
 			}
 			
@@ -2040,7 +2223,7 @@ var Arbiter = {
 			}
 			//features, f_table_name, geomName, srsName, isEdit
 			var protocol = selectedFeature.layer.protocol;
-			this.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
+			Arbiter.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
 		}
 		
 		//$.mobile.changePage("#idMapPage", {transition: "slide", reverse: true});
@@ -2056,7 +2239,7 @@ var Arbiter = {
 					li += attr;
 					li += "</label>";
 					li += "<input name='' id='textinput-" + attr + "' placeholder='' value='";
-					li += this.encodeChars(selectedFeature.attributes[attr]);
+					li += Arbiter.encodeChars(selectedFeature.attributes[attr]);
 					li += "' type='text'></div></li>";
 			}
 
@@ -2066,7 +2249,6 @@ var Arbiter = {
 	
 	//db filename, table in db file, featureType, featureNS, geomName, srsName, geoserverURL, nickname
 	StoreLayerMetadata: function(db, metadata){
-		var arbiter = this;
 		var query = function(tx){
 			tx.executeSql("CREATE TABLE IF NOT EXISTS " + metadataTable + " (id integer primary key, file text not null, featuretable text not null," +
 				" featuretype text not null, featurens text not null, geomname text not null, srsname text not null, geoserverurl text not null," +
@@ -2077,7 +2259,7 @@ var Arbiter = {
 				metadata.geomName + "', '" + metadata.srsName + "', '" + metadata.geoserverURL + "', '" + metadata.nickname + "');");
 		};
 		
-		db.transaction(query, this.errorSql, function(){});
+		db.transaction(query, Arbiter.errorSql, function(){});
 	},
 	
 	/*
@@ -2100,8 +2282,6 @@ var Arbiter = {
 			&& meta.srsName && meta.nickname && meta.username
 			&& meta.password && meta.typeName && meta.geomName){ // theres no wfs layer for that layer yet
 			
-			
-			var arbiter = this;
 				
 			var encodedCredentials = $.base64.encode(meta.username + ':' + meta.password);
 				
@@ -2138,7 +2318,7 @@ var Arbiter = {
 			map.addLayers([newWMSLayer, newWFSLayer]);
 			
 			newWFSLayer.events.register("featuremodified", null, function(event){
-				arbiter.insertFeaturesIntoTable([event.feature], meta.featureType, meta.geomName, meta.srsName, true);
+				Arbiter.insertFeaturesIntoTable([event.feature], meta.featureType, meta.geomName, meta.srsName, true);
 			});
 			
 			newWFSLayer.events.register("featureselected", null, function(event){
@@ -2152,7 +2332,7 @@ var Arbiter = {
 			newWFSLayer.events.register("featureunselected", null, function(event){
 				console.log("Feature unselected: " + event);
 				selectedFeature = null;
-				arbiter.CloseAttributesMenu();
+				Arbiter.CloseAttributesMenu();
 					
 				if(jqAttributeTab.is(':visible'))
 					jqAttributeTab.toggle();
@@ -2171,11 +2351,11 @@ var Arbiter = {
 				//map.layers[2].destroyFeatures();
 				//arbiter.pullFeatures(true);
 				//Remove the features for this layer from the table keeping track of dirty features
-				arbiter.currentProject.variablesDatabase.transaction(function(tx){
+				Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 					tx.executeSql("DELETE FROM dirty_table;");															  
-				}, arbiter.errorSql, function(){console.log("delete success");});
+				}, Arbiter.errorSql, function(){console.log("delete success");});
 				
-				var server = arbiter.currentProject.serverList[meta.serverName];
+				var server = Arbiter.currentProject.serverList[meta.serverName];
 				var serverLayer = server.layers[meta.nickname];
 				var url = server.url;
 				var username = server.username;
@@ -2186,14 +2366,14 @@ var Arbiter = {
 				var srsName = serverLayer.srsName;
 				
 				
-				arbiter.currentProject.dataDatabase.transaction(function(tx){
+				Arbiter.currentProject.dataDatabase.transaction(function(tx){
 					tx.executeSql("DELETE FROM ?", [featureType], function(tx, res){
 						//pull everything down
 								  console.log("pull after delete");
 						console.log("pullFeatures after delete: " + serverLayer.typeName + serverLayer.geomName + serverLayer.featureType + serverLayer.srsName + server.url + server.username + server.password);
-						arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url, server.username, server.password);
+						Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url, server.username, server.password);
 					}); 													  
-				}, arbiter.errorSql, function(){});
+				}, Arbiter.errorSql, function(){});
 			});
 			
 			var modifyControl = new OpenLayers.Control.ModifyFeature(newWFSLayer);
@@ -2201,14 +2381,14 @@ var Arbiter = {
 			var addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer,OpenLayers.Handler.Point);
 			addFeatureControl.events.register("featureadded", null, function(event){
 				//populate the features attributes object
-				var attributes = arbiter.currentProject.serverList[meta.serverName].layers[meta.nickname].attributes;
+				var attributes = Arbiter.currentProject.serverList[meta.serverName].layers[meta.nickname].attributes;
 											  
 				for(var i = 0; i < attributes.length;i++){
 					event.feature.attributes[attributes[i]] = "";							  
 				}
 				event.feature.fid = '';
 				console.log("new feature", event.feature);
-				arbiter.insertFeaturesIntoTable([event.feature], meta.featureType, meta.geomName, meta.srsName, true);	
+				Arbiter.insertFeaturesIntoTable([event.feature], meta.featureType, meta.geomName, meta.srsName, true);	
 			});
 			
 			map.addControl(addFeatureControl);
@@ -2217,7 +2397,7 @@ var Arbiter = {
 			map.addControl(modifyControl);
 			//modifyControl.activate();
 						
-			arbiter.currentProject.modifyControls[meta.nickname] = {
+			Arbiter.currentProject.modifyControls[meta.nickname] = {
 				modifyControl: modifyControl,
 				insertControl: addFeatureControl
 			};
@@ -2249,7 +2429,7 @@ var Arbiter = {
 	 Returns true if the application is in Landscape mode.
 	 */
 	isOrientationLandscape: function() {
-		if(this.getOrientation() == 90 || this.getOrientation() == -90)
+		if(Arbiter.getOrientation() == 90 || Arbiter.getOrientation() == -90)
 			return true;
 		else
 			return false;
@@ -2259,14 +2439,14 @@ var Arbiter = {
 	 Returns true if the application is in Portrait mode.
 	 */
 	isOrientationPortrait: function() {
-		if(this.getOrientation() == 0 || this.getOrientation() == 180)
+		if(Arbiter.getOrientation() == 0 || Arbiter.getOrientation() == 180)
 			return true;
 		else
 			return false;
 	},
 	
 	setSyncColor: function() {
-		if(this.isOnline) {
+		if(Arbiter.isOnline) {
 			$('#syncUpdates').css("background-color", "rgba(0, 136, 0, 0.496094)");
 		} else {
 			$('#syncUpdates').css("background-color", "rgba(136, 0, 0, 0.496094)");
@@ -2286,20 +2466,20 @@ var Arbiter = {
 	
 	onOnline: function() {
 		console.log("Arbiter: Online");
-		if(!this.isOnline){
-			this.isOnline = true;
+		if(!Arbiter.isOnline){
+			Arbiter.isOnline = true;
 		}
 		
-		this.setSyncColor();
+		Arbiter.setSyncColor();
 	},
 	
 	onOffline: function() {
 		console.log("Arbiter: Offline");
-		if(this.isOnline){
-			this.isOnline = false;
+		if(Arbiter.isOnline){
+			Arbiter.isOnline = false;
 		}
 		
-		this.setSyncColor();
+		Arbiter.setSyncColor();
 	},
 	
 	onBatteryCritical: function(info) {

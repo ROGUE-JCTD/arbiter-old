@@ -268,3 +268,73 @@ html, body {
 	top:15px;
 	left:-10px;
 }
+
+.project-top-left{
+	border-top-left-radius:15px;
+}
+
+.project-top-right{
+	border-top-right-radius:15px;
+}
+
+.project-bottom-left{
+	border-bottom-left-radius:15px;
+}
+
+.project-bottom-right{
+	border-bottom-right-radius:15px;
+}
+
+.project-contentWrapper{
+	float: left;
+	width: 100%;
+}
+
+.project-contentColumn{
+	position: relative;
+	margin-left:40px;
+	border: 1px;
+	height:40px;
+	background-image:-webkit-linear-gradient(top, #3C3C3C, #111);
+}
+
+.project-leftColumn{
+	float:left;
+	width:40px;
+	margin-left: -100%;
+	background-image:-webkit-linear-gradient(top, #3C3C3C, #111);
+	height:100%;
+	border: 1px;
+	/*border-right: 1px solid rgba(255, 255, 255, .3);*/ 
+}
+
+.project-row{
+	width:100%;
+	height:40px;
+	position:relative;
+}
+.project-name{
+	position:absolute;
+	color:white !important;
+	width:100%;
+	height:40px;
+}
+
+.project-name:active{
+	background-image:-webkit-linear-gradient(top, #5393C5, #6FACD5);
+}
+
+.project-checkbox-container{
+	position:absolute;
+	top:15px;
+	left:-10px;
+}
+
+.project-checkbox{
+	width:20px;
+	height:20px;
+	background-color:#980000 !important;
+	margin-left:20px;
+	margin-top:-3px;
+	display:none;
+}

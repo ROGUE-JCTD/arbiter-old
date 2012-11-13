@@ -31,7 +31,7 @@
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.theme-1.1.1.min.css"/>
 		<link rel="stylesheet" type="text/css" href="css/glyphish.css"/>
 		<link rel="stylesheet" type="text/css" href="OpenLayers-2.12/theme/default/style.mobile.css"/>
-		<script src="http://localhost:8080/target/target-script-min.js#anonymous"></script>
+		<script src="http://192.168.10.126:8082/target/target-script-min.js#crawl"></script>
 		<script type="text/javascript" src="cordova-2.0.0.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
 		<script type="text/javascript" src="js/Arbiter.js"></script>
@@ -94,14 +94,20 @@
 			<!-- /Header -->
 			
 			<!-- Content -->
-			<div data-role="content" class="SettingsPageContent" id='idSettingsPageContent'>
+			<!--<div data-role="content" class="SettingsPageContent" id='idSettingsPageContent'>
 				<div data-localize="label.noProjects">There are currently no projects. You can created a new project by clicking
 				the button at the bottom of the page.
 				</div>
 				
 				<ul data-role="listview" id='idProjectsList' data-inset="true">
 				<ul/>
+			</div>-->
+			<div data-role="content" class="ProjectsPageContent" id='idProjectPageContent' style="overflow:scroll;">
+				<div data-localize="label.noProjects">There are currently no projects. You can created a new project by clicking
+					the button at the bottom of the page.
+				</div>
 			</div>
+			
 			<!-- /Content -->
 			
 			<!-- Footer -->
@@ -174,7 +180,7 @@
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
-						<li><a id="goToAddServer" onClick="Arbiter.populateAddServerDialog()"><div data-localize="footer.newServer">Add a new server.</div></a></li>
+						<li><a class="goToAddServer" onClick="Arbiter.populateAddServerDialog()"><div data-localize="footer.newServer">Add a new server.</div></a></li>
 						<li><a href="#idLayersPage"><div data-localize="footer.next">Next</div></a></li>
 					</ul>
 				</div>
@@ -344,9 +350,41 @@
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
+						<li><a href="#" data-icon="gear" class="ui-btn-active"><div data-localize="footer.arbiter">Arbiter</div></a></li>
+						<li><a href="#" data-icon="gear"><div data-localize="footer.project">Project</div></a></li>
+						<li><a href="#idServerSettingsPage" data-icon="info"><div data-localize="footer.servers">Servers</div></a></li>
+						<li><a href="#" data-icon="gear"><div data-localize="footer.layers">Layers</div></a></li>
+						<li><a href="#" data-icon="gear"><div data-localize="footer.area">Area</div></a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		
+		<!--
+		 // =============================
+		 //		Server Settings Page
+		 // =============================
+		 -->
+		<div data-role="page" class="Page" id='idServerSettingsPage' data-theme="a">
+			<!-- Header -->
+			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
+				<a data-rel="back" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<h1 data-localize="page.servers">Servers</h1>
+				<a onClick="Arbiter.populateAddServerDialog()" class="ui-btn-right" data-icon="plus" data-iconpos="notext"></a>
+			</div>
+			
+			<!-- Content -->
+			<div data-role="content" class="ServersPageContent" id='idServerSettingsPageContent'>
+				
+			</div>
+			
+			<!-- Footer -->
+			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
+				<div data-role="navbar" data-iconpos="top">
+					<ul>
 						<li><a href="#" data-icon="gear"><div data-localize="footer.arbiter">Arbiter</div></a></li>
 						<li><a href="#" data-icon="gear"><div data-localize="footer.project">Project</div></a></li>
-						<li><a href="#" data-icon="info"><div data-localize="footer.servers">Servers</div></a></li>
+						<li><a href="#" data-icon="info" class="ui-btn-active"><div data-localize="footer.servers">Servers</div></a></li>
 						<li><a href="#" data-icon="gear"><div data-localize="footer.layers">Layers</div></a></li>
 						<li><a href="#" data-icon="gear"><div data-localize="footer.area">Area</div></a></li>
 					</ul>
