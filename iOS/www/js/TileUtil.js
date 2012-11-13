@@ -117,13 +117,14 @@ countTilesInBounds: function (bounds){
         //
         //
         //
-        console.log("-----<< Will cache " + widthInTiles * widthInTiles + " tiles for zoom level: " + zoomLevel + "widthInTiles: " + widthInTiles);
+        if (TileUtil.debug){
+        	console.log("-----<< Will cache " + widthInTiles * widthInTiles + " tiles for zoom level: " + zoomLevel + ", widthInTiles: " + widthInTiles);
+        }
         
     	zoomLevel += 1;
     }
     
     console.log("=====<< simple method Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
-    //alert("Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
     
     return totalTiles;
 },
@@ -180,19 +181,28 @@ cacheTilesForCurrentZoom: function() {
 },
 
 // stop caching (when done or when cacheTile is full)
-stopCachingTiles : function() {
+stopCachingTiles: function() {
 	// we're done - restore previous settings
 	caching.layer.events.unregister("loadend", null, TileUtil.cacheTilesForCurrentZoom);
 	caching.layer.buffer = caching.buffer;
     map.zoomToExtent(caching.extentOriginal, true);
     
     console.log("---- stopCachingTiles");
-
     
     // keep for debugging
     cachingLast = caching;
     
 	caching = undefined;
+},
+
+cacheTiles: function(){
+	
+	if (typeof caching === 'undefined'){
+		TileUtil.clearCache("osm", function(){
+			// once all the cache for this project is cleared, start caching again. 
+			TileUtil.startCachingTiles();
+		});
+	}
 },
 
 //TODO SM: test getURL
@@ -229,12 +239,8 @@ getURL: function(bounds) {
 	if (typeof caching !== 'undefined') {
 	
 	
-		//console.log("--- TileUtil chk 1");
-	
 		// have we cached the tile already? 
 		Arbiter.globalDatabase.transaction(function(tx){
-			//console.log("--- TileUtil chk 2");
-
 			//---- have we cached the tile already?
 			//TODO: bring everythign back for now for debugging we only need url though!
 			var selectTileSql = "SELECT * FROM tiles WHERE url=?;";
@@ -244,7 +250,6 @@ getURL: function(bounds) {
 			}
 			
 			tx.executeSql(selectTileSql, [finalUrl], function(tx, res){
-				//console.log("--- TileUtil chk 3");
 				
 				if (TileUtil.debug) {
 					console.log("getURL.res.rows.length: " + res.rows.length);
@@ -253,7 +258,6 @@ getURL: function(bounds) {
 				
 				// we have never cached the tile 
 				if (res.rows.length === 0){
-					
 						
 						// add the tile to databases immediately so that if multiple getURL calls come in for a given tile, 
 						// we do not download the tile multiple times
@@ -387,7 +391,9 @@ addTile : function(url, path, tileset, z, x, y) {
 
 		tx.executeSql(insertTilesSql, [ url ], function(tx, res) {
 
-			console.log("tiles items with url: " + url + " items: " + TileUtil.rowsToString(res.rows));
+			if (TileUtil.debug) {
+				console.log("tiles items with url: " + url + " items: " + TileUtil.rowsToString(res.rows));
+			}
 
 			var resTiles = res;
 
@@ -398,8 +404,9 @@ addTile : function(url, path, tileset, z, x, y) {
 						var statement = "INSERT INTO tiles (tileset, z, x, y, path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?, ?);";
 						tx.executeSql(statement, [ tileset, z, x, y, path, url, 1 ], function(tx, res) {
 							
-							//TODO: why does the first insert return id null??
-							console.log("inserted new url in tiles. res.insertId: " + res.insertId);
+							if (TileUtil.debug) {
+								console.log("inserted new url in tiles. res.insertId: " + res.insertId);
+							}
 	
 						    TileUtil.insertIntoTileIds(res.insertId);
 						});
@@ -407,24 +414,20 @@ addTile : function(url, path, tileset, z, x, y) {
 				});
 
 			} else if (res.rows.length === 1) {
-				console.log("chk1");
-				console.log(resTiles);
-				console.log("chk2");
-
-				console.log("found tile in global.tiles. TileUtil.rowsToString(resTiles.rows): " + TileUtil.rowsToString(resTiles.rows));
-				console.log("found tile in global.tiles. (resTiles.rows[0].ref_counter + 1 ): " + (resTiles.rows.item(0).ref_counter + 1));
+				
+				if (TileUtil.debug) {
+					console.log("found tile in global.tiles. TileUtil.rowsToString(resTiles.rows): " + TileUtil.rowsToString(resTiles.rows));
+					console.log("found tile in global.tiles. (resTiles.rows[0].ref_counter + 1 ): " + (resTiles.rows.item(0).ref_counter + 1));
+				}
 
 				Arbiter.globalDatabase.transaction(function(tx) {
 
-					console.log("chk3");
-					// var statement = "INSERT INTO tiles (tileset, z, x, y,
-					// path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?,
-					// ?);";
 					var statement = "UPDATE tiles SET ref_counter=? WHERE url=?;";
 					tx.executeSql(statement, [ (resTiles.rows.item(0).ref_counter + 1), url ], function(tx, res) {
-						console.log("chk4");
-
-						console.log("updated tiles. for url : " + url);
+						
+						if (TileUtil.debug) {
+							console.log("updated tiles. for url : " + url);
+						}
 
 						Arbiter.currentProject.variablesDatabase.transaction(
 							function(tx) {
@@ -479,15 +482,11 @@ clearCache : function(tileset, successCallback, errorCallback) {
 	if (TileUtil.debug) {
 		console.log("---- TileUtil.clearCache");
 	}	
-	
-	console.log("chk 1");
-	
+		
 	//alert("inserted tile. id: " + res.insertId);
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-		console.log("chk 2");
 		var sql = "SELECT id FROM tileIds;";
 		tx.executeSql(sql, [], function(tx, res){
-			console.log("chk 3");
 			
 			if (res.rows.length > 0) {
 			
@@ -495,10 +494,8 @@ clearCache : function(tileset, successCallback, errorCallback) {
 				
 				var removeCounterCallback = function() {
 					removeCounter += 1;
-					console.log("removeCounterCallback: " + removeCounter + " row.length: " + res.rows.length);
 					
 					if (removeCounter === res.rows.length) {
-						console.log("removeCounterCallback, counter met!");
 						TileUtil.deleteTileIds();
 						if (successCallback){
 							successCallback();
@@ -507,12 +504,8 @@ clearCache : function(tileset, successCallback, errorCallback) {
 				};
 				
 				for(var i = 0; i < res.rows.length; i++){
-					console.log("chk 4");
-	
 					var tileId = res.rows.item(i).id;
-					
 					TileUtil.removeTileById(tileId, removeCounterCallback);
-					console.log("chk 5");
 				}
 			} else {
 				if (successCallback){
@@ -533,7 +526,9 @@ deleteTileIds: function(){
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 		var statement = "DELETE FROM tileIds;";
 		tx.executeSql(statement, [], function(tx, res){
-			console.log("---- TileUtil.deleteTileIds done");
+			if (TileUtil.debug) {
+				console.log("---- TileUtil.deleteTileIds done");
+			}
 		}, Arbiter.errorSql);					
 	}, Arbiter.errorSql, function(){});	
 },
@@ -546,7 +541,9 @@ insertIntoTileIds: function(id) {
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
 		var statement = "INSERT INTO tileIds (id) VALUES (?);";
 		tx.executeSql(statement, [id], function(tx, res) {
-			console.log("inserted in tileIds. id: " + id);
+			if (TileUtil.debug) {
+				console.log("inserted in tileIds. id: " + id);
+			}
 		}, Arbiter.errorSql);
 	}, Arbiter.errorSql, function() {
 	});
