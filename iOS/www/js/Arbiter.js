@@ -377,11 +377,20 @@ var Arbiter = {
 						}
 					}),
 					new OpenLayers.Control.Zoom()
-					],
-					center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
-					zoom: 15
+					]
 				});
 				
+				// we have a map, lets zoom and center based on the aoi 
+				if (Arbiter.currentProject.aoi){
+					map.zoomToExtent(Arbiter.currentProject.aoi, true);
+				}
+				
+				var serverList = Arbiter.currentProject.serverList;
+				var url;
+				var username;
+				var password;
+				var layers;
+				var li = "";
 				var radioNumber = 1;
 					
 				$("ul#editor-layer-list").empty();
@@ -401,7 +410,7 @@ var Arbiter = {
 					Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 				});
 			}
-			
+						
 			$('#projectName').text(Arbiter.currentProject.name);
 			Arbiter.setSyncColor();
 		});
