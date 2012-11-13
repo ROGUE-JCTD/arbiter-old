@@ -195,28 +195,6 @@ stopCachingTiles : function() {
 	caching = undefined;
 },
 
-// clear entries in db, removed tiles from device
-clearCache : function(tileset) {
-	if (TileUtil.debug) {
-		console.log("---- TileUtil.clearCache");
-	}	
-
-	//alert("inserted tile. id: " + res.insertId);
-	Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-		var sql = "SELECT id FROM tileIds;";
-		tx.executeSql(sql, [], function(tx, res){
-			
-			for(var i = 0; i < res.rows.length; i++){
-				var tileId = rows.item(i).id;
-				
-				//TODO: consider collect all the delete statement and execute one command against tileIds
-				TileUtil.removeTileById(tileId);
-			}
-		});
-	}, Arbiter.errorSql, function(){});		
-}, 
-
-
 //TODO SM: test getURL
 getURL: function(bounds) {
 	
@@ -229,99 +207,112 @@ getURL: function(bounds) {
     
     var finalUrl = OpenLayers.String.format(url, xyz);
     
-    if (TileUtil.debug) {
-    	console.log("--- TileUtil.getURL.url: " + finalUrl);
-    }
-    
-    //var tilePath = window.localStorage.getItem("tile_" + finalUrl);
     
     var tilePath = null;
-	//console.log("--- TileUtil chk 1");
+    
+    
+    // assume we ave already saved the tile to the device and return what would be the path to it. 
+	// this is the best we can do unless this call actually truly blocks the thread without hammering the cpu and running down battery of the device
+	// TODO: might be able to do a synchronous ajax call with duration of pause in the loop but will probably fail when there is no connection
+	//       consider other blocking calls like printing to console 
+	tilePath = Arbiter.fileSystem.root.fullPath + "/" + "osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + finalUrl.substr(finalUrl.lastIndexOf("."));
 
-	// add to global.tiles table. if already exists, increment ref counter
-	Arbiter.globalDatabase.transaction(function(tx){
-		//console.log("--- TileUtil chk 2");
-		
-		var selectTileSql = "SELECT url FROM tiles WHERE url=?;";
-		
-		if (TileUtil.debug) {
-			console.log("SQL: " + selectTileSql + "params: " + finalUrl);
-		}
+    if (TileUtil.debug) {
+    	console.log("--- TileUtil.getURL.url: " + finalUrl + " tile: " + tilePath);
+    }
+	
+    
+    //BUGS:
+    //  on project #2 nothing gets added to tilesId
+    //  reference doesn't get incremented because of project two 
+	
+	if (typeof caching !== 'undefined') {
+	
+	
+		//console.log("--- TileUtil chk 1");
+	
+		// have we cached the tile already? 
+		Arbiter.globalDatabase.transaction(function(tx){
+			//console.log("--- TileUtil chk 2");
 
-		//console.log("--- TileUtil chk 2.5");
-		
-		tx.executeSql(selectTileSql, [finalUrl], function(tx, res){
-			//console.log("--- TileUtil chk 3");
+			//---- have we cached the tile already?
+			//TODO: bring everythign back for now for debugging we only need url though!
+			var selectTileSql = "SELECT * FROM tiles WHERE url=?;";
 			
 			if (TileUtil.debug) {
-				console.log("getURL.res.rows.length: " + res.rows.length);
-				console.log(TileUtil.rowsToString(res.rows));
+				console.log("SQL: " + selectTileSql + "params: " + finalUrl);
 			}
 			
-			if (res.rows.length === 0){
-				if (typeof caching !== 'undefined') { 
-					var saveTileSuccess = function(url, path){
-						if (typeof caching !== 'undefined' && typeof caching.counterCached !== 'undefined') {
-							caching.counterCached += 1;
-							console.log("caching percent complete: " +  caching.counterCached/caching.counterEstimatedMax);
-						}
-					};
-					
-					var saveTileError = function(url, path, error){
-						console.log("========>> saveTileError filename: " + url + ", path: " + path);
-						alert("failed to download file. todo.");
-						//TODO: failed to download file and save to disk so just remove it from global.tiles and project.tileIds tables
-						// if save failed, remove it. 
-						//TileUtil.removeTile(url, path);
-					};
-					
-					tilePath = TileUtil.saveTile(finalUrl, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, saveTileError);
-
-					if (TileUtil.debug) {
-						console.log("<<<<<<<< ------ cach tile: " + finalUrl + " to: " + tilePath);
-					}
+			tx.executeSql(selectTileSql, [finalUrl], function(tx, res){
+				//console.log("--- TileUtil chk 3");
+				
+				if (TileUtil.debug) {
+					console.log("getURL.res.rows.length: " + res.rows.length);
+					console.log(TileUtil.rowsToString(res.rows));
 				}
+				
+				// we have never cached the tile 
+				if (res.rows.length === 0){
+					
+						
+						// add the tile to databases immediately so that if multiple getURL calls come in for a given tile, 
+						// we do not download the tile multiple times
+			    		TileUtil.addTile(finalUrl, tilePath, "osm", xyz.z, xyz.x, xyz.y);
+						
+						var saveTileSuccess = function(url, path){
+							if (typeof caching !== 'undefined' && typeof caching.counterCached !== 'undefined') {
+								caching.counterCached += 1;
+								
+								if (TileUtil.debug) {
+									var percent = (caching.counterCached/caching.counterEstimatedMax * 100);
+									
+									if (percent > 100) {
+										percent = 100;
+									}
+	
+									console.log("caching estimated percent complete: " + percent );
+								}
+							}
+						};
+						
+						var saveTileError = function(url, path, error){
+							console.log("========>> saveTileError filename: " + url + ", path: " + path);
+							alert("failed to download file. todo.");
+							//TODO: failed to download file and save to disk so just remove it from global.tiles and project.tileIds tables
+							// if save failed, remove it. 
+							//TileUtil.removeTile(url, path);
+						};
+						
+						// write the tile to device
+						tilePath = TileUtil.saveTile(finalUrl, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, saveTileError);
+	
+						if (TileUtil.debug) {
+							console.log("<<<<<<<< ------ cach tile: " + finalUrl + " to: " + tilePath);
+						}
+	
+				} else if (res.rows.length === 1) {
+					// we have cached the file! great... 
 
-
-			} else if (res.rows.length === 1) {
-				tilePath =  res.rows.item(0).path;
-			} else {
-				console.log("====>> ERROR: TileUtil.getURL: Multiple Entries for tile " + TileUtil.rowsToString(res.rows));
-				alert("TileUtil.getURL: Multiple Entries for tile! see console for details. count: " + res.rows.length);
-			}	
-			//console.log("--- TileUtil chk 4");
+					// we have the file in the global.tiles table but we need to increment ref counter and also add it to this project.tileIds
+		    		TileUtil.addTile(finalUrl, tilePath, "osm", xyz.z, xyz.x, xyz.y);
+					
+					// This would be path to tile retrieved from the database but since we are pre stitching the tilePath anyway
+		    		// no real need to return this. 
+					// tilePath =  res.rows.item(0).path;
+				} else {
+					// for some reason the tile have been cached under two separate entries!!
+					console.log("====>> ERROR: TileUtil.getURL: Multiple Entries for tile " + TileUtil.rowsToString(res.rows));
+					alert("TileUtil.getURL: Multiple Entries for tile! see console for details. count: " + res.rows.length);
+				}					
+			}, Arbiter.errorSql);	
 			
-		});	
-	}, Arbiter.errorSql, function(){});	
-    
-	//console.log("--- TileUtil chk 5");
-   
-	// very unlikely we'll have the tile path. since even if we have the file locally, tx to get it is async
-    if (tilePath) {
-    	if (TileUtil.debug) {
-    		console.log("<<<<<<<< ++++++ founed cached tile already. wow: " + tilePath + " for " + finalUrl);
-    	}
-    } else {
- 		
-    	// stitch a tile path together and hope that either file is there or if it is being saved for the first time, 
-    	// it finishes saving before openlayers uses it. Unlikely but not impossible. 
-    	
-    	// this is the best we can do unles this call actually truely blocks the thread without hammering the cpu and running down battery life
-    	// can probably do a syncronous ajax call with diration of pause in the loop but will probably fail when there is no connection
-    	// consider other blocking calls like printing to console 
-    	tilePath = Arbiter.fileSystem.root.fullPath + "/" + "osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + finalUrl.substr(finalUrl.lastIndexOf("."));
-    	
-    	if (TileUtil.debug) {
-    		console.log("<<<<<<<< ----- just returning a stitched path hoping it is there: " + tilePath + " for " + finalUrl);
-    	}    	
-    	//TODO: do we really have to worry about multiple requests before the db queries return? 
-    	//      test for this case!
-		//Add it immediately before we have confirmation that it has saved so that we do not download it multiple times
-		//TileUtil.addTile(finalUrl, tilePath, "osm", xyz.z, xyz.x, xyz.y);
-		//window.localStorage.setItem("tile_" + finalUrl, tilePath);		
+		}, Arbiter.errorSql, function(){});	
+		
 	}
-    
-	//console.log("--- TileUtil.return tilePath: " + tilePath);
+	
+	if (TileUtil.debug) {
+		console.log("<<<<<<<< ------ returning tile: " + tilePath + " for: " + finalUrl);
+	}
    
 	return tilePath;
 }, 
@@ -381,11 +372,81 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 	return filePath2;
 },
 
+addTile : function(url, path, tileset, z, x, y) {
 
-addTile: function(url, path, tileset, z, x, y) {
+	Arbiter.globalDatabase.transaction(function(tx) {
+
+		var insertTilesSql = "SELECT id, ref_counter FROM tiles WHERE url=?;";
+
+		tx.executeSql(insertTilesSql, [ url ], function(tx, res) {
+
+			console.log("tiles items with url: " + url + " items: " + TileUtil.rowsToString(res.rows));
+
+			var resTiles = res;
+
+			if (res.rows.length === 0) {
+				// alert("inserted tile. id: " + res.insertId);
+				Arbiter.globalDatabase.transaction(
+					function(tx) {
+						var statement = "INSERT INTO tiles (tileset, z, x, y, path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?, ?);";
+						tx.executeSql(statement, [ tileset, z, x, y, path, url, 1 ], function(tx, res) {
+							
+							//TODO: why does the first insert return id null??
+							console.log("inserted new url in tiles. res.insertId: " + res.insertId);
+	
+						    TileUtil.insertIntoTileIds(res.insertId);
+						});
+					}, Arbiter.errorSql, function() {
+				});
+
+			} else if (res.rows.length === 1) {
+				console.log("chk1");
+				console.log(resTiles);
+				console.log("chk2");
+
+				console.log("found tile in global.tiles. TileUtil.rowsToString(resTiles.rows): " + TileUtil.rowsToString(resTiles.rows));
+				console.log("found tile in global.tiles. (resTiles.rows[0].ref_counter + 1 ): " + (resTiles.rows.item(0).ref_counter + 1));
+
+				Arbiter.globalDatabase.transaction(function(tx) {
+
+					console.log("chk3");
+					// var statement = "INSERT INTO tiles (tileset, z, x, y,
+					// path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?,
+					// ?);";
+					var statement = "UPDATE tiles SET ref_counter=? WHERE url=?;";
+					tx.executeSql(statement, [ (resTiles.rows.item(0).ref_counter + 1), url ], function(tx, res) {
+						console.log("chk4");
+
+						console.log("updated tiles. for url : " + url);
+
+						Arbiter.currentProject.variablesDatabase.transaction(
+							function(tx) {
+							    TileUtil.insertIntoTileIds(resTiles.rows.item(0).id);
+							}, Arbiter.errorSql, function() {
+						});
+
+					});
+				}, Arbiter.errorSql, function() {
+				});
+
+			} else {
+				console.log("TileUtil.addTile rows length not 0 not 1: " + TileUtil.rowsToString(res.rows))
+				alert("tiles has duplicate entry for a given url. see console");
+			}
+
+		}, Arbiter.errorSql);
+
+	}, Arbiter.errorSql, function() {
+	});
+
+}, 
+
+//BUG: it always inserts! either not supported in sqlite or plugin bug
+addTileReplaceBug: function(url, path, tileset, z, x, y) {
 
 	// add to global.tiles table. if already exists, increment ref counter
 	Arbiter.globalDatabase.transaction(function(tx){
+		
 		var insertTilesSql = "INSERT OR REPLACE INTO tiles (tileset, z, x, y, path, url, ref_counter)" +
 							"VALUES (?, ?, ?, ?, ?, ?, " +  
 							  "COALESCE(" +
@@ -396,16 +457,8 @@ addTile: function(url, path, tileset, z, x, y) {
 		
 		//TODO: does the second url get replaced as expected?
 		tx.executeSql(insertTilesSql, [tileset, z, x, y, path, url, url], function(tx, res){
-			
-			//alert("inserted tile. id: " + res.insertId);
-			Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-				var insertTileIdsSql = "INSERT INTO tileIds (id)" + "VALUES (?);";
-				tx.executeSql(insertTileIdsSql, [res.insertId], function(tx, res){
-					//alert("inserted in tileIds: " + res.insertId);
-				});
-			}, Arbiter.errorSql, function(){});	
-				
-		});
+		    TileUtil.insertIntoTileIds(res.insertId);
+		}, Arbiter.errorSql);
 		
 			
 	}, Arbiter.errorSql, function(){});	
@@ -414,6 +467,79 @@ addTile: function(url, path, tileset, z, x, y) {
 	// TODO: add entry to groutDatabase
 }, 
 
+//clear entries in db, removed tiles from device
+clearCache : function(tileset, successCallback, errorCallback) {
+	if (TileUtil.debug) {
+		console.log("---- TileUtil.clearCache");
+	}	
+	
+	console.log("chk 1");
+	
+	//alert("inserted tile. id: " + res.insertId);
+	Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+		console.log("chk 2");
+		var sql = "SELECT id FROM tileIds;";
+		tx.executeSql(sql, [], function(tx, res){
+			console.log("chk 3");
+			
+			if (res.rows.length > 0) {
+			
+				var removeCounter = 0;
+				
+				var removeCounterCallback = function() {
+					removeCounter += 1;
+					console.log("removeCounterCallback: " + removeCounter + " row.length: " + res.rows.length);
+					
+					if (removeCounter === res.rows.length) {
+						console.log("removeCounterCallback, counter met!");
+						TileUtil.deleteTileIds();
+						if (successCallback){
+							successCallback();
+						}
+					}
+				};
+				
+				for(var i = 0; i < res.rows.length; i++){
+					console.log("chk 4");
+	
+					var tileId = res.rows.item(i).id;
+					
+					TileUtil.removeTileById(tileId, removeCounterCallback);
+					console.log("chk 5");
+				}
+			} else {
+				if (successCallback){
+					successCallback();
+				}				
+			}
+
+		}, Arbiter.errorSql);
+	}, Arbiter.errorSql, function(){});		
+}, 
+
+deleteTileIds: function(){
+	console.log("---- TileUtil.deleteTileIds");
+	
+	// Remove everything from tileIds table
+	Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+		var statement = "DELETE FROM tileIds;";
+		tx.executeSql(statement, [], function(tx, res){
+			console.log("---- TileUtil.deleteTileIds done");
+		}, Arbiter.errorSql);					
+	}, Arbiter.errorSql, function(){});	
+},
+
+insertIntoTileIds: function(id) {
+	console.log("---- TileUtil.addToTileIds. id: " + id);
+	
+	Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
+		var statement = "INSERT INTO tileIds (id) VALUES (?);";
+		tx.executeSql(statement, [id], function(tx, res) {
+			console.log("inserted in tileIds. id: " + id);
+		}, Arbiter.errorSql);
+	}, Arbiter.errorSql, function() {
+	});
+},
 
 /**
  * given a tileId, remove it from the project's tileIds table
@@ -421,58 +547,87 @@ addTile: function(url, path, tileset, z, x, y) {
  * if counter is already only one, remove the entry from the global table
  * and delete the actual tile from the device. 
  */
-removeTileById: function(id, txProject, txGlobal) {
+removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal) {
+	
+	console.log("---- TileUtil.removeTileById: " + id);
+	
+	console.log("yaya 1");
 	
 	//TODO: use txProject, txGlobal if provided
 	//window.localStorage.removeItem("tile_" + url);
-
-	var sql = "(DELETE FROM tileIds WHERE id=?);";
-	tx.executeSql(sql, [id], function(tx, res){
-		console.log("--removed id from tileIds. id: " + id);
-	});
 	
 	Arbiter.globalDatabase.transaction(function(tx){
-		var selectTileSql = "(SELECT path, ref_counter FROM tiles WHERE id=?);";
-		tx.executeSql(selectTileSql, [id], function(tx, res){
+		console.log("yaya 2");
+		var statement = "SELECT id, url, path, ref_counter FROM tiles WHERE id=?;";
+		tx.executeSql(statement, [id], function(tx, res){
+			console.log("yaya 3. rows:");
+			console.log(TileUtil.rowsToString(res.rows));
+
 			// we should only have one tile for this url
 			if (res.rows.length === 1){
-				
-				var tileEntry = rows.item(0);
+				console.log("yaya 4");
+
+				var tileEntry = res.rows.item(0);
 				
 				// if the counter is only at 1, we can delete the file from disk
 				if (tileEntry.ref_counter === 1){
-					//TODO: delete entry from tiles
-					var deleteTileSql = "(DELETE FROM tiles WHERE id=?);";
-					tx.executeSql(selectTileSql, [id], function(tx, res){
-						// remove tile from disk
-						//TODO: is tileEntry safe in this callback since it was from a loop item?
-						//TODO: remove part of the path that is before the root dir??!!
-						Arbiter.fileSystem.root.getFile(tileEntry.path, {create: false}, 
-							function(fileEntry){
-								fileEntry.remove(
-									function(fileEntry){
-										//TODO: is fileEntry.fullpath still valid?
-										console.log("-- removed tile from disk: " + fileEntry.fullPath);
-									},
-									function(err){
-										console.log("-- removed tile from disk: " + fileEntry.fullPath + ", err: " + err);
-										alert("failed to delete tile from disk!");
-									}
-								);
-							}, 
-							function(err){
-								console.log("get file from root failed. path: " + tileEntry.path);
-								alert("err" + err);
-							}
-						);
-					});
+					console.log("yaya 5");
+
+					Arbiter.globalDatabase.transaction(function(tx){
+						//TODO: delete entry from tiles
+						var statement = "DELETE FROM tiles WHERE id=?;";
+						tx.executeSql(statement, [id], function(tx, res){
+							console.log("yaya 6");
+	
+							// remove tile from disk
+							//TODO: is tileEntry safe in this callback since it was from a loop item?
+							//TODO: remove part of the path that is before the root dir??!!
+							Arbiter.fileSystem.root.getFile(tileEntry.path, {create: false},
+								function(fileEntry){
+									fileEntry.remove(
+										function(fileEntry){
+											console.log("yaya 8");
+	
+											//TODO: is fileEntry.fullpath still valid?
+											console.log("-- removed tile from disk: " + tileEntry.path);
+											
+											if (successCallback){
+												successCallback();
+											}
+										},
+										function(err){
+											console.log("-- removed tile from disk: " + tileEntry.path + ", err: " + err);
+											alert("failed to delete tile from disk!");
+										}
+									);
+								}, 
+								function(err){
+									console.log("get file from root failed. path: " + tileEntry.path);
+									alert("err" + err);
+								}
+							);
+						}, Arbiter.errorSql);
+					}, Arbiter.errorSql, function(){});							
 					
-				} if (tileEntry.ref_counter > 1){
-					// decrement ref_counter
-					var sql = "(UPDATE tiles SET ref_counter=? WHERE id=?);";
-					tx.executeSql(sql, [(tileEntry.ref_counter - 1), id], function(tx, res){
-						console.log("-- decremented ref_counter to: " + (tileEntry.ref_counter - 1));
-					});
+				} else if (tileEntry.ref_counter > 1){
+					console.log("yaya 100");
+					console.log("ref_counter:" + tileEntry.ref_counter);
+					console.log("id:" + id);
+					console.log("yaya 100.2");
+
+					// NOTE: hmm, had to make another transaction
+					Arbiter.globalDatabase.transaction(function(tx){
+						console.log("yaya 101");
+						// decrement ref_counter
+						var statement = "UPDATE tiles SET ref_counter=? WHERE id=?;";
+						tx.executeSql(statement, [(tileEntry.ref_counter - 1), id], function(tx, res){
+							console.log("yaya 102");
+							console.log("-- decremented ref_counter to: " + (tileEntry.ref_counter - 1));
+							if (successCallback){
+								successCallback();
+							}
+						}, Arbiter.errorSql);
+					}, Arbiter.errorSql, function(){});	
 					
 				} else {
 					alert("something is wrong!");
@@ -485,29 +640,18 @@ removeTileById: function(id, txProject, txGlobal) {
 				// should not happen
 				alert("Error: tiles has multiple entries for id");
 			}
-		});
+		}, Arbiter.errorSql);
 	}, Arbiter.errorSql, function(){});	
 	
 
-	// TODO: remove entry from groutDatabase
 }, 
-/*
-removeTileByUrl: function(url) {
-	window.localStorage.removeItem("tile_" + url);
-	
-	//TODO: bring section from clear cache into this function 
-	
-	// decrement ref counter in global.tiles. if it hits 0, remove file from device
-	// remove from project.variablesDatabase.tileIds
-	// TODO: remove entry from groutDatabase
-}, 
-*/
+
 dumpTableNames: function(database){
 	console.log("---- TileUtil.dumpTable");
 	database.transaction(function(tx){
 		tx.executeSql("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;", [], function(tx, res){
 			console.log(TileUtil.rowsToString(res.rows));
-		});	
+		}, Arbiter.errorSql);	
 	}, Arbiter.errorSql, function(){
 	});
 },
@@ -517,12 +661,19 @@ dumpTableRows: function(database, tableName){
 	database.transaction(function(tx){
 		tx.executeSql("SELECT * FROM " + tableName + ";", [], function(tx, res){
 			console.log(TileUtil.rowsToString(res.rows));
-		});	
+		}, Arbiter.errorSql);	
 	}, Arbiter.errorSql, function(){
 	});
 },
 
 rowsToString: function(rows) {
+	
+	for(var x in row){
+		if(x != "id" && x != "fid" && x != geomName){
+			feature.attributes[x] = row[x];
+		}
+	}	
+	
 	var rowsStr = "rows.length: " + rows.length + "\n";
 	for(var i = 0; i < rows.length; i++){
 		var row = rows.item(i);
@@ -530,9 +681,9 @@ rowsToString: function(rows) {
 		
 		for(var x in row){
 			if (rowData === "") {
-				rowData = row[x];
+				rowData = x + "=" + row[x];
 			} else {
-				rowData += ", " + row[x];
+				rowData += ", " + x + "=" + row[x];
 			}
 		}
 			  

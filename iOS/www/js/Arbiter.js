@@ -546,7 +546,12 @@ var Arbiter = {
 				}
 			}
 			
-			//TileUtil.startCachingTiles();
+			TileUtil.clearCache("osm", function(){
+				
+				// once all the cache for this project is cleared, start caching again. 
+				TileUtil.startCachingTiles();
+			});
+			//TODO: WARNING: the above should be done before we do this... make it a call back
 		});
 		
 		jqEditorTab.mouseup(function(event){
