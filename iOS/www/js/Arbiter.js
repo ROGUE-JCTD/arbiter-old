@@ -578,6 +578,12 @@ var Arbiter = {
 			
 		});
 		
+		jqSyncUpdates.doubletap(function(event){
+			alert("double");
+			TileUtil.cacheTiles();
+		});
+		
+		
 		jqEditorTab.mouseup(function(event){
 			//arbiter.pullFeatures(false);
 			Arbiter.ToggleEditorMenu();
