@@ -59,34 +59,6 @@ dumpDirectory: function(dir) {
 	}
 },
 
-// start caching the cacheTile
-startCachingTiles: function() {
-	console.log("---- startCachingTiles");
-	
-    var layer = map.baseLayer;
-
-    caching = {
-        extentOriginal: map.getExtent(),		// extent before we start caching
-        extent: Arbiter.currentProject.aoi,		// extent that we should use as starting point of caching
-        buffer: layer.buffer,
-        layer: layer, 
-        counterCached: 0,
-        counterEstimatedMax: TileUtil.countTilesInBounds(Arbiter.currentProject.aoi)
-    };
-
-	console.log("---- startCachingTiles. counterEstimatedMax: " + caching.counterEstimatedMax);
-    
-	//TODO: zoom to a level other than caching.extent
-    // make sure the next setCenter triggers a load
-	var startZoom = map.getZoomForExtent(caching.extent, true);
-    map.zoomTo(startZoom === layer.numZoomLevels ? startZoom - 1 : startZoom + 1);
-    
-    layer.events.register("loadend", null, TileUtil.cacheTilesForCurrentZoom);
-    
-    // start caching
-    map.zoomToExtent(caching.extent, true);
-},
-
 countTilesInBounds: function (bounds){
     var layer =  map.baseLayer;
     var tileWidth = layer.tileSize.w;
@@ -162,7 +134,41 @@ countTilesInBounds2: function (){
     return totalTiles;
 },
 
-// cacheTile a zoom level based on the extent at the time startCachingTiles was called
+
+// start caching the cacheTile
+startCachingTiles: function(successCallback) {
+	console.log("---- startCachingTiles");
+
+	var layer = map.baseLayer;
+
+	caching = {
+		// extent before we start caching	
+		extentOriginal: map.getExtent(),
+		// extent that we should use as starting point of caching
+		extent: Arbiter.currentProject.aoi,
+		buffer: layer.buffer,
+		layer: layer,
+		counterCached: 0,
+		counterEstimatedMax: TileUtil.countTilesInBounds(Arbiter.currentProject.aoi),
+		successCallback: successCallback
+	};
+
+	console.log("---- startCachingTiles. counterEstimatedMax: " + caching.counterEstimatedMax);
+
+	// TODO: zoom to a level other than caching.extent
+	// make sure the next setCenter triggers a load
+	var startZoom = map.getZoomForExtent(caching.extent, true);
+	map.zoomTo(startZoom === layer.numZoomLevels ? startZoom - 1 : startZoom + 1);
+
+	layer.events.register("loadend", null, TileUtil.cacheTilesForCurrentZoom);
+
+	// start caching
+	map.zoomToExtent(caching.extent, true);
+},
+
+
+// cacheTile a zoom level based on the extent at the time startCachingTiles was
+// called
 cacheTilesForCurrentZoom: function() {
     var layer = caching.layer;
     var tileWidth = layer.tileSize.w;
@@ -188,19 +194,28 @@ stopCachingTiles: function() {
     map.zoomToExtent(caching.extentOriginal, true);
     
     console.log("---- stopCachingTiles");
-    
+
+	if (caching.successCallback){
+		caching.successCallback();
+	}
+
     // keep for debugging
     cachingLast = caching;
-    
 	caching = undefined;
 },
 
-cacheTiles: function(){
+cacheTiles: function(successCallback){
 	
+	Arbiter.ShowCachingTilesMenu();
+
 	if (typeof caching === 'undefined'){
 		TileUtil.clearCache("osm", function(){
 			// once all the cache for this project is cleared, start caching again. 
-			TileUtil.startCachingTiles();
+			TileUtil.startCachingTiles(
+				function(){
+					Arbiter.HideCachingTilesMenu();
+				}
+			);
 		});
 	}
 },
@@ -281,7 +296,7 @@ getURL: function(bounds) {
 						
 						var saveTileError = function(url, path, error){
 							console.log("========>> saveTileError filename: " + url + ", path: " + path);
-							alert("failed to download file. todo.");
+							//alert("failed to download file. todo.");
 							//TODO: failed to download file and save to disk so just remove it from global.tiles and project.tileIds tables
 							// if save failed, remove it. 
 							//TileUtil.removeTile(url, path);
@@ -634,10 +649,10 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 				
 			} else if (res.rows.length === 0){
 				// should not happen
-				alert("Error: tile id from tileIds not in tiles table");
+				console.log("====> Error: tile id from tileIds not in tiles table");
 			} else {
 				// should not happen
-				alert("Error: tiles has multiple entries for id");
+				console.log("====> Error: tiles has multiple entries for id");
 			}
 		}, Arbiter.errorSql);
 	}, Arbiter.errorSql, function(){});	

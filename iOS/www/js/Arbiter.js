@@ -85,6 +85,7 @@ var jqAttributeTab;
 var jqExistingServers;
 var jqAddFeature;
 var jqEditFeature;
+var jqCacheTiles;
 var jqSyncUpdates;
 var jqProjectPageContent;
 
@@ -179,6 +180,7 @@ var Arbiter = {
 		jqAttributeTab = $('#attributeTab');
 		jqAddFeature	 = $('#addPointFeature');
 		jqEditFeature	 = $('#editPointFeature');
+		jqCacheTiles = $('#cacheTiles');
 		jqSyncUpdates	 = $('#syncUpdates');
 		jqProjectPageContent = $('#idProjectPageContent');
 		jqServersPageContent = $('.ServersPageContent');
@@ -556,19 +558,21 @@ var Arbiter = {
 			}
 			
 
-			// if the TileIds table is empty, cache tiles. 
-			Arbiter.currentProject.variablesDatabase.transaction(
-				function(tx) {
-					var statement = "SELECT * FROM tileIds;";
-					tx.executeSql(statement, [], function(tx, res) {
-						if (res.rows.length === 0){
-							TileUtil.cacheTiles();
-						} else {
-							console.log("---->> tile have been cached already. not re-caching");
-						}
-					}, Arbiter.errorSql);
-				}, Arbiter.errorSql, function() {
-			});
+			TileUtil.cacheTiles();
+			
+//			// if the TileIds table is empty, cache tiles. 
+//			Arbiter.currentProject.variablesDatabase.transaction(
+//				function(tx) {
+//					var statement = "SELECT * FROM tileIds;";
+//					tx.executeSql(statement, [], function(tx, res) {
+//						if (res.rows.length === 0){
+//							TileUtil.cacheTiles();
+//						} else {
+//							console.log("---->> tile have been cached already. not re-caching");
+//						}
+//					}, Arbiter.errorSql);
+//				}, Arbiter.errorSql, function() {
+//			});
 			
 		});
 		
@@ -579,6 +583,10 @@ var Arbiter = {
 		
 		jqAttributeTab.mouseup(function(event){
 			Arbiter.ToggleAttributeMenu();
+		});
+		
+		jqCacheTiles.mouseup(function(event){
+			TileUtil.cacheTiles();
 		});
 		
 		$(".layer-list-item").mouseup(function(event){
@@ -738,6 +746,14 @@ var Arbiter = {
 		$("#idAttributeMenu").animate({ "left": "100%" }, 50);
 		$("#attributeTab").animate({ "right": "0px" }, 50);
 		$("#editorTab").animate({ "opacity": "1.0" }, 0);
+	},
+	
+	ShowCachingTilesMenu: function() {
+		$("#idCachingTilesMenu").animate({ "left": "0%" }, 50);
+	},
+	
+	HideCachingTilesMenu: function() {
+		$("#idCachingTilesMenu").animate({ "left": "100%" }, 50);
 	},
 	
 	PopulateProjectsList: function() {

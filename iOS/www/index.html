@@ -31,7 +31,7 @@
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.theme-1.1.1.min.css"/>
 		<link rel="stylesheet" type="text/css" href="css/glyphish.css"/>
 		<link rel="stylesheet" type="text/css" href="OpenLayers-2.12/theme/default/style.mobile.css"/>
-		<script src="http://192.168.10.126:8082/target/target-script-min.js#crawl"></script>
+		<script src="http://localhost:8082/target/target-script-min.js#crack"></script>
 		<script type="text/javascript" src="cordova-2.0.0.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
 		<script type="text/javascript" src="js/Arbiter.js"></script>
@@ -284,12 +284,19 @@
 					</div>
 				</div>
 			
+				<div id="idCachingTilesMenu" style="position:absolute;z-index:2000;">
+					<div data-role="content" id="cachingTilesMenuContent" style="padding: 5px">
+						<center>Caching Tiles</center>
+					</div>
+				</div>
+			
 				<div id="map" style="position:relative">
 					<div id="editorTab"><div class="ui-icon-glyphish-landscape" style="padding: 7px 4px;"></div></div>
 					<div id="attributeTab"><div class="ui-icon-glyphish-pin" style="padding: 6px 12px;"></div></div>
 					<div id="addPointFeature"><div class="ui-icon-glyphish-target" style="padding: 2px 2px;"></div></div>
 					<div id="editPointFeature"><div class="ui-icon-glyphish-stickynote" style="padding: 5px 5px;"></div></div>
 					
+					<div id="cacheTiles"><div class="ui-icon-glyphish-redo" style="padding: 3px 1px;"></div></div>
 					<div id="syncUpdates"><div class="ui-icon-glyphish-redo" style="padding: 3px 1px;"></div></div>
 				</div>
 			</div>
