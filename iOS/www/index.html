@@ -283,12 +283,15 @@
 						<input type="submit" value="Save" data-mini="true" onClick="Arbiter.SubmitAttributes()">
 					</div>
 				</div>
-			
+				
 				<div id="idCachingTilesMenu" style="position:absolute;z-index:2000;">
-					<div data-role="content" id="cachingTilesMenuContent" style="padding: 5px">
+					<div data-role="content" id="cachingTilesMenuContent" style="position:absolute; top:50%; left:30%; height:10em; margin-top:-5em">
 						<center>Caching Tiles</center>
+						<div id="loadingIndicator"><div style="padding: 3px 1px;"></div></div>
+						<div id="cachingPercentComplete"><center>0%</center></div>
 					</div>
 				</div>
+				
 			
 				<div id="map" style="position:relative">
 					<div id="editorTab"><div class="ui-icon-glyphish-landscape" style="padding: 7px 4px;"></div></div>
