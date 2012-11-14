@@ -115,6 +115,8 @@ var Arbiter = {
 	
 	globalDatabase: null,
 	
+	featureIncrement: 0,
+	
 	//grout tilesets db. primarily used to import grout tiles into global.tiles table since unlike grout's this table is optimized for access 
 	tilesetsDatabase: null, 
 	
@@ -1668,7 +1670,17 @@ var Arbiter = {
 								var password = serverList[name].password;
 																			
 								tx.executeSql(createFeatureTableSql, [], function(tx, res){
-									Arbiter.pullFeatures(typeName, geomName, featureType, srsName, url, username, password);														  
+									var projectName = Arbiter.currentProject.name;
+									Arbiter.pullFeatures(typeName, geomName, featureType, srsName, url, username, password, function(featureCount){
+										console.log("featureCount: " + featureCount);
+										Arbiter.featureIncrement++;
+										if(Arbiter.featureIncrement == featureCount){
+											console.log("featureIncrement: " + Arbiter.featureIncrement);
+											Arbiter.setCurrentProject(projectName);
+										}else{
+											console.log("featureIncrement: " + Arbiter.featureIncrement);
+										}
+									});														  
 								});
 							}, Arbiter.errorSql, function(){});
 						}
@@ -1897,7 +1909,7 @@ var Arbiter = {
 	},
 	
 	//override: Bool, should override
-	pullFeatures: function(featureType, geomName, f_table_name, srs, serverUrl, username, password){
+	pullFeatures: function(featureType, geomName, f_table_name, srs, serverUrl, username, password, addProjectCallback){
 		var layerNativeSRS = new OpenLayers.Projection(srs);
 		var currentBounds = Arbiter.currentProject.aoi.clone().transform(WGS84_Google_Mercator, layerNativeSRS);
 		
@@ -1958,7 +1970,7 @@ var Arbiter = {
 						}
 						
 						console.log(features);
-						Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false);
+						Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false, addProjectCallback);
 					});
 				}, Arbiter.errorSql, function(){});
 			},
@@ -2240,10 +2252,11 @@ var Arbiter = {
 		
 	},
 											
-	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit){
+	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback){
 		var db = Arbiter.currentProject.dataDatabase;
 		console.log("insertFeaturesIntoTable: ", features);
 		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
+							  
 		for(var i = 0; i < features.length; i++){
 			var feature = features[i];
 			db.transaction(function(tx){
@@ -2260,7 +2273,7 @@ var Arbiter = {
 						selectSql = "SELECT * FROM " + f_table_name + " WHERE id=?";
 						selectParams = [feature.rowid];
 					}
-					
+					var _featureCount = featureCount;
 					tx.executeSql(selectSql, selectParams, function(tx, res){
 						//console.log(updateList);
 						//If this exists, then its an update, else its an insert
@@ -2308,6 +2321,8 @@ var Arbiter = {
 										else
 											feature.rowid = 1;
 									}
+									
+									addProjectCallback.call(Arbiter, features.length);
 								}, function(tx, err){
 									console.log("insert err: ", err);
 								});
@@ -2316,7 +2331,7 @@ var Arbiter = {
 					}, function(tx, err){
 						console.log("err: ", err);
 					});
-				}else{
+				}else{ 
 					console.log('new insert');
 					console.log(sqlObject);
 					db.transaction(function(tx){
