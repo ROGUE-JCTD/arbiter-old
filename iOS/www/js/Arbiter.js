@@ -385,11 +385,25 @@ var Arbiter = {
 					new OpenLayers.Control.Zoom()
 					]
 				});
-				
-				// we have a map, lets zoom and center based on the aoi 
-				if (Arbiter.currentProject.aoi){
-					map.zoomToExtent(Arbiter.currentProject.aoi, true);
-				}
+						 
+						 // we have a map, lets zoom and center based on the aoi 
+						 if (Arbiter.currentProject.aoi){
+						 map.zoomToExtent(Arbiter.currentProject.aoi, true);
+						 }
+						 
+						 // if the TileIds table is empty, cache tiles. 
+						 Arbiter.currentProject.variablesDatabase.transaction(
+																			  function(tx) {
+																			  var statement = "SELECT * FROM tileIds;";
+																			  tx.executeSql(statement, [], function(tx, res) {
+																							if (res.rows.length === 0){
+																							TileUtil.cacheTiles();
+																							} else {
+																							console.log("---->> tile have been cached already. not re-caching");
+																							}
+																							}, Arbiter.errorSql);
+																			  }, Arbiter.errorSql, function() {
+																			  });
 				
 				var serverList = Arbiter.currentProject.serverList;
 				var url;
@@ -562,7 +576,7 @@ var Arbiter = {
 			}
 			
 
-			TileUtil.cacheTiles();
+//			TileUtil.cacheTiles();
 			
 //			// if the TileIds table is empty, cache tiles. 
 //			Arbiter.currentProject.variablesDatabase.transaction(
@@ -1683,7 +1697,7 @@ var Arbiter = {
 									Arbiter.pullFeatures(typeName, geomName, featureType, srsName, url, username, password, function(featureCount){
 										
 										featureIncrement++;
-										if(featureIncrement == featureCount){
+										if(featureIncrement >= featureCount){
 											console.log("featureIncrement: " + featureIncrement);
 											Arbiter.layerCount--;
 											if(Arbiter.layerCount == 0){
@@ -1925,7 +1939,9 @@ var Arbiter = {
 	
 	//override: Bool, should override
 	pullFeatures: function(featureType, geomName, f_table_name, srs, serverUrl, username, password, addProjectCallback){
+		console.log("pullFeatures: " + featureType + "," + geomName + "," + f_table_name + "," + srs + "," + serverUrl + "," + username + "," + password);
 		var layerNativeSRS = new OpenLayers.Projection(srs);
+		console.log("aoi: " + Arbiter.currentProject.aoi);
 		var currentBounds = Arbiter.currentProject.aoi.clone().transform(WGS84_Google_Mercator, layerNativeSRS);
 		
 		var postData = '<wfs:GetFeature service="WFS" version="1.0.0" outputFormat="GML2" ' +
@@ -2100,8 +2116,9 @@ var Arbiter = {
 	errorSql: function(err){
 		console.log('Error processing SQL: ', err);
 		var trace = printStackTrace();
+		console.log(trace.join('\n\n'));
         //Output however you want!
-        alert(trace.join('\n\n'));
+        //alert(trace.join('\n\n'));
 	},
 	
 	printStackTrace_my: function() {
@@ -2364,7 +2381,10 @@ var Arbiter = {
 		var db = Arbiter.currentProject.dataDatabase;
 		console.log("insertFeaturesIntoTable: ", features);
 		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
-							  
+		
+		if(addProjectCallback && !features.length)
+			addProjectCallback.call(Arbiter, features.length);
+		
 		for(var i = 0; i < features.length; i++){
 			var feature = features[i];
 			db.transaction(function(tx){
