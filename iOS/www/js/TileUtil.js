@@ -220,7 +220,6 @@ cacheTiles: function(successCallback){
 	}
 },
 
-//TODO SM: test getURL
 getURL: function(bounds) {
 	
 	var xyz = this.getXYZ(bounds);

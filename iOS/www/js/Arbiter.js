@@ -2114,96 +2114,54 @@ var Arbiter = {
 	},
 	
 	errorSql: function(err){
-		console.log('Error processing SQL: ', err);
-		var trace = printStackTrace();
-		console.log(trace.join('\n\n'));
-        //Output however you want!
-        //alert(trace.join('\n\n'));
+		console.log('Error: ' + err);
+		var trace = Arbiter.printStackTrace();
+		console.log(trace);
+        alert(trace);
 	},
 	
-	printStackTrace_my: function() {
-		console.log("chk 1");
+	printStackTrace: function() {
 		var callstack = [];
-		var isCallstackPopulated = false;
-		
-		try {
-			console.log("chk 2");
-			idonotexist+=0; // doesn't exist- that's the point
-		} catch(e) {
-			console.log("chk 3");
-			if (e.stack) { // Firefox
-				console.log("chk 4");
-				var lines = e.stack.split('\n');
-				for (var i=0, len=lines.length; i<len; i++) {
-					console.log("chk 4 loop. " + i);
-					if (lines[i].match(/^\s*[A-Za-z0-9\-_\$]+\(/)) {
-						callstack.push(lines[i]);
-					}
-				}
-				// Remove call to printStackTrace()
-				callstack.shift();
-				isCallstackPopulated = true;
-			} else if (window.opera && e.message) { // Opera
-				console.log("chk 5");
-				var lines = e.message.split('\n');
-				for (var i=0, len=lines.length; i<len; i++) {
-					if (lines[i].match(/^\s*[A-Za-z0-9\-_\$]+\(/)) {
-						var entry = lines[i];
-						// Append next line also since it has the file info
-						if (lines[i+1]) {
-							entry += ' at ' + lines[i+1];
-							i++;
+			
+		if (typeof resolveFunctionNamesFrom === 'undefined') {
+			//TODO: add other objects that we can use to resolve member function
+			resolveFunctionNamesFrom = new Array(Arbiter,TileUtil);
+		}			
+	
+		var currentFunction = arguments.callee.caller;
+		while (currentFunction) {
+			var fn = currentFunction.toString();
+			var fname = fn.substring(fn.indexOf("function") + 8, fn.indexOf('')) || 'anonymous';
+			var resolvedName = null;
+			
+			// if the function is anon, look through our objects to see if it is a member function
+			if (fname === "function") {				
+				if (currentFunction.name !== ""){
+					fname = currentFunction.name;
+				} else {
+					for(var obj in resolveFunctionNamesFrom){
+						var table = resolveFunctionNamesFrom[obj];
+						for(var member in table){
+							if (table[member] == currentFunction) {
+								resolvedName = member;
+								break;
+							}
 						}
-						callstack.push(entry);
+						
+						if (resolvedName){
+							fname = resolvedName;
+							break;
+						}
 					}
 				}
-				// Remove call to printStackTrace()
-				callstack.shift();
-				isCallstackPopulated = true;
 			}
+			
+			callstack.push(fname);
+			currentFunction = currentFunction.caller;
 		}
 
-		if (!isCallstackPopulated) { // IE and Safari
-			console.log("chk 6");
-			var currentFunction = arguments.callee.caller;
-			while (currentFunction) {
-				console.log("chk 7 loop");
-				var fn = currentFunction.toString();
-				console.log("name: " + fn.name);
-				var fname = fn.substring(fn.indexOf("function") + 8, fn.indexOf('')) || 'anonymous';
-				callstack.push(fname);
-				currentFunction = currentFunction.caller;
-			}
-		}
-		console.log("chk 8");
-		
-		Arbiter.output(callstack);
+		return callstack.join('\n');
 	},
-	
-	output: function(arr) {
-		  //Optput however you want
-		  alert(arr.join('\n\n'));
-	},
-	
-	foo: function() {
-	    var blah;
-	    Arbiter.bar('blah');
-	},
-
-	bar: function(blah) {
-	    // some code
-		Arbiter.thing();
-	},
-
-	thing: function() {
-	    if (true) { //your error condition here
-	    	//Arbiter.printStackTrace();
-	    	
-	         var trace = printStackTrace();
-	         //Output however you want!
-	         alert(trace.join('\n\n'));
-	    }
-	},	
 	
 	squote: function(str){
 		return "'" + str + "'";
