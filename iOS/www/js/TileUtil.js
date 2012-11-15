@@ -281,14 +281,15 @@ getURL: function(bounds) {
 						var saveTileSuccess = function(url, path){
 							if (typeof caching !== 'undefined' && typeof caching.counterCached !== 'undefined') {
 								caching.counterCached += 1;
+								var percent = Math.round((caching.counterCached/caching.counterEstimatedMax * 100));
+								
+								if (percent > 100) {
+									percent = 100;
+								}
+								
+								$("#cachingPercentComplete").html("<center>" + percent + "%</center>");
 								
 								if (TileUtil.debug) {
-									var percent = (caching.counterCached/caching.counterEstimatedMax * 100);
-									
-									if (percent > 100) {
-										percent = 100;
-									}
-	
 									console.log("caching estimated percent complete: " + percent );
 								}
 							}
