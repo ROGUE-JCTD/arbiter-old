@@ -130,6 +130,16 @@ html, body {
 	display:none;
 }
 
+#idCachingTilesMenu {
+	overflow: scroll;
+	left: 100%;
+	right: 0px;
+	height: 100%;
+	top:0px;
+	left: 100%;
+	background-color:rgba(60, 60, 60, 0.8);
+}
+
 #idAttributeMenu {
 	overflow: scroll;
 	left: 100%;
@@ -186,6 +196,33 @@ html, body {
 	border-bottom-right-radius: 4px;
 }
 
+#cacheTiles {
+	position:absolute;
+	z-index:1005;
+	left:3px;
+	bottom:46px;
+	width:32px;
+	height:32px;
+	background-color:rgba(0, 60, 136, 0.496094);
+	border-radius: 5px;
+	display:none;	
+}
+
+#loadingIndicator { 
+	border-radius: 0px !important; 
+	background:  url(images/ajax-loader-indicator-big-t.gif) 50% 50% no-repeat !important;  
+	background-size: 24px 24px;
+	position: absolute;
+	width: 24px !important; 
+	height: 24px !important;
+	background-color: transparent;
+	left: 50%;
+	top: 50%;
+	margin-left: -12px;
+	margin-top: -12px;
+	z-index: 1005;	
+}
+
 #syncUpdates {
 	position:absolute;
 	z-index:1005;
@@ -196,7 +233,9 @@ html, body {
 	background-color:rgba(136, 0, 0, 0.496094);
 	border-radius: 5px;
 }
-
+#syncUpdates:active {
+	background-image:-webkit-linear-gradient(top, #5393C5, #6FACD5);
+}
 .invalid-field{
 	background-color: #700000 !important;
 }
@@ -267,4 +306,74 @@ html, body {
 	position:absolute;
 	top:15px;
 	left:-10px;
+}
+
+.project-top-left{
+	border-top-left-radius:15px;
+}
+
+.project-top-right{
+	border-top-right-radius:15px;
+}
+
+.project-bottom-left{
+	border-bottom-left-radius:15px;
+}
+
+.project-bottom-right{
+	border-bottom-right-radius:15px;
+}
+
+.project-contentWrapper{
+	float: left;
+	width: 100%;
+}
+
+.project-contentColumn{
+	position: relative;
+	margin-left:40px;
+	border: 1px;
+	height:40px;
+	background-image:-webkit-linear-gradient(top, #3C3C3C, #111);
+}
+
+.project-leftColumn{
+	float:left;
+	width:40px;
+	margin-left: -100%;
+	background-image:-webkit-linear-gradient(top, #3C3C3C, #111);
+	height:100%;
+	border: 1px;
+	/*border-right: 1px solid rgba(255, 255, 255, .3);*/ 
+}
+
+.project-row{
+	width:100%;
+	height:40px;
+	position:relative;
+}
+.project-name{
+	position:absolute;
+	color:white !important;
+	width:100%;
+	height:40px;
+}
+
+.project-name:active{
+	background-image:-webkit-linear-gradient(top, #5393C5, #6FACD5);
+}
+
+.project-checkbox-container{
+	position:absolute;
+	top:15px;
+	left:-10px;
+}
+
+.project-checkbox{
+	width:20px;
+	height:20px;
+	background-color:#980000 !important;
+	margin-left:20px;
+	margin-top:-3px;
+	display:none;
 }
