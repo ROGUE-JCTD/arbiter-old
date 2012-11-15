@@ -117,6 +117,8 @@ var Arbiter = {
 	
 	featureIncrement: 0,
 	
+	layerCount: 0,
+	
 	//grout tilesets db. primarily used to import grout tiles into global.tiles table since unlike grout's this table is optimized for access 
 	tilesetsDatabase: null, 
 	
@@ -1623,6 +1625,7 @@ var Arbiter = {
 					
 					console.log(insertServerSql);
 					var name = x;
+					console.log("server name: " + name);
 					var serverId = _serverId;
 																	 
 					tx.executeSql(insertServerSql, [], function(tx, res){
@@ -1632,9 +1635,13 @@ var Arbiter = {
 						var createFeatureTableSql;
 						var attributes;	
 						
+						var layerCount = Arbiter.getAssociativeArraySize(serverList[name].layers);
+						Arbiter.layerCount += layerCount;
+						
 						for(var y in serverList[name].layers){
 							layer = serverList[name].layers[y];
-								  
+							var layername = y;
+							
 							insertLayerSql = "INSERT INTO layers (server_id, layername, f_table_name, featureNS, typeWithPrefix) VALUES (?,?,?,?,?);";
 							
 							Arbiter.currentProject.variablesDatabase.transaction(function(tx){
@@ -1671,14 +1678,22 @@ var Arbiter = {
 																			
 								tx.executeSql(createFeatureTableSql, [], function(tx, res){
 									var projectName = Arbiter.currentProject.name;
+									//name = server's name, y = layer's name
+									var featureIncrement = 0;
 									Arbiter.pullFeatures(typeName, geomName, featureType, srsName, url, username, password, function(featureCount){
-										console.log("featureCount: " + featureCount);
-										Arbiter.featureIncrement++;
-										if(Arbiter.featureIncrement == featureCount){
-											console.log("featureIncrement: " + Arbiter.featureIncrement);
-											Arbiter.setCurrentProject(projectName);
+										
+										featureIncrement++;
+										if(featureIncrement == featureCount){
+											console.log("featureIncrement: " + featureIncrement);
+											Arbiter.layerCount--;
+											if(Arbiter.layerCount == 0){
+												console.log("layerCount is 0! yay!");
+												Arbiter.setCurrentProject(projectName);
+											}else{
+												console.log("layerCount: " + Arbiter.layerCount);
+											}
 										}else{
-											console.log("featureIncrement: " + Arbiter.featureIncrement);
+											console.log("featureIncrement: " + featureIncrement);
 										}
 									});														  
 								});
@@ -1946,6 +1961,10 @@ var Arbiter = {
 				
 				var features = gmlReader.read(response.responseText);
 				
+				//var vectorLayer = map.getLayersByName(layerName + '-wfs')[0];
+					
+				//vectorLayer.destroyFeatures();
+												  
 				Arbiter.currentProject.dataDatabase.transaction(function(tx){
 																console.log("pragma transaction table name: " + f_table_name);
 					tx.executeSql("PRAGMA table_info (" + f_table_name + ");", [], function(tx, res){
@@ -1953,12 +1972,14 @@ var Arbiter = {
 						var i;
 						var value;
 						
+						//get the columns that are type dateTime
 						console.log("number of columns: " + res.rows.length);
 						for(i = 0; i < res.rows.length;i++){
 							if(res.rows.item(i).type == "dateTime")
 								dtAttributes.push(res.rows.item(i).name);
 						}
 						
+						//GeoServer doesn't include the 'Z' when storing the dateTime, so add it manually
 						console.log("dtAttributes: ", dtAttributes);
 						for(i = 0; i < features.length;i++){
 							for(var j = 0; j < dtAttributes.length;j++){
@@ -1970,7 +1991,7 @@ var Arbiter = {
 						}
 						
 						console.log(features);
-						Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false, addProjectCallback);
+						Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false, addProjectCallback/*, vectorLayer*/);
 					});
 				}, Arbiter.errorSql, function(){});
 			},
@@ -2252,7 +2273,7 @@ var Arbiter = {
 		
 	},
 											
-	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback){
+	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback/*, vectorLayer*/){
 		var db = Arbiter.currentProject.dataDatabase;
 		console.log("insertFeaturesIntoTable: ", features);
 		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
@@ -2273,7 +2294,7 @@ var Arbiter = {
 						selectSql = "SELECT * FROM " + f_table_name + " WHERE id=?";
 						selectParams = [feature.rowid];
 					}
-					var _featureCount = featureCount;
+					
 					tx.executeSql(selectSql, selectParams, function(tx, res){
 						//console.log(updateList);
 						//If this exists, then its an update, else its an insert
@@ -2322,6 +2343,10 @@ var Arbiter = {
 											feature.rowid = 1;
 									}
 									
+									/*if(vectorLayer){
+										feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
+										vectorLayer.addFeatures([feature]);	  
+									}*/
 									addProjectCallback.call(Arbiter, features.length);
 								}, function(tx, err){
 									console.log("insert err: ", err);
