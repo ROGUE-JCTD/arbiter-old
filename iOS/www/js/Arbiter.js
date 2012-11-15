@@ -577,13 +577,7 @@ var Arbiter = {
 //			});
 			
 		});
-		
-		jqSyncUpdates.doubletap(function(event){
-			alert("double");
-			TileUtil.cacheTiles();
-		});
-		
-		
+				
 		jqEditorTab.mouseup(function(event){
 			//arbiter.pullFeatures(false);
 			Arbiter.ToggleEditorMenu();
@@ -2084,7 +2078,94 @@ var Arbiter = {
 	
 	errorSql: function(err){
 		console.log('Error processing SQL: ', err);
+		var trace = printStackTrace();
+        //Output however you want!
+        alert(trace.join('\n\n'));
 	},
+	
+	printStackTrace_my: function() {
+		console.log("chk 1");
+		var callstack = [];
+		var isCallstackPopulated = false;
+		
+		try {
+			console.log("chk 2");
+			idonotexist+=0; // doesn't exist- that's the point
+		} catch(e) {
+			console.log("chk 3");
+			if (e.stack) { // Firefox
+				console.log("chk 4");
+				var lines = e.stack.split('\n');
+				for (var i=0, len=lines.length; i<len; i++) {
+					console.log("chk 4 loop. " + i);
+					if (lines[i].match(/^\s*[A-Za-z0-9\-_\$]+\(/)) {
+						callstack.push(lines[i]);
+					}
+				}
+				// Remove call to printStackTrace()
+				callstack.shift();
+				isCallstackPopulated = true;
+			} else if (window.opera && e.message) { // Opera
+				console.log("chk 5");
+				var lines = e.message.split('\n');
+				for (var i=0, len=lines.length; i<len; i++) {
+					if (lines[i].match(/^\s*[A-Za-z0-9\-_\$]+\(/)) {
+						var entry = lines[i];
+						// Append next line also since it has the file info
+						if (lines[i+1]) {
+							entry += ' at ' + lines[i+1];
+							i++;
+						}
+						callstack.push(entry);
+					}
+				}
+				// Remove call to printStackTrace()
+				callstack.shift();
+				isCallstackPopulated = true;
+			}
+		}
+
+		if (!isCallstackPopulated) { // IE and Safari
+			console.log("chk 6");
+			var currentFunction = arguments.callee.caller;
+			while (currentFunction) {
+				console.log("chk 7 loop");
+				var fn = currentFunction.toString();
+				console.log("name: " + fn.name);
+				var fname = fn.substring(fn.indexOf("function") + 8, fn.indexOf('')) || 'anonymous';
+				callstack.push(fname);
+				currentFunction = currentFunction.caller;
+			}
+		}
+		console.log("chk 8");
+		
+		Arbiter.output(callstack);
+	},
+	
+	output: function(arr) {
+		  //Optput however you want
+		  alert(arr.join('\n\n'));
+	},
+	
+	foo: function() {
+	    var blah;
+	    Arbiter.bar('blah');
+	},
+
+	bar: function(blah) {
+	    // some code
+		Arbiter.thing();
+	},
+
+	thing: function() {
+	    if (true) { //your error condition here
+	    	//Arbiter.printStackTrace();
+	    	
+	         var trace = printStackTrace();
+	         //Output however you want!
+	         alert(trace.join('\n\n'));
+	    }
+	},	
 	
 	squote: function(str){
 		return "'" + str + "'";
