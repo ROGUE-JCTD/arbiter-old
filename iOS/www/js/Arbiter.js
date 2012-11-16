@@ -207,6 +207,24 @@ var Arbiter = {
 				
 								
 				Arbiter.globalDatabase = Cordova.openDatabase("Arbiter/global", "1.0", "Global Database", 1000000);
+				
+				Arbiter.globalDatabase.beginTransaction();
+				try{
+				Arbiter.globalDatabase.transaction(function(tx) {
+						var createSettingsSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);";
+						tx.executeSql(createSettingsSql, [], function(tx, res){
+							console.log("global settings table created");											 
+						}, function(tx, err){
+							console.log("global settings err: ", err);		  
+						});
+					Arbiter.globalDatabase.setTransactionSuccessful();
+				});
+				} catch {
+					//Error in between database transaction
+				} finally {
+					Arbiter.globalDatabase.endTransaction();
+				}
+				
 				Arbiter.globalDatabase.transaction(function(tx){
 					
 					var createSettingsSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);";
