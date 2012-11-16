@@ -388,25 +388,6 @@ var Arbiter = {
 					new OpenLayers.Control.Zoom()
 					]
 				});
-						 
-						 // we have a map, lets zoom and center based on the aoi 
-						 if (Arbiter.currentProject.aoi){
-						 map.zoomToExtent(Arbiter.currentProject.aoi, true);
-						 }
-						 
-						 // if the TileIds table is empty, cache tiles. 
-						 Arbiter.currentProject.variablesDatabase.transaction(
-																			  function(tx) {
-																			  var statement = "SELECT * FROM tileIds;";
-																			  tx.executeSql(statement, [], function(tx, res) {
-																							if (res.rows.length === 0){
-																							TileUtil.cacheTiles();
-																							} else {
-																							console.log("---->> tile have been cached already. not re-caching");
-																							}
-																							}, Arbiter.error);
-																			  }, Arbiter.error, function() {
-																			  });
 				
 				var serverList = Arbiter.currentProject.serverList;
 				var url;
@@ -433,9 +414,29 @@ var Arbiter = {
 					Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 				});
 			}
-						
+				
+			
 			$('#projectName').text(Arbiter.currentProject.name);
-			Arbiter.setSyncColor();
+			Arbiter.setSyncColor();			
+
+			// we have a map, lets zoom and center based on the aoi
+			if (Arbiter.currentProject.aoi) {
+				map.zoomToExtent(Arbiter.currentProject.aoi, true);
+			}
+
+			// if the TileIds table is empty, cache tiles.
+			Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
+				var statement = "SELECT * FROM tileIds;";
+				tx.executeSql(statement, [], function(tx, res) {
+					if (res.rows.length === 0) {
+						TileUtil.cacheTiles();
+					} else {
+						console.log("---->> tile have been cached already. not re-caching");
+					}
+				}, Arbiter.error);
+			}, Arbiter.error, function() {
+			});
+			
 		});
 		
 		div_AreaOfInterestPage.live('pageshow', function(){
@@ -886,38 +887,45 @@ var Arbiter = {
 	},
 	
 	deleteProject: function(projectName){
-		//get the projects directory
-		Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + projectName, {create: false, exclusive: false}, function(dir){
-			dir.removeRecursively(function(){
-				console.log(projectName + " project deleted");
-				Arbiter.globalDatabase.transaction(function(tx){
-					tx.executeSql("SELECT id FROM projects WHERE name=?;", [projectName], function(tx, res){
-						if(res.rows.length){
-							var projectId = res.rows.item(0).id;
-							Arbiter.globalDatabase.transaction(function(tx){
-								tx.executeSql("DELETE FROM server_usage WHERE project_id=?", [projectId],
-							  function(tx, res){
-								console.log("deletion success: " + projectId);
-							  }, function(tx, err){
-											  console.log("deletion failure: " + projectId);
-							  });
-															   
-								tx.executeSql("DELETE FROM projects WHERE id=?", [projectId],
-									function(tx, res){
-										console.log("deletion success: " + projectId);
-									}, function(tx, err){
-										console.log("deletion failure: " + projectId);
-									});
-							}, Arbiter.error, function(){});
-						}
-					}, function(tx, err){
-								  
-					});
-				}, Arbiter.error, function(){});
-			}, function(){
-				console.log(projectName + " project deletion failed");					  
-			});									 
-		});
+		var variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + projectName + "/variables", "1.0", "Variable Database", 1000000);
+		
+		// clear tiles related to this db, then perform otehr operations
+		TileUtil.clearCache("osm", op, variablesDatabase);
+		
+		var op = function(){
+			//get the projects directory
+			Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + projectName, {create: false, exclusive: false}, function(dir){
+				dir.removeRecursively(function(){
+					console.log(projectName + " project deleted");
+					Arbiter.globalDatabase.transaction(function(tx){
+						tx.executeSql("SELECT id FROM projects WHERE name=?;", [projectName], function(tx, res){
+							if(res.rows.length){
+								var projectId = res.rows.item(0).id;
+								Arbiter.globalDatabase.transaction(function(tx){
+									tx.executeSql("DELETE FROM server_usage WHERE project_id=?", [projectId],
+								  function(tx, res){
+									console.log("deletion success: " + projectId);
+								  }, function(tx, err){
+												  console.log("deletion failure: " + projectId);
+								  });
+																   
+									tx.executeSql("DELETE FROM projects WHERE id=?", [projectId],
+										function(tx, res){
+											console.log("deletion success: " + projectId);
+										}, function(tx, err){
+											console.log("deletion failure: " + projectId);
+										});
+								}, Arbiter.error, function(){});
+							}
+						}, function(tx, err){
+									  
+						});
+					}, Arbiter.error, function(){});
+				}, function(){
+					console.log(projectName + " project deletion failed");					  
+				});									 
+			});
+		}
 	},
 	
 	//listname = existingServer or project
