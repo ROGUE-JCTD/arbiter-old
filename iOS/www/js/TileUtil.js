@@ -286,7 +286,7 @@ getURL: function(bounds) {
 									percent = 100;
 								}
 								
-								$("#cachingPercentComplete").html("<center>" + percent + "%</center>");
+								$("#cachingPercentComplete").html("<center>Cached " + percent + "%</center>");
 								
 								if (TileUtil.debug) {
 									console.log("caching estimated percent complete: " + percent );
@@ -321,11 +321,11 @@ getURL: function(bounds) {
 				} else {
 					// for some reason the tile have been cached under two separate entries!!
 					console.log("====>> ERROR: TileUtil.getURL: Multiple Entries for tile " + TileUtil.rowsToString(res.rows));
-					alert("TileUtil.getURL: Multiple Entries for tile! see console for details. count: " + res.rows.length);
+					Arbiter.error("TileUtil.getURL: Multiple Entries for tile! see console for details. count: " + res.rows.length);
 				}					
-			}, Arbiter.errorSql);	
+			}, Arbiter.error);	
 			
-		}, Arbiter.errorSql, function(){});	
+		}, Arbiter.error, function(){});	
 		
 	} else {
 		//TODO: if not chached, if we have connection, just return URL aka finalUrl
@@ -425,7 +425,7 @@ addTile : function(url, path, tileset, z, x, y) {
 	
 						    TileUtil.insertIntoTileIds(res.insertId);
 						});
-					}, Arbiter.errorSql, function() {
+					}, Arbiter.error, function() {
 				});
 
 			} else if (res.rows.length === 1) {
@@ -447,21 +447,21 @@ addTile : function(url, path, tileset, z, x, y) {
 						Arbiter.currentProject.variablesDatabase.transaction(
 							function(tx) {
 							    TileUtil.insertIntoTileIds(resTiles.rows.item(0).id);
-							}, Arbiter.errorSql, function() {
+							}, Arbiter.error, function() {
 						});
 
 					});
-				}, Arbiter.errorSql, function() {
+				}, Arbiter.error, function() {
 				});
 
 			} else {
 				console.log("TileUtil.addTile rows length not 0 not 1: " + TileUtil.rowsToString(res.rows))
-				alert("tiles has duplicate entry for a given url. see console");
+				Arbiter.error("tiles has duplicate entry for a given url. see console");
 			}
 
-		}, Arbiter.errorSql);
+		}, Arbiter.error);
 
-	}, Arbiter.errorSql, function() {
+	}, Arbiter.error, function() {
 	});
 
 }, 
@@ -483,10 +483,10 @@ addTileReplaceBug: function(url, path, tileset, z, x, y) {
 		//TODO: does the second url get replaced as expected?
 		tx.executeSql(insertTilesSql, [tileset, z, x, y, path, url, url], function(tx, res){
 		    TileUtil.insertIntoTileIds(res.insertId);
-		}, Arbiter.errorSql);
+		}, Arbiter.error);
 		
 			
-	}, Arbiter.errorSql, function(){});	
+	}, Arbiter.error, function(){});	
 
 	// add id to project.variablesDatabase.tileIds
 	// TODO: add entry to groutDatabase
@@ -509,6 +509,12 @@ clearCache : function(tileset, successCallback, errorCallback) {
 				
 				var removeCounterCallback = function() {
 					removeCounter += 1;
+					var percent = Math.round(removeCounter/res.rows.length * 100);
+					$("#cachingPercentComplete").html("<center>Cleared " + percent + "%</center>");
+
+					if (TileUtil.debug) {
+						console.log("removeCounter: " + removeCounter + ", percent cleared: " + percent);
+					}
 					
 					if (removeCounter === res.rows.length) {
 						TileUtil.deleteTileIds();
@@ -528,8 +534,8 @@ clearCache : function(tileset, successCallback, errorCallback) {
 				}				
 			}
 
-		}, Arbiter.errorSql);
-	}, Arbiter.errorSql, function(){});		
+		}, Arbiter.error);
+	}, Arbiter.error, function(){});		
 }, 
 
 deleteTileIds: function(){
@@ -544,8 +550,8 @@ deleteTileIds: function(){
 			if (TileUtil.debug) {
 				console.log("---- TileUtil.deleteTileIds done");
 			}
-		}, Arbiter.errorSql);					
-	}, Arbiter.errorSql, function(){});	
+		}, Arbiter.error);					
+	}, Arbiter.error, function(){});	
 },
 
 insertIntoTileIds: function(id) {
@@ -559,8 +565,8 @@ insertIntoTileIds: function(id) {
 			if (TileUtil.debug) {
 				console.log("inserted in tileIds. id: " + id);
 			}
-		}, Arbiter.errorSql);
-	}, Arbiter.errorSql, function() {
+		}, Arbiter.error);
+	}, Arbiter.error, function() {
 	});
 },
 
@@ -615,17 +621,17 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 										},
 										function(err){
 											console.log("====> Error: TileUtil.removeTileById. Error removing tile from disk: " + tileEntry.path + ", err: " + err);
-											alert("failed to delete tile from disk!");
+											Arbiter.error("failed to delete tile from disk!");
 										}
 									);
 								}, 
 								function(err){
 									console.log("get file from root failed. path: " + tileEntry.path);
-									alert("err" + err);
+									Arbiter.error("err" + err);
 								}
 							);
-						}, Arbiter.errorSql);
-					}, Arbiter.errorSql, function(){});							
+						}, Arbiter.error);
+					}, Arbiter.error, function(){});							
 					
 				} else if (tileEntry.ref_counter > 1){
 					Arbiter.globalDatabase.transaction(function(tx){
@@ -640,11 +646,11 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 							if (successCallback){
 								successCallback();
 							}
-						}, Arbiter.errorSql);
-					}, Arbiter.errorSql, function(){});	
+						}, Arbiter.error);
+					}, Arbiter.error, function(){});	
 					
 				} else {
-					alert("Error: tileEntry.ref_counter <= 0");
+					Arbiter.error("Error: tileEntry.ref_counter <= 0");
 				}
 				
 			} else if (res.rows.length === 0){
@@ -654,8 +660,8 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 				// should not happen
 				console.log("====> Error: tiles has multiple entries for id");
 			}
-		}, Arbiter.errorSql);
-	}, Arbiter.errorSql, function(){});	
+		}, Arbiter.error);
+	}, Arbiter.error, function(){});	
 	
 
 }, 
@@ -665,8 +671,8 @@ dumpTableNames: function(database){
 	database.transaction(function(tx){
 		tx.executeSql("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;", [], function(tx, res){
 			console.log(TileUtil.rowsToString(res.rows));
-		}, Arbiter.errorSql);	
-	}, Arbiter.errorSql, function(){
+		}, Arbiter.error);	
+	}, Arbiter.error, function(){
 	});
 },
 
@@ -675,8 +681,8 @@ dumpTableRows: function(database, tableName){
 	database.transaction(function(tx){
 		tx.executeSql("SELECT * FROM " + tableName + ";", [], function(tx, res){
 			console.log(TileUtil.rowsToString(res.rows));
-		}, Arbiter.errorSql);	
-	}, Arbiter.errorSql, function(){
+		}, Arbiter.error);	
+	}, Arbiter.error, function(){
 	});
 },
 

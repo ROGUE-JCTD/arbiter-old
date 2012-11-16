@@ -110,7 +110,10 @@ var tabOpen = false;
 var editorTabOpen = false;
 var attributeTabOpen = false;
 
-var Arbiter = { 	
+var Arbiter = { 
+	
+	debug: true,	
+	
 	fileSystem: null,
 	
 	globalDatabase: null,
@@ -286,7 +289,7 @@ var Arbiter = {
 						for(var i = 0; i < jqServersPageContent.length;i++)
 							$(jqServersPageContent[i]).html(html);
 						
-					}, Arbiter.errorSql, function(){});
+					}, Arbiter.error, function(){});
 					
 					var createTilesSql = "CREATE TABLE IF NOT EXISTS tiles (" +
 							"id integer primary key autoincrement, " +
@@ -305,7 +308,7 @@ var Arbiter = {
 					});
 					
 
-				}, Arbiter.errorSql, function(){});
+				}, Arbiter.error, function(){});
 				
 				
 				
@@ -320,7 +323,7 @@ var Arbiter = {
 					}, function(tx, err){
 						console.log("tilesetsDatabase.tile_ref_counter table err: ", err);
 					});
-				}, Arbiter.errorSql, function(){});
+				}, Arbiter.error, function(){});
 				
 			}, function(error){
 				console.log("couldn't create arbiter directory");
@@ -401,8 +404,8 @@ var Arbiter = {
 																							} else {
 																							console.log("---->> tile have been cached already. not re-caching");
 																							}
-																							}, Arbiter.errorSql);
-																			  }, Arbiter.errorSql, function() {
+																							}, Arbiter.error);
+																			  }, Arbiter.error, function() {
 																			  });
 				
 				var serverList = Arbiter.currentProject.serverList;
@@ -588,8 +591,8 @@ var Arbiter = {
 //						} else {
 //							console.log("---->> tile have been cached already. not re-caching");
 //						}
-//					}, Arbiter.errorSql);
-//				}, Arbiter.errorSql, function() {
+//					}, Arbiter.error);
+//				}, Arbiter.error, function() {
 //			});
 			
 		});
@@ -637,7 +640,7 @@ var Arbiter = {
 					}, function(tx, err){
 																 
 					});
-				}, Arbiter.errorSql, function(){});
+				}, Arbiter.error, function(){});
 			}else{
 				delete Arbiter.currentProject.serverList[name];								
 			}
@@ -681,7 +684,7 @@ var Arbiter = {
 							  
 					$.mobile.changePage('#idEditServerPage', 'pop');
 				});
-			}, Arbiter.errorSql, function(){});
+			}, Arbiter.error, function(){});
 		});
 		
 		$('.project-checkbox').live('mouseup', function(event){
@@ -768,6 +771,7 @@ var Arbiter = {
 	
 	ShowCachingTilesMenu: function() {
 		$("#idCachingTilesMenu").animate({ "left": "0%" }, 50);
+		$("#cachingPercentComplete").html("<center>Clearing Cache</center>");
 	},
 	
 	HideCachingTilesMenu: function() {
@@ -869,7 +873,7 @@ var Arbiter = {
 						tx.executeSql('UPDATE projects SET name=? WHERE name=?;', [newName, oldName], function(tx, res){
 							console.log("update project name success");											 
 						});
-					}, Arbiter.errorSql, function(){});
+					}, Arbiter.error, function(){});
 				}, function(err){
 					console.log("error moving directory:", err);	
 				});
@@ -904,12 +908,12 @@ var Arbiter = {
 									}, function(tx, err){
 										console.log("deletion failure: " + projectId);
 									});
-							}, Arbiter.errorSql, function(){});
+							}, Arbiter.error, function(){});
 						}
 					}, function(tx, err){
 								  
 					});
-				}, Arbiter.errorSql, function(){});
+				}, Arbiter.error, function(){});
 			}, function(){
 				console.log(projectName + " project deletion failed");					  
 			});									 
@@ -1141,16 +1145,16 @@ var Arbiter = {
 											}
 										}
 									});
-								}, Arbiter.errorSql, function() {});
+								}, Arbiter.error, function() {});
 							}
 						});
-					}, Arbiter.errorSql, function() {});
+					}, Arbiter.error, function() {});
 				}
 
 				Arbiter.changePage_Pop(div_MapPage);
 			});
 
-		}, Arbiter.errorSql, function() {});
+		}, Arbiter.error, function() {});
 	},
 
 	setCurrentProject: function(projectName){
@@ -1203,7 +1207,7 @@ var Arbiter = {
 								Arbiter.setServerLayers(serverId);
 							}
 						});
-					}, Arbiter.errorSql, function(){});
+					}, Arbiter.error, function(){});
 				}
 			});
 															 
@@ -1218,7 +1222,7 @@ var Arbiter = {
 				}
 			});
 												
-		}, Arbiter.errorSql, function(){});
+		}, Arbiter.error, function(){});
 	},
 	
 	getAssociativeArraySize: function(obj) {
@@ -1367,7 +1371,7 @@ var Arbiter = {
 							 
 				   window.history.back();
 				});
-			}, Arbiter.errorSql, function(){});
+			}, Arbiter.error, function(){});
 		};
 		
 		if(Arbiter.validateAddServerFields(args)){
@@ -1482,7 +1486,7 @@ var Arbiter = {
 							  
 					window.history.back();
 				});
-			}, Arbiter.errorSql, function(){});
+			}, Arbiter.error, function(){});
 		};
 		
 		if(Arbiter.validateAddServerFields(args)){
@@ -1536,7 +1540,7 @@ var Arbiter = {
 				}, function(tx, err){
 					console.log("delete server err: ", err);			  
 				});								   
-			}, Arbiter.errorSql, function(){});
+			}, Arbiter.error, function(){});
 		};
 		
 		Arbiter.globalDatabase.transaction(function(tx){
@@ -1564,7 +1568,7 @@ var Arbiter = {
 			}, function(tx, err){
 						  console.log("check server_usage err:", err);			  
 			});
-		}, Arbiter.errorSql, function(){});
+		}, Arbiter.error, function(){});
 	},
 	
 	PopulateLayersList: function() {
@@ -1660,7 +1664,7 @@ var Arbiter = {
 							
 							Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 								tx.executeSql(insertLayerSql, [serverId, y, layer.featureType, layer.featureNS, layer.typeName]);															   
-							}, Arbiter.errorSql, function(){});
+							}, Arbiter.error, function(){});
 								  
 							Arbiter.currentProject.dataDatabase.transaction(function(tx){
 								insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
@@ -1711,10 +1715,10 @@ var Arbiter = {
 										}
 									});														  
 								});
-							}, Arbiter.errorSql, function(){});
+							}, Arbiter.error, function(){});
 						}
 					});
-				}, Arbiter.errorSql, function(){});
+				}, Arbiter.error, function(){});
 				
 				Arbiter.globalDatabase.transaction(function(tx){
 					var insertUsageSql = "INSERT INTO server_usage (project_id, server_id) VALUES (" + 
@@ -1722,7 +1726,7 @@ var Arbiter = {
 					tx.executeSql(insertUsageSql, [], function(tx, res){
 						console.log("insert usage successful");
 					});	  
-				}, Arbiter.errorSql, function(){});
+				}, Arbiter.error, function(){});
 			}
 			
 			// every project has a list of tiles it uses so that:
@@ -1751,15 +1755,15 @@ var Arbiter = {
 			Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
 			
 			//Create the initial tables in each database
-			Arbiter.currentProject.variablesDatabase.transaction(Arbiter.createMetaTables, Arbiter.errorSql, function(){
-				Arbiter.currentProject.dataDatabase.transaction(Arbiter.createDataTables, Arbiter.errorSql, function(){
+			Arbiter.currentProject.variablesDatabase.transaction(Arbiter.createMetaTables, Arbiter.error, function(){
+				Arbiter.currentProject.dataDatabase.transaction(Arbiter.createDataTables, Arbiter.error, function(){
 					Arbiter.globalDatabase.transaction(function(tx){
 						tx.executeSql("INSERT INTO projects (name) VALUES (" + Arbiter.squote(Arbiter.currentProject.name) + ");", [], function(tx, res){
 							//Transaction succeeded so both metadata and data tables exist
 								Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 									var projectId = res.insertId;
 									insertCurrentProject(tx, projectId);													   
-								}, Arbiter.errorSql, function(){
+								}, Arbiter.error, function(){
 																					 
 							 	var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
 							 		'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';
@@ -1769,7 +1773,7 @@ var Arbiter = {
 							   	Arbiter.changePage_Pop(div_ProjectsPage);
 							});
 						});
-					}, Arbiter.errorSql, function(){});
+					}, Arbiter.error, function(){});
 				});
 			});
 		};
@@ -2009,7 +2013,7 @@ var Arbiter = {
 						console.log(features);
 						Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false, addProjectCallback/*, vectorLayer*/);
 					});
-				}, Arbiter.errorSql, function(){});
+				}, Arbiter.error, function(){});
 			},
 			failure: function(response){
 				console.log('something went wrong');
@@ -2113,14 +2117,20 @@ var Arbiter = {
 		$("[data-localize]").localize("locale/Arbiter", { language: CurrentLanguage.locale });
 	},
 	
-	errorSql: function(err){
+	error: function(err){
 		console.log('Error: ' + err);
-		var trace = Arbiter.printStackTrace();
-		console.log(trace);
-        alert(trace);
+		Arbiter.printStackTrace();
+		
+		var trace = Arbiter.getStackTrace();
+		
+		console.log("StackTrace: \n" + trace);
+		
+		if (Arbiter.debug) {
+			alert(trace);
+		}		
 	},
 	
-	printStackTrace: function() {
+	getStackTrace: function() {
 		var callstack = [];
 			
 		if (typeof resolveFunctionNamesFrom === 'undefined') {
@@ -2253,9 +2263,9 @@ var Arbiter = {
 					}, function(tx, err){
 								  console.log("err: ", err);			  
 					});
-				}, Arbiter.errorSql, function(){});
+				}, Arbiter.error, function(){});
 			});
-		}, Arbiter.errorSql, function(){
+		}, Arbiter.error, function(){
 			
 		});
 	},
@@ -2386,7 +2396,7 @@ var Arbiter = {
 											}, function(tx, err){
 												console.log("insert dirty fail: ", err);
 											});
-										}, Arbiter.errorSql, function(){});
+										}, Arbiter.error, function(){});
 								  	}
 								}, function(tx, err){
 									console.log("update err: ", err);
@@ -2394,7 +2404,7 @@ var Arbiter = {
 										$(this).fadeOut(3000);
 									});
 								});
-							}, Arbiter.errorSql, function(){});
+							}, Arbiter.error, function(){});
 						}else{
 							console.log('new insert');
 							db.transaction(function(tx){
@@ -2416,7 +2426,7 @@ var Arbiter = {
 								}, function(tx, err){
 									console.log("insert err: ", err);
 								});
-							}, Arbiter.errorSql, function(){});
+							}, Arbiter.error, function(){});
 						}
 					}, function(tx, err){
 						console.log("err: ", err);
@@ -2442,9 +2452,9 @@ var Arbiter = {
 						}, function(tx, err){
 							console.log("insert err: ", err);
 						});
-					}, Arbiter.errorSql, function(){});	
+					}, Arbiter.error, function(){});	
 				}
-			}, Arbiter.errorSql, function(){});
+			}, Arbiter.error, function(){});
 		}
 	},
 	
@@ -2610,7 +2620,7 @@ var Arbiter = {
 				metadata.geomName + "', '" + metadata.srsName + "', '" + metadata.geoserverURL + "', '" + metadata.nickname + "');");
 		};
 		
-		db.transaction(query, Arbiter.errorSql, function(){});
+		db.transaction(query, Arbiter.error, function(){});
 	},
 	
 	/*
@@ -2683,7 +2693,7 @@ var Arbiter = {
 				// of dirty features
 				Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
 					tx.executeSql("DELETE FROM dirty_table;");
-				}, Arbiter.errorSql, function() {
+				}, Arbiter.error, function() {
 					console.log("delete success");
 				});
 
@@ -2704,7 +2714,7 @@ var Arbiter = {
 						Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
 								server.username, server.password);
 					});
-				}, Arbiter.errorSql, function() {});
+				}, Arbiter.error, function() {});
 			});
 		}
 		
