@@ -1938,7 +1938,7 @@ var Arbiter = {
 	},
 	
 	//override: Bool, should override
-	pullFeatures: function(featureType, geomName, f_table_name, srs, serverUrl, username, password, addProjectCallback){
+	pullFeatures: function(featureType, geomName, f_table_name, srs, serverUrl, username, password, addProjectCallback, layernickname){
 		console.log("pullFeatures: " + featureType + "," + geomName + "," + f_table_name + "," + srs + "," + serverUrl + "," + username + "," + password);
 		var layerNativeSRS = new OpenLayers.Projection(srs);
 		console.log("aoi: " + Arbiter.currentProject.aoi);
@@ -2007,7 +2007,7 @@ var Arbiter = {
 						}
 						
 						console.log(features);
-						Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false, addProjectCallback/*, vectorLayer*/);
+						Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false, addProjectCallback, layernickname);
 					});
 				}, Arbiter.errorSql, function(){});
 			},
@@ -2335,7 +2335,7 @@ var Arbiter = {
 		
 	},
 											
-	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback/*, vectorLayer*/){
+	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback, layername){
 		var db = Arbiter.currentProject.dataDatabase;
 		console.log("insertFeaturesIntoTable: ", features);
 		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
@@ -2406,12 +2406,19 @@ var Arbiter = {
 											feature.rowid = res.insertId;
 										else
 											feature.rowid = 1;
+									}else{ // from sync
+										console.log("syncing: " + layername + ", ", map);
+										if(layername && map){
+											var vectorLayer = map.getLayersByName(layername);
+											if(vectorLayer.length){
+											  	console.log("insert sync:", feature);
+												feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
+												vectorLayer[0].addFeatures([feature]);
+											  	console.log("insert sync end:", feature);
+											}
+										}
 									}
 									
-									/*if(vectorLayer){
-										feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
-										vectorLayer.addFeatures([feature]);	  
-									}*/
 									addProjectCallback.call(Arbiter, features.length);
 								}, function(tx, err){
 									console.log("insert err: ", err);
@@ -2696,14 +2703,16 @@ var Arbiter = {
 				var srsName = serverLayer.srsName;
 
 				Arbiter.currentProject.dataDatabase.transaction(function(tx) {
-					tx.executeSql("DELETE FROM ?", [ featureType ], function(tx, res) {
+					tx.executeSql("DELETE FROM " + featureType, [], function(tx, res) {
 						// pull everything down
 						console.log("pull after delete");
 						console.log("pullFeatures after delete: " + serverLayer.typeName + serverLayer.geomName + serverLayer.featureType + serverLayer.srsName
 								+ server.url + server.username + server.password);
 						Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
-								server.username, server.password);
-					});
+								server.username, server.password, null, meta.nickname);
+						}, function(tx, err){
+							console.log("save delete failure:", err);	  
+						});
 				}, Arbiter.errorSql, function() {});
 			});
 		}
