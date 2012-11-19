@@ -1,6 +1,6 @@
 var TileUtil = {
 
-debug: true,		
+debug: false,		
 		
 dumpFiles: function() {
 	console.log("---- TileUtil.dumpFiles");
@@ -96,7 +96,9 @@ countTilesInBounds: function (bounds){
     	zoomLevel += 1;
     }
     
-    console.log("=====<< simple method Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
+    if (TileUtil.debug){
+    	console.log("=====<< simple method Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
+    }
     
     return totalTiles;
 },
@@ -153,7 +155,9 @@ startCachingTiles: function(successCallback) {
 		successCallback: successCallback
 	};
 
-	console.log("---- startCachingTiles. counterEstimatedMax: " + caching.counterEstimatedMax);
+	if (TileUtil.debug){
+		console.log("---- startCachingTiles. counterEstimatedMax: " + caching.counterEstimatedMax);
+	}
 
 	// TODO: zoom to a level other than caching.extent
 	// make sure the next setCenter triggers a load
@@ -734,7 +738,7 @@ dumpTilesWithRefCount: function(count){
 },
 
 dumpTileIds: function(count){
-	console.log("---- TileUtil.dumpTilesWithRefCount");
+	console.log("---- TileUtil.dumpTileIds");
 	Arbiter.currentProject.variablesDatabase.transaction(
 		function(tx){
 			tx.executeSql(

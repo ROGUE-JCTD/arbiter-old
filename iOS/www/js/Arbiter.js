@@ -112,7 +112,7 @@ var attributeTabOpen = false;
 
 var Arbiter = { 
 	
-	debug: true,	
+	debugAlertOnError: true,	
 	
 	fileSystem: null,
 	
@@ -2136,6 +2136,10 @@ var Arbiter = {
 		if (Arbiter.debug) {
 			alert(trace);
 		}		
+		
+		var er =  new Error();
+		
+		console.log(er);
 	},
 	
 	getStackTrace: function() {
