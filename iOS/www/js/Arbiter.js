@@ -367,93 +367,7 @@ var Arbiter = {
 		capabilitiesFormatter = new OpenLayers.Format.WMSCapabilities();
 		describeFeatureTypeReader = new OpenLayers.Format.WFSDescribeFeatureType();
 		
-		div_MapPage.live('pageshow', function(){
-			if(!map){
-				
-				alert("about to create map");
-				// create map
-				map = new OpenLayers.Map({
-					div: "map",
-					projection: WGS84_Google_Mercator,
-					displayProjection: WGS84,
-					theme: null,
-					numZoomLevels: 18,
-					layers: [
-					osmLayer
-					],
-					controls: [
-					new OpenLayers.Control.Attribution(),
-					new OpenLayers.Control.TouchNavigation({
-						dragPanOptions: {
-							enableKinetic: true
-						}
-					}),
-					new OpenLayers.Control.Zoom()
-					]
-				});
-				
-				var serverList = Arbiter.currentProject.serverList;
-				var url;
-				var username;
-				var password;
-				var layers;
-				var li = "";
-				var radioNumber = 1;
-					
-				$("ul#editor-layer-list").empty();
-				
-				//add the layers to the map and read the data in from the local database
-				radioNumber = Arbiter.readLayers(Arbiter.currentProject.serverList, radioNumber);
-				Arbiter.readLayers(Arbiter.currentProject.deletedServers, radioNumber);
-				
-				$("ul#editor-layer-list").listview("refresh");
-				
-				$("input[type='radio']").bind( "change", function(event, ui) {
-					console.log("Radio Change");
-					console.log($("input[type=radio]:checked").attr('id'));
-					
-					Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.deactivate();
-					Arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
-					Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
-				});
-			}
-				
-			//console.log("map: ", map);
-			//alert("about to call onOpenProject");
-			//Arbiter.onOpenProject(Arbiter.currentProject.name);
-			
-			
-	    	console.log("chk10");
-	    	
-	        
-			$('#projectName').text(Arbiter.currentProject.name);
-			Arbiter.setSyncColor();			
-
-			// we have a map, lets zoom and center based on the aoi
-			if (map && Arbiter.currentProject.aoi) {
-				map.zoomToExtent(Arbiter.currentProject.aoi, true);
-	    	}else{
-	    		console.log("map ", map);
-	    		console.log("Arbiter.currentProject.aoi ", Arbiter.currentProject.aoi);
-	    		Arbiter.error("cannot zoom to extent. see console. map is " + (map?"not null": "NULL"));
-	    	}
-	    	console.log("chk11");
-
-			// if the TileIds table is empty, cache tiles.
-			Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
-				var statement = "SELECT * FROM tileIds;";
-				tx.executeSql(statement, [], function(tx, res) {
-					if (res.rows.length === 0) {
-						TileUtil.cacheTiles();
-					} else {
-						console.log("---->> tile have been cached already. not re-caching");
-					}
-				}, Arbiter.error);
-			}, Arbiter.error, function() {
-			});    	
-			
-	    	console.log("chk12");			
-		});
+		div_MapPage.live('pageshow', Arbiter.onShowMap);
 		
 		div_AreaOfInterestPage.live('pageshow', function(){
 			if(!aoiMap){		
@@ -929,7 +843,6 @@ var Arbiter = {
     	if (projectName == null || projectName === ""){
     		alert("onOpenProject projectName not valid: " + projectName)
     	}
-    	console.log("chk1");
 
     	console.log("map: ", map);
 		console.log("onOpenProject: " + projectName + ".");
@@ -937,19 +850,15 @@ var Arbiter = {
 
 		
 		Arbiter.currentProject = {};
-		
 		Arbiter.currentProject.name = projectName;
 		Arbiter.currentProject.serverList = {};
-		Arbiter.currentProject.deletedServers = {
-				length: 0
-		};
+		Arbiter.currentProject.deletedServers = { length: 0 };
 		Arbiter.currentProject.modifyControls = {};
 		
 		// set dataDatabase and variablesDatabase
 		Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 		Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
 		
-    	console.log("chk2");
 
 		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 			// select servers and add to the project
@@ -989,10 +898,7 @@ var Arbiter = {
 					}, Arbiter.error, function(){});
 				}
 			});
-			
-	    	console.log("chk5");
-
-															 
+																		 
 			//select area of interest and add to the project
 			tx.executeSql("SELECT * FROM settings;", [], function(tx, res){
 				//should only be 1 row
@@ -1001,19 +907,71 @@ var Arbiter = {
 					Arbiter.currentProject.aoi = new OpenLayers.Bounds(
 						settings.aoi_left, settings.aoi_bottom, settings.aoi_right, settings.aoi_top
 					);
-					
-			    	console.log("chk6");
-
 				}
 			});
 												
 		}, Arbiter.error, function(){});
-   	
-    	/*
-    	//============================================
-    	console.log("chk10");
+    },
+	
+    onCloseProject: function(){
     	
+    	alert("onCloseProject");
+    	
+    },
     
+    onShowMap: function(){
+		alert("show map");
+
+		// if we are switching projects, the map object will already be created
+		if(!map){
+			// create map
+			map = new OpenLayers.Map({
+				div: "map",
+				projection: WGS84_Google_Mercator,
+				displayProjection: WGS84,
+				theme: null,
+				numZoomLevels: 18,
+				layers: [
+				osmLayer
+				],
+				controls: [
+				new OpenLayers.Control.Attribution(),
+				new OpenLayers.Control.TouchNavigation({
+					dragPanOptions: {
+						enableKinetic: true
+					}
+				}),
+				new OpenLayers.Control.Zoom()
+				]
+			});
+		}
+		
+		var serverList = Arbiter.currentProject.serverList;
+		var url;
+		var username;
+		var password;
+		var layers;
+		var li = "";
+		var radioNumber = 1;
+			
+		$("ul#editor-layer-list").empty();
+		
+		//add the layers to the map and read the data in from the local database
+		radioNumber = Arbiter.readLayers(Arbiter.currentProject.serverList, radioNumber);
+		Arbiter.readLayers(Arbiter.currentProject.deletedServers, radioNumber);
+		
+		$("ul#editor-layer-list").listview("refresh");
+		
+		$("input[type='radio']").bind( "change", function(event, ui) {
+			console.log("Radio Change");
+			console.log($("input[type=radio]:checked").attr('id'));
+			
+			Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.deactivate();
+			Arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
+			Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
+		});
+		
+			
 		$('#projectName').text(Arbiter.currentProject.name);
 		Arbiter.setSyncColor();			
 
@@ -1021,11 +979,8 @@ var Arbiter = {
 		if (map && Arbiter.currentProject.aoi) {
 			map.zoomToExtent(Arbiter.currentProject.aoi, true);
     	}else{
-    		console.log("map ", map);
-    		console.log("Arbiter.currentProject.aoi ", Arbiter.currentProject.aoi);
     		Arbiter.error("cannot zoom to extent. see console. map is " + (map?"not null": "NULL"));
     	}
-    	console.log("chk11");
 
 		// if the TileIds table is empty, cache tiles.
 		Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
@@ -1039,17 +994,7 @@ var Arbiter = {
 			}, Arbiter.error);
 		}, Arbiter.error, function() {
 		});    	
-		
-    	console.log("chk12");
-    	*/
-
-    },
-	
-    onCloseProject: function(){
-    	
-    	alert("onCloseProject");
-    	
-    },
+	},
 	
 	ToggleEditorMenu: function() {
 		if(!editorTabOpen) {

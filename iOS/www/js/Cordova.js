@@ -123,7 +123,7 @@ var Cordova = {
         this.bindCordovaCallbacks();
 		
 		//Start Watches
-		this.startWatch_GeoLocation();
+		//this.startWatch_GeoLocation();
     },
 	
 	//===================
