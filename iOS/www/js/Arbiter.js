@@ -104,11 +104,8 @@ var LanguageType = {
 
 var isFirstTime = true;
 var CurrentLanguage = LanguageType.ENGLISH;
-var globalresult;
 
-var tabOpen = false;
 var editorTabOpen = false;
-var attributeTabOpen = false;
 
 var Arbiter = { 
 	
@@ -122,26 +119,17 @@ var Arbiter = {
 	
 	layerCount: 0,
 	
+	//TODO: remove for now until actually supported
 	//grout tilesets db. primarily used to import grout tiles into global.tiles table since unlike grout's this table is optimized for access 
 	tilesetsDatabase: null, 
 	
-	serverList: {},
-	
-	currentProject: {
-		name: "default",
-		aoi: null,
-		variablesDatabase: null,
-		dataDatabase: null,
-		serverList: {},
-		deletedServers: {}
-	},
+	currentProject: null,
 
 	isOnline: false,
 	
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); // http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
-		//TODO: remove ref to arbiter here. should be treated as singlton
 		Cordova.Initialize(Arbiter);
 		
 		//Save divs for later
@@ -195,7 +183,7 @@ var Arbiter = {
 		div_ProjectsPage.live('pageshow', Arbiter.PopulateProjectsList);
 		div_ServersPage.live('pageshow', Arbiter.PopulateServersList);
 		div_LayersPage.live('pageshow', Arbiter.PopulateLayersList);
-		
+				
 		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(filesystem){
 			Arbiter.fileSystem = filesystem;
 			
@@ -406,6 +394,12 @@ var Arbiter = {
 		
 		jqSaveButton.mouseup(function(event){
 			map.layers[map.layers.length - 1].strategies[0].save();
+		});
+		
+		
+		$('#toNewProjectPageButton').mouseup(function(event){
+			Arbiter.onPreCreateProject();
+			Arbiter.changePage_Pop('#idNewProjectPage');
 		});
 		
 		jqToServersButton.mouseup(function(event){
@@ -634,7 +628,24 @@ var Arbiter = {
 		console.log("Now go spartan, I shall remain here.");
     },
     
+    // called as soon as user begins to create a project
+    onPreCreateProject: function() {
+		alert("onPreCreateProject");
+    	Arbiter.onCloseProject();
+    	
+    	Arbiter.currentProject = Arbiter.clearCurrentProject();
+    	
+    	
+		alert("flush layer-list");
+		// if a project was opened before creating this project, we need to clear out the layers list
+		$("ul#layer-list").empty();
+		jqNewProjectName.val('');
+    },
+    
+    // gets called once we have collected all the information about the new project
 	onCreateProject: function() {
+		alert("onCreateProject");
+		
 		Arbiter.currentProject.aoi = aoiMap.getExtent();
 		
 		var insertCurrentProject = function(tx, projectId){
@@ -755,7 +766,6 @@ var Arbiter = {
 			}, function(tx, err){
 				console.log("project tileIds table err: ", err);			  
 			});
-
 		};
 		
 		var writeToDatabases = function(dir){
@@ -797,6 +807,9 @@ var Arbiter = {
 	
     onDeleteProject: function(projectName){
     	alert("onDeleteProject: " + projectName);
+    	
+    	//TODO: if current project is he one being deleted, close it first!
+    	//onCloseProject
 
 		var variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + projectName + "/variables", "1.0", "Variable Database", 1000000);
 		
@@ -847,6 +860,11 @@ var Arbiter = {
     	console.log("map: ", map);
 		console.log("onOpenProject: " + projectName + ".");
     	alert("onOpenProject: " + projectName);
+    	
+    	
+    	if (Arbiter.currentProject){
+    		Arbiter.onCloseProject();
+    	}
 
 		
 		Arbiter.currentProject = {};
@@ -914,13 +932,13 @@ var Arbiter = {
     },
 	
     onCloseProject: function(){
-    	
     	alert("onCloseProject");
+    	Arbiter.currentProject = null;
     	
+    	//TODO: do actual cleaup / close up
     },
     
     onShowMap: function(){
-		alert("show map");
 
 		// if we are switching projects, the map object will already be created
 		if(!map){
@@ -954,7 +972,6 @@ var Arbiter = {
 		var li = "";
 		var radioNumber = 1;
 			
-		$("ul#editor-layer-list").empty();
 		
 		//add the layers to the map and read the data in from the local database
 		radioNumber = Arbiter.readLayers(Arbiter.currentProject.serverList, radioNumber);
@@ -1571,12 +1588,14 @@ var Arbiter = {
 	},
 	
 	resetAddLayersPage: function() {
+		alert("resetAddLayersPage");
 		console.log("Reset Add Layers");
 		Arbiter.addServersToLayerDropdown();
 		Arbiter.disableLayerSelectAndNickname();
 	},
 	
 	resetEditLayersPage: function() {
+		alert("resetEditLayersPage");
 		console.log("Reset Edit Layers");
 		//Arbiter.addServersToLayerDropdown();
 		//Arbiter.disableLayerSelectAndNickname();
@@ -1904,7 +1923,7 @@ var Arbiter = {
 						
 					var layerName = selectedOption.html();
 					var li = "<li><a onClick='Arbiter.editLayer(\"" + typeName + "\", \"" + layernickname + "\", " + serverInfo.serverId + ")' class='layer-list-item'>" + layernickname + "</a></li>";
-													 
+					
 					$("ul#layer-list").append(li).listview("refresh");
 													 
 					jqLayerSubmit.removeClass('ui-btn-active');
@@ -2309,6 +2328,17 @@ var Arbiter = {
 			str = str.replace(/&#39/g, "'");
 		}
 		return str;
+	},
+	
+	clearCurrentProject: function(){
+		return  {
+			name: "default",
+			aoi: null,
+			variablesDatabase: null,
+			dataDatabase: null,
+			serverList: {},
+			deletedServers: {}
+		};
 	},
 						  
 	/*
