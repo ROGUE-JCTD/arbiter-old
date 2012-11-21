@@ -356,6 +356,8 @@ var Arbiter = {
 		describeFeatureTypeReader = new OpenLayers.Format.WFSDescribeFeatureType();
 		
 		div_MapPage.live('pageshow', Arbiter.onShowMap);
+
+		div_MapPage.live('pagebeforeshow', Arbiter.onBeforeShowMap);
 		
 		div_AreaOfInterestPage.live('pageshow', function(){
 			if(!aoiMap){		
@@ -381,7 +383,7 @@ var Arbiter = {
 			}
 		});
 
-		$('#idAddLayerPage').live('pagebeforeshow', function(){
+		div_AddLayersPage.live('pagebeforeshow', function(){
 			//populate the servers drop down from the currentProject.serverList
 			var html = '<option value="" data-localize="label.chooseAServer">Choose a Server...</option>';
 			
@@ -395,11 +397,10 @@ var Arbiter = {
 		jqSaveButton.mouseup(function(event){
 			map.layers[map.layers.length - 1].strategies[0].save();
 		});
+
 		
-		
-		$('#toNewProjectPageButton').mouseup(function(event){
-			Arbiter.onPreCreateProject();
-			Arbiter.changePage_Pop('#idNewProjectPage');
+		div_NewProjectPage.live('pagebeforeshow', function(){
+			Arbiter.onBeforeCreateProject();
 		});
 		
 		jqToServersButton.mouseup(function(event){
@@ -502,24 +503,14 @@ var Arbiter = {
 						layers[i].strategies[0].save();
 				}
 			}
+		});
+		
+		jqSyncUpdates.taphold(function(){
+			// do the same things as mouseup event
+			jqSyncUpdates.mouseup();
 			
-
-//			TileUtil.cacheTiles();
-			
-//			// if the TileIds table is empty, cache tiles. 
-//			Arbiter.currentProject.variablesDatabase.transaction(
-//				function(tx) {
-//					var statement = "SELECT * FROM tileIds;";
-//					tx.executeSql(statement, [], function(tx, res) {
-//						if (res.rows.length === 0){
-//							TileUtil.cacheTiles();
-//						} else {
-//							console.log("---->> tile have been cached already. not re-caching");
-//						}
-//					}, Arbiter.error);
-//				}, Arbiter.error, function() {
-//			});
-			
+			// but also re-cache tiles
+			TileUtil.cacheTiles();
 		});
 				
 		jqEditorTab.mouseup(function(event){
@@ -606,8 +597,8 @@ var Arbiter = {
 						jqEditServerURL.val(row.url);
 						jqEditServerButton.attr('server-id', row.id);
 					}
-							  
-					$.mobile.changePage('#idEditServerPage', 'pop');
+					
+					Arbiter.changePage_Pop('#idEditServerPage');
 				});
 			}, Arbiter.error, function(){});
 		});
@@ -629,8 +620,8 @@ var Arbiter = {
     },
     
     // called as soon as user begins to create a project
-    onPreCreateProject: function() {
-		alert("onPreCreateProject");
+    onBeforeCreateProject: function() {
+		alert("onBeforeCreateProject");
     	Arbiter.onCloseProject();
     	
     	Arbiter.currentProject = Arbiter.clearCurrentProject();
@@ -938,8 +929,16 @@ var Arbiter = {
     	//TODO: do actual cleaup / close up
     },
     
+    onBeforeShowMap: function(){
+		// this catches the case where a project is opened after one already has been open and helps
+    	// zoom to the new project's aoi before the map shows so that the map doesn't zoom a bit later 
+    	// allowing the user to notice it
+		if (map && Arbiter.currentProject.aoi) {
+			map.zoomToExtent(Arbiter.currentProject.aoi, true);
+    	}
+    },
+    
     onShowMap: function(){
-
 		// if we are switching projects, the map object will already be created
 		if(!map){
 			// create map
@@ -963,6 +962,13 @@ var Arbiter = {
 				]
 			});
 		}
+		
+		// we have a map, lets zoom and center based on the aoi
+		if (map && Arbiter.currentProject.aoi) {
+			map.zoomToExtent(Arbiter.currentProject.aoi, true);
+    	}else{
+    		Arbiter.error("cannot zoom to extent. see console. map is " + (map?"not null": "NULL"));
+    	}
 		
 		var serverList = Arbiter.currentProject.serverList;
 		var url;
@@ -992,12 +998,6 @@ var Arbiter = {
 		$('#projectName').text(Arbiter.currentProject.name);
 		Arbiter.setSyncColor();			
 
-		// we have a map, lets zoom and center based on the aoi
-		if (map && Arbiter.currentProject.aoi) {
-			map.zoomToExtent(Arbiter.currentProject.aoi, true);
-    	}else{
-    		Arbiter.error("cannot zoom to extent. see console. map is " + (map?"not null": "NULL"));
-    	}
 
 		// if the TileIds table is empty, cache tiles.
 		Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
@@ -1010,7 +1010,7 @@ var Arbiter = {
 				}
 			}, Arbiter.error);
 		}, Arbiter.error, function() {
-		});    	
+		});
 	},
 	
 	ToggleEditorMenu: function() {
@@ -2602,7 +2602,7 @@ var Arbiter = {
 		}
 		
 		//$.mobile.changePage("#idMapPage", {transition: "slide", reverse: true});
-		$.mobile.changePage("#idMapPage", "pop");
+		Arbiter.changePage_Pop('#idMapPage');
 	},
 	
 	getInputType: function(type){
