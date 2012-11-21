@@ -335,17 +335,6 @@ var Arbiter = {
 		//Initialize Projections
 		WGS84 					= new OpenLayers.Projection('EPSG:4326');
 		WGS84_Google_Mercator	= new OpenLayers.Projection('EPSG:900913');
-						
-		//Initialize Layers
-		osmLayer		=	new OpenLayers.Layer.OSM('OpenStreetMap', null, {
-				transitionEffect : 'resize',
-				singleTile : false,
-				ratio : 1.3671875,
-				isBaseLayer : true,
-				visibility : true,
-				getURL : TileUtil.getURL
-			}			
-		);
 		
 		aoi_osmLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
 			transitionEffect: 'resize'
@@ -621,21 +610,17 @@ var Arbiter = {
     
     // called as soon as user begins to create a project
     onBeforeCreateProject: function() {
-		alert("onBeforeCreateProject");
-    	Arbiter.onCloseProject();
+		console.log("---- onBeforeCreateProject");
+    	Arbiter.onCloseCurrentProject();
     	
-    	Arbiter.currentProject = Arbiter.clearCurrentProject();
-    	
-    	
-		alert("flush layer-list");
-		// if a project was opened before creating this project, we need to clear out the layers list
-		$("ul#layer-list").empty();
-		jqNewProjectName.val('');
+    	// all clearing of the current project should be done on onCloseCurrentProject
+    	// here, we initialize new project
+    	Arbiter.currentProject = Arbiter.initializeCurrentProject();
     },
     
     // gets called once we have collected all the information about the new project
 	onCreateProject: function() {
-		alert("onCreateProject");
+		console.log("---- onCreateProject");
 		
 		Arbiter.currentProject.aoi = aoiMap.getExtent();
 		
@@ -797,10 +782,12 @@ var Arbiter = {
 	},
 	
     onDeleteProject: function(projectName){
-    	alert("onDeleteProject: " + projectName);
+    	console.log("---- onDeleteProject: " + projectName);
     	
-    	//TODO: if current project is he one being deleted, close it first!
-    	//onCloseProject
+		// if the project being deleted is currently open, close it first
+    	if (Arbiter.currentProject && Arbiter.currentProject.name === projectName){
+    		Arbiter.onCloseCurrentProject();
+    	}
 
 		var variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + projectName + "/variables", "1.0", "Variable Database", 1000000);
 		
@@ -844,17 +831,15 @@ var Arbiter = {
 	},
     
     onOpenProject: function(projectName){
-    	if (projectName == null || projectName === ""){
+		console.log("---- onOpenProject: " + projectName + ".");
+
+		if (projectName == null || projectName === ""){
     		alert("onOpenProject projectName not valid: " + projectName)
     	}
 
-    	console.log("map: ", map);
-		console.log("onOpenProject: " + projectName + ".");
-    	alert("onOpenProject: " + projectName);
-    	
-    	
+		// if a project is currently open, close it first
     	if (Arbiter.currentProject){
-    		Arbiter.onCloseProject();
+    		Arbiter.onCloseCurrentProject();
     	}
 
 		
@@ -922,46 +907,77 @@ var Arbiter = {
 		}, Arbiter.error, function(){});
     },
 	
-    onCloseProject: function(){
-    	alert("onCloseProject");
+    onCloseCurrentProject: function(){
+    	console.log("---- onCloseCurrentProject");
     	Arbiter.currentProject = null;
     	
-    	//TODO: do actual cleaup / close up
+		// if a project was opened before creating this project, we need to clear out the layers list
+		$("ul#layer-list").empty();
+		
+		jqNewProjectName.val('');
+		
+		$("ul#editor-layer-list").empty();
+		
+		Arbiter.CloseAttributesMenu();
+		Arbiter.CloseEditorMenu();
+		
+		// destroy map and everything that goes with it. 
+		// when next project is opened, a new one will be created and populated
+    	if (map){
+    		map.destroy();
+    		map = null;
+    	}		
     },
     
     onBeforeShowMap: function(){
+    	console.log("---- onBeforeShowMap");
 		// this catches the case where a project is opened after one already has been open and helps
     	// zoom to the new project's aoi before the map shows so that the map doesn't zoom a bit later 
     	// allowing the user to notice it
 		if (map && Arbiter.currentProject.aoi) {
 			map.zoomToExtent(Arbiter.currentProject.aoi, true);
     	}
+		
+		
+		//TODO: hmm, still delays. might have to refresh...
+		$('#projectName').text(Arbiter.currentProject.name);
     },
     
     onShowMap: function(){
-		// if we are switching projects, the map object will already be created
-		if(!map){
-			// create map
-			map = new OpenLayers.Map({
-				div: "map",
-				projection: WGS84_Google_Mercator,
-				displayProjection: WGS84,
-				theme: null,
-				numZoomLevels: 18,
-				layers: [
-				osmLayer
-				],
-				controls: [
-				new OpenLayers.Control.Attribution(),
-				new OpenLayers.Control.TouchNavigation({
-					dragPanOptions: {
-						enableKinetic: true
-					}
-				}),
-				new OpenLayers.Control.Zoom()
-				]
-			});
-		}
+    	console.log("---- onShowMap");
+    	
+    	if (map){
+    		Arbiter.error("map should not exist!");
+    	}
+    	
+		osmLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
+				transitionEffect : 'resize',
+				singleTile : false,
+				ratio : 1.3671875,
+				isBaseLayer : true,
+				visibility : true,
+				getURL : TileUtil.getURL
+			}			
+		);    	
+    	
+		map = new OpenLayers.Map({
+			div: "map",
+			projection: WGS84_Google_Mercator,
+			displayProjection: WGS84,
+			theme: null,
+			numZoomLevels: 18,
+			layers: [osmLayer],
+			controls: [
+			new OpenLayers.Control.Attribution(),
+			new OpenLayers.Control.TouchNavigation({
+				dragPanOptions: {
+					enableKinetic: true
+				}
+			}),
+			new OpenLayers.Control.Zoom()
+			]
+		});
+		
 		
 		// we have a map, lets zoom and center based on the aoi
 		if (map && Arbiter.currentProject.aoi) {
@@ -995,7 +1011,6 @@ var Arbiter = {
 		});
 		
 			
-		$('#projectName').text(Arbiter.currentProject.name);
 		Arbiter.setSyncColor();			
 
 
@@ -1588,14 +1603,14 @@ var Arbiter = {
 	},
 	
 	resetAddLayersPage: function() {
-		alert("resetAddLayersPage");
+		//alert("resetAddLayersPage");
 		console.log("Reset Add Layers");
 		Arbiter.addServersToLayerDropdown();
 		Arbiter.disableLayerSelectAndNickname();
 	},
 	
 	resetEditLayersPage: function() {
-		alert("resetEditLayersPage");
+		//alert("resetEditLayersPage");
 		console.log("Reset Edit Layers");
 		//Arbiter.addServersToLayerDropdown();
 		//Arbiter.disableLayerSelectAndNickname();
@@ -2330,7 +2345,7 @@ var Arbiter = {
 		return str;
 	},
 	
-	clearCurrentProject: function(){
+	initializeCurrentProject: function(){
 		return  {
 			name: "default",
 			aoi: null,
