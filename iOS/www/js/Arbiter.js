@@ -208,7 +208,13 @@ var Arbiter = {
 				Arbiter.globalDatabase.transaction(function(tx) {
 					//Create settings table
 					tx.executeSql("CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);", [], function(tx, res){
-						console.log("global.db: 'settings' table created.");											
+						console.log("global.db: 'settings' table created.");
+						
+							console.log("TX");
+							console.log(tx);
+							
+							console.log("RES");
+							console.log(res);
 							
 							//Create server_usage table
 							tx.executeSql("CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);",
@@ -314,7 +320,7 @@ var Arbiter = {
 			//Open/Create Arbiter/Projects directory.
 			Arbiter.fileSystem.root.getDirectory("Arbiter/Projects", {create: true}, function(dir){
 				console.log("Arbiter.fileSystem: 'Arbiter/Projects' directory created/exists.");
-				
+				Arbiter.InitializeProjectList(dir);
 			}, function(error){
 				console.log("Arbiter.fileSystem: Couldn't create 'Arbiter/Projects' directory.");
 			});	
@@ -1008,8 +1014,7 @@ var Arbiter = {
 			}
 			
 			if(html){
-				var instructions = '<div data-localize="label.selectProject" style="text-align:center;margin-bottom:15px;font-weight:bold;">Select a project to begin working</div>';
-				
+				var instructions = '<div data-localize="label.selectProject" style="text-align:center;margin-bottom:15px;font-weight:bold;">Select a project to begin working</div>';	
 				$("#idProjectPageContent").html(instructions + html);
 			}
 		};
@@ -1738,7 +1743,47 @@ var Arbiter = {
 		};
 		
 		var writeToDatabases = function(dir){
+		
+			//Set up a transaction for the global database
+			Arbiter.globalDatabase.transaction(function(tx){
 			
+				console.log("Add project " + Arbiter.squote(Arbiter.currentProject.name) + " to projects table...");
+			
+				//Add the project name to the projects table in globle.db
+				tx.executeSql("INSERT INTO projects (name) VALUES (" + Arbiter.squote(Arbiter.currentProject.name) + ");", [], function(tx, res){
+				
+					console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " added to projects table.");
+					Arbiter.globalDatabase.close();
+					
+					var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
+						'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';
+									
+					Arbiter.appendToListView("project", res.insertId, Arbiter.currentProject.name, leftplaceholder);		   
+					Arbiter.changePage_Pop(div_ProjectsPage);
+				
+				}, function(tx, err){
+					console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " NOT added to projects table - ", err);			  
+				});
+			});
+			
+			Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
+			Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
+			
+			Arbiter.currentProject.variablesDatabase.transaction(Arbiter.createMetaTables, Arbiter.errorSql, function(){
+				Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+					Arbiter.currentProject.close();
+					var projectId = res.insertId;
+					insertCurrentProject(tx, projectId);	
+				}, function(tx, err){
+					console.log("Variables Database error - ", err);			  
+				});
+			});
+			
+			Arbiter.currentProject.dataDatabase.transaction(Arbiter.createDataTables, Arbiter.errorSql, function(){
+			
+			});
+			
+			/*
 			//Create the databases for that project
 			Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 			Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
@@ -1768,6 +1813,7 @@ var Arbiter = {
 					}, Arbiter.errorSql, function(){});
 				});
 			});
+			*/
 		};
 		
 		var error = function(error){
