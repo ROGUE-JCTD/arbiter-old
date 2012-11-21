@@ -336,10 +336,6 @@ var Arbiter = {
 		WGS84 					= new OpenLayers.Projection('EPSG:4326');
 		WGS84_Google_Mercator	= new OpenLayers.Projection('EPSG:900913');
 		
-		aoi_osmLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
-			transitionEffect: 'resize'
-		});
-		
 		wktFormatter = new OpenLayers.Format.WKT();
 		capabilitiesFormatter = new OpenLayers.Format.WMSCapabilities();
 		describeFeatureTypeReader = new OpenLayers.Format.WFSDescribeFeatureType();
@@ -348,29 +344,7 @@ var Arbiter = {
 
 		div_MapPage.live('pagebeforeshow', Arbiter.onBeforeShowMap);
 		
-		div_AreaOfInterestPage.live('pageshow', function(){
-			if(!aoiMap){		
-				aoiMap = new OpenLayers.Map({
-					div: "aoiMap",
-					projection: new OpenLayers.Projection("EPSG:900913"),
-					displayProjection: new OpenLayers.Projection("EPSG:4326"),
-					theme: null,
-					numZoomLevels: 18,
-					layers: [aoi_osmLayer],
-					controls: [
-						new OpenLayers.Control.Attribution(),
-						new OpenLayers.Control.TouchNavigation({
-							dragPanOptions: {
-								enableKinetic: true
-							}
-						}),
-						new OpenLayers.Control.Zoom()
-					],
-					center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
-					zoom: 12
-				});
-			}
-		});
+		div_AreaOfInterestPage.live('pageshow', Arbiter.onShowAOIMap);
 
 		div_AddLayersPage.live('pagebeforeshow', function(){
 			//populate the servers drop down from the currentProject.serverList
@@ -926,7 +900,12 @@ var Arbiter = {
     	if (map){
     		map.destroy();
     		map = null;
-    	}		
+    	}
+    	
+    	if (aoiMap){
+    		aoiMap.destroy();
+    		aoiMap = null;
+    	}
     },
     
     onBeforeShowMap: function(){
@@ -1027,6 +1006,40 @@ var Arbiter = {
 		}, Arbiter.error, function() {
 		});
 	},
+	
+    onShowAOIMap: function(){
+    	console.log("---- onShowAOIMap");
+    	
+    	console.log("---- onShowAreaOfInterestPage");
+    	
+    	if (aoiMap){
+    		Arbiter.error("aoiMap should not exist!");
+    	}
+    	
+		aoi_osmLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
+			transitionEffect: 'resize'
+		});
+
+		aoiMap = new OpenLayers.Map({
+			div: "aoiMap",
+			projection: new OpenLayers.Projection("EPSG:900913"),
+			displayProjection: new OpenLayers.Projection("EPSG:4326"),
+			theme: null,
+			numZoomLevels: 18,
+			layers: [aoi_osmLayer],
+			controls: [
+				new OpenLayers.Control.Attribution(),
+				new OpenLayers.Control.TouchNavigation({
+					dragPanOptions: {
+						enableKinetic: true
+					}
+				}),
+				new OpenLayers.Control.Zoom()
+			],
+			center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
+			zoom: 12
+		});
+    },	
 	
 	ToggleEditorMenu: function() {
 		if(!editorTabOpen) {
