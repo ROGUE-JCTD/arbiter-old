@@ -192,160 +192,135 @@ var Arbiter = {
 		div_ServersPage.live('pageshow', Arbiter.PopulateServersList);
 		div_LayersPage.live('pageshow', Arbiter.PopulateLayersList);
 		
+		//Acquire the file system
 		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(filesystem){
 			Arbiter.fileSystem = filesystem;
+			console.log("window.requestFileSystem: Arbiter.fileSystem acquired");
 			
-			Arbiter.fileSystem.root.getDirectory("Arbiter", {create: true, exclusive: false}, function(dir){
-				console.log("created arbiter directory");
+			//Open/Create Arbiter directory.
+			Arbiter.fileSystem.root.getDirectory("Arbiter", {create: true}, function(dir){
+				console.log("Arbiter.fileSystem: 'Arbiter' directory created/exists.");
 				
-				Arbiter.fileSystem.root.getDirectory("Arbiter/Projects", {create: true, exclusive: false}, function(dir){
-					console.log("created projects directory");
-					Arbiter.InitializeProjectList(dir);
-				}, function(error){
-					console.log("error getting projects");
-				});
-				
-								
+				//Open/Create global.db
 				Arbiter.globalDatabase = Cordova.openDatabase("Arbiter/global", "1.0", "Global Database", 1000000);
 				
-				Arbiter.globalDatabase.beginTransaction();
-				try{
+				//Add tables to global.db
 				Arbiter.globalDatabase.transaction(function(tx) {
-						var createSettingsSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);";
-						tx.executeSql(createSettingsSql, [], function(tx, res){
-							console.log("global settings table created");											 
-						}, function(tx, err){
-							console.log("global settings err: ", err);		  
+					//Create settings table
+					tx.executeSql("CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);", [], function(tx, res){
+						console.log("global.db: 'settings' table created.");											
+							
+							//Create server_usage table
+							tx.executeSql("CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);",
+								[], function(tx, res){
+								console.log("global.db: 'server_usage' table created.");	
+								
+								//Create projects table
+								tx.executeSql("CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, project_id integer, " +
+									"FOREIGN KEY(server_id) REFERENCES servers(id), FOREIGN KEY(project_id) REFERENCES projects(id));",
+									[], function(tx, res){
+									console.log("global.db: 'projects' table created.");
+									
+									//Create tiles table
+									var createTilesSql = "CREATE TABLE IF NOT EXISTS tiles (" +
+										"id integer primary key autoincrement, " +
+										"tileset text not null, " +
+										"z integer not null, " +
+										"x integer not null, " +
+										"y integer not null, " +
+										"path text not null, " +
+										"url text not null, " +
+										"ref_counter integer not null);";
+										
+										//Create servers table
+										tx.executeSql("CREATE TABLE IF NOT EXISTS servers (id integer primary key autoincrement, name text not null, " + 
+											"url text not null, username text not null, password text not null);", [], function(tx, res){
+											console.log("global.db: 'servers' table created.");	
+											
+											//Populate the existing server dropdown
+											tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
+												console.log("SELECT * FROM servers and add them to the list!");
+												var row;
+												var html = '';
+												var contentClass;
+												var leftClass;
+												//var leftPositioning;
+										
+												for(var i = 0;i < res.rows.length;i++){
+													row = res.rows.item(i);
+													contentClass = 'existingServer-contentColumn';
+													leftClass = 'existingServer-leftColumn';
+											
+													if(i == 0){
+														contentClass += ' existingServer-top-right';
+														leftClass += ' existingServer-top-left';
+													}
+											
+													if(i == (res.rows.length - 1)){
+														contentClass += ' existingServer-bottom-right';
+														leftClass += ' existingServer-bottom-left';
+													}
+											
+													//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
+											
+													html += '<div class="existingServer-row">' +
+													'<div class="existingServer-contentWrapper">' +
+													'<div class="' + contentClass + '">' +
+													'<a class="existingServer-name" id="existingServer-' + row.id + '">' + row.name + '</a>' +
+													'</div>' +
+													'</div>' +
+													'<div class="' + leftClass + '">' +
+													'<div class="existingServer-checkbox-container">' +
+													'<input type="checkbox" class="existingServer-checkbox" server-id="' + row.id + '" name="' + row.name +
+													'" id="existingServer-checkbox-' + row.id + '" style="width:20px;height:20px;" />' +
+													'</div>' +
+													'</div>' +
+													'</div>';
+												}
+										
+												for(var i = 0; i < jqServersPageContent.length;i++)
+													$(jqServersPageContent[i]).html(html);
+										
+											});
+							
+									tx.executeSql(createTilesSql, [], function(tx, res){
+										console.log("global.db: 'tiles' table created.");	
+																	 
+									}, function(e) {
+										console.log("global.db: 'tiles' table failed to create. - " + e);
+									});
+																	 
+								}, function(e) {
+									console.log("global.db: 'projects' table failed to create. - " + e);
+								});
+																	 
+							}, function(e) {
+								console.log("global.db: 'server_usage' table failed to create. - " + e);
+							});
+																	 
+						}, function(e) {
+							console.log("global.db: 'servers' table failed to create. - " + e);
 						});
-					Arbiter.globalDatabase.setTransactionSuccessful();
+						
+					}, function(e) {
+						console.log("global.db: 'settings' table failed to create. - " + e);
+					});
 				});
-				} catch {
-					//Error in between database transaction
-				} finally {
-					Arbiter.globalDatabase.endTransaction();
-				}
-				
-				Arbiter.globalDatabase.transaction(function(tx){
-					
-					var createSettingsSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);";
-					tx.executeSql(createSettingsSql, [], function(tx, res){
-						console.log("global settings table created");											 
-					}, function(tx, err){
-						console.log("global settings err: ", err);		  
-					});
-					
-					var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key autoincrement, name text not null, url text not null, " +
-												   "username text not null, password text not null);";
-					   
-					tx.executeSql(createServersSql, [], function(tx, res){
-						console.log("global servers table created");											 
-					}, function(tx, err){
-						console.log("global servers err: ", err);		  
-					});
-												   
-					var createServerUsageSql = "CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, project_id integer, " +
-												"FOREIGN KEY(server_id) REFERENCES servers(id), FOREIGN KEY(project_id) REFERENCES projects(id));";
-
-					tx.executeSql(createServerUsageSql, [], function(tx, res){
-						console.log("global server_usage table created");											 
-					}, function(tx, err){
-						console.log("global server_usage err: ", err);		  
-					});
-
-					
-					var createProjectsSql = "CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);";
-
-					tx.executeSql(createProjectsSql, [], function(tx, res){
-						console.log("global projects table created");
-					}, function(tx, err){
-						console.log("global projects table err: ", err);			  
-					});
-
-					// populate the existing servers drop down on the add server page
-					tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
-						var row;
-						var html = '';
-						var contentClass;
-						var leftClass;
-						//var leftPositioning;
-						
-						for(var i = 0;i < res.rows.length;i++){
-							row = res.rows.item(i);
-							contentClass = 'existingServer-contentColumn';
-							leftClass = 'existingServer-leftColumn';
-							
-							if(i == 0){
-								contentClass += ' existingServer-top-right';
-								leftClass += ' existingServer-top-left';
-							}
-							
-							if(i == (res.rows.length - 1)){
-								contentClass += ' existingServer-bottom-right';
-								leftClass += ' existingServer-bottom-left';
-							}
-							
-							//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
-							
-							html += '<div class="existingServer-row">' +
-							'<div class="existingServer-contentWrapper">' +
-							'<div class="' + contentClass + '">' +
-							'<a class="existingServer-name" id="existingServer-' + row.id + '">' + row.name + '</a>' +
-							'</div>' +
-							'</div>' +
-							'<div class="' + leftClass + '">' +
-							'<div class="existingServer-checkbox-container">' +
-							'<input type="checkbox" class="existingServer-checkbox" server-id="' + row.id + '" name="' + row.name +
-							'" id="existingServer-checkbox-' + row.id + '" style="width:20px;height:20px;" />' +
-							'</div>' +
-							'</div>' +
-							'</div>';
-						}
-						
-						for(var i = 0; i < jqServersPageContent.length;i++)
-							$(jqServersPageContent[i]).html(html);
-						
-					}, Arbiter.errorSql, function(){});
-					
-					var createTilesSql = "CREATE TABLE IF NOT EXISTS tiles (" +
-							"id integer primary key autoincrement, " +
-							"tileset text not null, " +
-							"z integer not null, " +
-							"x integer not null, " +
-							"y integer not null, " +
-							"path text not null, " +
-							"url text not null, " +
-							"ref_counter integer not null);";
-   
-					tx.executeSql(createTilesSql, [], function(tx, res){
-						console.log("global tiles table created");
-					}, function(tx, err){
-						console.log("global tiles table err: ", err);			  
-					});
-					
-
-				}, Arbiter.errorSql, function(){});
-				
-				
-				
-				// create the table that will store the tile sets across all
-				// projects
-				Arbiter.tilesetsDatabase = Cordova.openDatabase("Arbiter/tilesets", "1.0", "Tilesets Database", 1000000);
-				Arbiter.tilesetsDatabase.transaction(function(tx){
-					var createTileRefCounterSql = "CREATE TABLE IF NOT EXISTS tilesets (tilelevel_table text PRIMARY KEY, title text not null);";
-					   
-					tx.executeSql(createTileRefCounterSql, [], function(tx, res){
-						console.log("tilesetsDatabase.tile_ref_counter table created");
-					}, function(tx, err){
-						console.log("tilesetsDatabase.tile_ref_counter table err: ", err);
-					});
-				}, Arbiter.errorSql, function(){});
 				
 			}, function(error){
-				console.log("couldn't create arbiter directory");
+				console.log("Arbiter.fileSystem: Couldn't create 'Arbiter' directory.");
 			});
 			
+			//Open/Create Arbiter/Projects directory.
+			Arbiter.fileSystem.root.getDirectory("Arbiter/Projects", {create: true}, function(dir){
+				console.log("Arbiter.fileSystem: 'Arbiter/Projects' directory created/exists.");
+				
+			}, function(error){
+				console.log("Arbiter.fileSystem: Couldn't create 'Arbiter/Projects' directory.");
+			});	
+			
 		}, function(error){
-			console.log("requestFileSystem failed with error code: " + error.code);					 
+			console.log("window.requestFileSystem: Failed with error code: " + error.code);					 
 		});
 		
 		div_AddLayersPage.live('pageshow', Arbiter.resetAddLayersPage);
@@ -1771,13 +1746,16 @@ var Arbiter = {
 			//Create the initial tables in each database
 			Arbiter.currentProject.variablesDatabase.transaction(Arbiter.createMetaTables, Arbiter.errorSql, function(){
 				Arbiter.currentProject.dataDatabase.transaction(Arbiter.createDataTables, Arbiter.errorSql, function(){
+
 					Arbiter.globalDatabase.transaction(function(tx){
+						console.log("Add project " + Arbiter.squote(Arbiter.currentProject.name) + " to projects table...");
 						tx.executeSql("INSERT INTO projects (name) VALUES (" + Arbiter.squote(Arbiter.currentProject.name) + ");", [], function(tx, res){
+							console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " added to projects table.");
 							//Transaction succeeded so both metadata and data tables exist
 								Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 									var projectId = res.insertId;
 									insertCurrentProject(tx, projectId);													   
-								}, Arbiter.errorSql, function(){
+								}, function(){console.log("FAILED!");}, function(){
 																					 
 							 	var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
 							 		'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';

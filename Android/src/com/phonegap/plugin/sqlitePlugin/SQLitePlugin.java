@@ -145,7 +145,7 @@ public class SQLitePlugin extends Plugin {
 
 		SQLiteDatabase privateDB = this.cordova.getActivity().getApplicationContext().openOrCreateDatabase("private.db", Context.MODE_PRIVATE, null);
 			File arbiter = this.cordova.getActivity().getDatabasePath("private.db");
-		privateDB.endTransaction();
+		privateDB.close();
 		String[] paths = arbiter.getAbsolutePath().split("databases");
 		File databaseFile = new File(paths[0] + db + ".db");
 		
