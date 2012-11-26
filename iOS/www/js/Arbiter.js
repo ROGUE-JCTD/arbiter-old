@@ -2053,6 +2053,7 @@ var Arbiter = {
 				'Authorization': 'Basic ' + encodedCredentials
 			},
 			callback: function(response){
+				console.log("pull request complete");
 				var gmlReader = new OpenLayers.Format.GML({
 					extractAttributes: true
 				});
@@ -2088,7 +2089,7 @@ var Arbiter = {
 							}
 						}
 						
-						console.log(features);
+						console.log("pullFeatures: ", features);
 						Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false, addProjectCallback, layernickname);
 					});
 				}, Arbiter.error, function(){});
@@ -2431,9 +2432,122 @@ var Arbiter = {
 		};
 		
 	},
-											
-	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback, layername){
+	
+	// quick hack to get the proper scope for insertFeaturesIntoTable when syncing...
+	tableInsertion: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername){
 		var db = Arbiter.currentProject.dataDatabase;
+		db.transaction(function(tx){
+			var selectSql;
+			var selectParams;
+			
+			var sqlObject = Arbiter.getSql(f_table_name, feature, geomName, isEdit, srsName);
+				
+			if(feature.fid || feature.rowid){
+				if(feature.fid){
+					selectSql = "SELECT * FROM " + f_table_name + " WHERE fid=?";
+					selectParams = [feature.fid];
+				}else{
+					selectSql = "SELECT * FROM " + f_table_name + " WHERE id=?";
+					selectParams = [feature.rowid];
+				}
+				
+				tx.executeSql(selectSql, selectParams, function(tx, res){
+					//console.log(updateList);
+					//If this exists, then its an update, else its an insert
+					if(res.rows.length){
+						console.log("UPDATE", res.rows.item(0));
+						db.transaction(function(tx){											 
+							var updateSql = sqlObject.updateSql.substring(0, sqlObject.updateSql.length - 1) + " WHERE id=?";						
+									   console.log("update sql: " + updateSql, sqlObject);
+							sqlObject.params.push(res.rows.item(0).id);
+													
+							tx.executeSql(updateSql, sqlObject.params, function(tx, res){
+								console.log("update success");
+								$("#saveAttributesSucceeded").fadeIn(1000, function(){
+									$(this).fadeOut(3000);
+								});
+										  
+							  	if(feature.fid){						
+							  		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+										var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid) VALUES (?,?);";
+																				   
+										console.log(insertDirtySql);
+										tx.executeSql(insertDirtySql, [f_table_name, feature.fid], function(tx, res){
+											console.log("insert dirty success");			 
+										}, function(tx, err){
+											console.log("insert dirty fail: ", err);
+										});
+									}, Arbiter.error, function(){});
+							  	}
+							}, function(tx, err){
+								console.log("update err: ", err);
+								$("#saveAttributesFailed").fadeIn(1000, function(){
+									$(this).fadeOut(3000);
+								});
+							});
+						}, Arbiter.error, function(){});
+					}else{
+						console.log('new insert');
+						db.transaction(function(tx){
+							tx.executeSql(sqlObject.insertSql, sqlObject.params, function(tx, res){
+								console.log("insert success");
+								if(isEdit){
+									console.log('isEdit: ' + res.insertId);
+									if(res.insertId) //hack because insertId is returned as null for the first insert...
+										feature.rowid = res.insertId;
+									else
+										feature.rowid = 1;
+								}else{ // from sync
+									console.log("syncing: " + layername + ", ", map);
+									if(layername && map){
+										var vectorLayer = map.getLayersByName(layername + '-wfs');
+										if(vectorLayer.length){
+										  	console.log("insert sync:", feature);
+										    console.log("srs: " + srsName, feature);
+											feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
+											vectorLayer[0].addFeatures([feature]);
+										  	console.log("insert sync end:", feature);
+										}
+									}
+								}
+								
+								if(addProjectCallback)
+									addProjectCallback.call(Arbiter, features.length);
+							}, function(tx, err){
+								console.log("insert err: ", err);
+							});
+						}, Arbiter.error, function(){});
+					}
+				}, function(tx, err){
+					console.log("err: ", err);
+				});
+			}else{ 
+				console.log('new insert');
+				console.log(sqlObject);
+				db.transaction(function(tx){
+					/*var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
+					  propertyValues + ");";
+									  
+					console.log(insertSql);*/
+					console.log(sqlObject);
+					tx.executeSql(sqlObject.insertSql, sqlObject.params, function(tx, res){
+						console.log("insert success");
+						if(isEdit){
+							console.log('isEdit: ' + res.insertId);
+							if(res.insertId) //hack because insertid is returned as 1 for the first insert...
+								feature.rowid = res.insertId;
+							else
+								feature.rowid = 1;
+						}
+					}, function(tx, err){
+						console.log("insert err: ", err);
+					});
+				}, Arbiter.error, function(){});	
+			}
+		}, Arbiter.error, function(){});
+	},
+	
+	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback, layername){
 		console.log("insertFeaturesIntoTable: ", features);
 		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
 		
@@ -2442,113 +2556,7 @@ var Arbiter = {
 		
 		for(var i = 0; i < features.length; i++){
 			var feature = features[i];
-			db.transaction(function(tx){
-				var selectSql;
-				var selectParams;
-				
-				var sqlObject = Arbiter.getSql(f_table_name, feature, geomName, isEdit, srsName);
-						   
-				if(feature.fid || feature.rowid){
-					if(feature.fid){
-						selectSql = "SELECT * FROM " + f_table_name + " WHERE fid=?";
-						selectParams = [feature.fid];
-					}else{
-						selectSql = "SELECT * FROM " + f_table_name + " WHERE id=?";
-						selectParams = [feature.rowid];
-					}
-					
-					tx.executeSql(selectSql, selectParams, function(tx, res){
-						//console.log(updateList);
-						//If this exists, then its an update, else its an insert
-						if(res.rows.length){
-							console.log("UPDATE", res.rows.item(0));
-							db.transaction(function(tx){											 
-								var updateSql = sqlObject.updateSql.substring(0, sqlObject.updateSql.length - 1) + " WHERE id=?";						
-										   console.log("update sql: " + updateSql, sqlObject);
-								sqlObject.params.push(res.rows.item(0).id);
-														
-								tx.executeSql(updateSql, sqlObject.params, function(tx, res){
-									console.log("update success");
-									$("#saveAttributesSucceeded").fadeIn(1000, function(){
-										$(this).fadeOut(3000);
-									});
-											  
-								  	if(feature.fid){						
-								  		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-											var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid) VALUES (?,?);";
-																					   
-											console.log(insertDirtySql);
-											tx.executeSql(insertDirtySql, [f_table_name, feature.fid], function(tx, res){
-												console.log("insert dirty success");			 
-											}, function(tx, err){
-												console.log("insert dirty fail: ", err);
-											});
-										}, Arbiter.error, function(){});
-								  	}
-								}, function(tx, err){
-									console.log("update err: ", err);
-									$("#saveAttributesFailed").fadeIn(1000, function(){
-										$(this).fadeOut(3000);
-									});
-								});
-							}, Arbiter.error, function(){});
-						}else{
-							console.log('new insert');
-							db.transaction(function(tx){
-								tx.executeSql(sqlObject.insertSql, sqlObject.params, function(tx, res){
-									console.log("insert success");
-									if(isEdit){
-										console.log('isEdit: ' + res.insertId);
-										if(res.insertId) //hack because insertId is returned as null for the first insert...
-											feature.rowid = res.insertId;
-										else
-											feature.rowid = 1;
-									}else{ // from sync
-										console.log("syncing: " + layername + ", ", map);
-										if(layername && map){
-											var vectorLayer = map.getLayersByName(layername);
-											if(vectorLayer.length){
-											  	console.log("insert sync:", feature);
-												feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
-												vectorLayer[0].addFeatures([feature]);
-											  	console.log("insert sync end:", feature);
-											}
-										}
-									}
-									
-									addProjectCallback.call(Arbiter, features.length);
-								}, function(tx, err){
-									console.log("insert err: ", err);
-								});
-							}, Arbiter.error, function(){});
-						}
-					}, function(tx, err){
-						console.log("err: ", err);
-					});
-				}else{ 
-					console.log('new insert');
-					console.log(sqlObject);
-					db.transaction(function(tx){
-						/*var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
-						  propertyValues + ");";
-										  
-						console.log(insertSql);*/
-						console.log(sqlObject);
-						tx.executeSql(sqlObject.insertSql, sqlObject.params, function(tx, res){
-							console.log("insert success");
-							if(isEdit){
-								console.log('isEdit: ' + res.insertId);
-								if(res.insertId) //hack because insertid is returned as 1 for the first insert...
-									feature.rowid = res.insertId;
-								else
-									feature.rowid = 1;
-							}
-						}, function(tx, err){
-							console.log("insert err: ", err);
-						});
-					}, Arbiter.error, function(){});	
-				}
-			}, Arbiter.error, function(){});
+			Arbiter.tableInsertion(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername);
 		}
 	},
 	
@@ -2802,6 +2810,8 @@ var Arbiter = {
 				Arbiter.currentProject.dataDatabase.transaction(function(tx) {
 					tx.executeSql("DELETE FROM " + featureType, [], function(tx, res) {
 						// pull everything down
+								  
+						newWFSLayer.destroyFeatures();
 						console.log("pull after delete");
 						console.log("pullFeatures after delete: " + serverLayer.typeName + serverLayer.geomName + serverLayer.featureType + serverLayer.srsName
 								+ server.url + server.username + server.password);
