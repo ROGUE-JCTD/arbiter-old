@@ -1,6 +1,7 @@
 var TileUtil = {
 
-debug: false,		
+debug: false,
+debugProgress: false,
 		
 dumpFiles: function() {
 	console.log("---- TileUtil.dumpFiles");
@@ -96,7 +97,7 @@ countTilesInBounds: function (bounds){
     	zoomLevel += 1;
     }
     
-    if (TileUtil.debug){
+    if (TileUtil.debug || TileUtil.debugProgress){
     	console.log("=====<< simple method Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
     }
     
@@ -292,8 +293,8 @@ getURL: function(bounds) {
 								
 								$("#cachingPercentComplete").html("<center>Cached " + percent + "%</center>");
 								
-								if (TileUtil.debug) {
-									console.log("caching estimated percent complete: " + percent );
+								if (TileUtil.debugProgress) {
+									console.log("caching estimated percent complete: " + percent + ". counterCached: " + caching.counterCached + ", counterEstimatedMax: " + caching.counterEstimatedMax);
 								}
 							}
 						};
@@ -561,16 +562,16 @@ deleteTileIds: function(){
 },
 
 insertIntoTileIds: function(id) {
-//    if (TileUtil.debug) {
+    if (TileUtil.debug) {
     	console.log("---- TileUtil.addToTileIds. id: " + id);
-//    }
+    }
 	
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
 		var statement = "INSERT INTO tileIds (id) VALUES (?);";
 		tx.executeSql(statement, [id], function(tx, res) {
-//			if (TileUtil.debug) {
+			if (TileUtil.debug) {
 				console.log("inserted in tileIds. id: " + id);
-//			}
+			}
 		}, Arbiter.error);
 	}, Arbiter.error);
 },

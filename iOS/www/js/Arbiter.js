@@ -322,8 +322,8 @@ var Arbiter = {
 			console.log("requestFileSystem failed with error code: " + error.code);					 
 		});
 		
-		div_AddLayersPage.live('pageshow', Arbiter.resetAddLayersPage);
-		div_EditLayersPage.live('pageshow', Arbiter.resetEditLayersPage);
+		div_AddLayersPage.live('pagebeforeshow', Arbiter.resetAddLayersPage);
+		div_EditLayersPage.live('pagebeforeshow', Arbiter.resetEditLayersPage);
 		
 		//Start on the Language Select screen if this is the users first time.
 		//Otherwise move to the Projects page.
@@ -885,14 +885,19 @@ var Arbiter = {
     	console.log("---- onCloseCurrentProject");
     	Arbiter.currentProject = null;
     	
-		// if a project was opened before creating this project, we need to clear out the layers list
-		$("ul#layer-list").empty();
+		//---- reset all menus so that when we create anotehr project, we do not carry any setting from the
+    	//     current project that is being closed. 
 		
 		jqNewProjectName.val('');
 		
-		$("ul#editor-layer-list").empty();
+		Arbiter.restExistingServersCheckboxes();
+
+		$("ul#layer-list").empty();
 		
+		$("ul#editor-layer-list").empty();
+
 		Arbiter.CloseAttributesMenu();
+
 		Arbiter.CloseEditorMenu();
 		
 		// destroy map and everything that goes with it. 
@@ -1638,6 +1643,12 @@ var Arbiter = {
 			console.log("Refresh Layer Select");
 			jqEditLayerSelect.selectmenu('refresh', true);
 		}
+	},
+	
+	restExistingServersCheckboxes: function() {
+		$('.existingServer-checkbox').each(function(index) {
+		    $(this).prop('checked', false);
+		});		
 	},
 	
 	addServersToLayerDropdown: function(_serverName) {
