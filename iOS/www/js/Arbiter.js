@@ -209,12 +209,6 @@ var Arbiter = {
 					//Create settings table
 					tx.executeSql("CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);", [], function(tx, res){
 						console.log("global.db: 'settings' table created.");
-						
-							console.log("TX");
-							console.log(tx);
-							
-							console.log("RES");
-							console.log(res);
 							
 							//Create server_usage table
 							tx.executeSql("CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);",
@@ -390,19 +384,15 @@ var Arbiter = {
 						 map.zoomToExtent(Arbiter.currentProject.aoi, true);
 						 }
 						 
-						 // if the TileIds table is empty, cache tiles. 
-						 Arbiter.currentProject.variablesDatabase.transaction(
-																			  function(tx) {
-																			  var statement = "SELECT * FROM tileIds;";
-																			  tx.executeSql(statement, [], function(tx, res) {
-																							if (res.rows.length === 0){
-																							TileUtil.cacheTiles();
-																							} else {
-																							console.log("---->> tile have been cached already. not re-caching");
-																							}
-																							}, Arbiter.errorSql);
-																			  }, Arbiter.errorSql, function() {
-																			  });
+						 var statement = "SELECT * FROM tileIds;";
+						 // if the TileIds table is empty, cache tiles.
+						Cordova.transaction( Arbiter.currentProject.variablesDatabase, statement, [], function(tx, res) {
+							if (res.rows.length === 0){
+								TileUtil.cacheTiles();
+							} else {
+								console.log("---->> tile have been cached already. not re-caching");
+							}
+						}, function(e){ console.log("Error reading tileIds - " + e); });
 				
 				var serverList = Arbiter.currentProject.serverList;
 				var url;
@@ -573,23 +563,6 @@ var Arbiter = {
 						layers[i].strategies[0].save();
 				}
 			}
-			
-
-//			TileUtil.cacheTiles();
-			
-//			// if the TileIds table is empty, cache tiles. 
-//			Arbiter.currentProject.variablesDatabase.transaction(
-//				function(tx) {
-//					var statement = "SELECT * FROM tileIds;";
-//					tx.executeSql(statement, [], function(tx, res) {
-//						if (res.rows.length === 0){
-//							TileUtil.cacheTiles();
-//						} else {
-//							console.log("---->> tile have been cached already. not re-caching");
-//						}
-//					}, Arbiter.errorSql);
-//				}, Arbiter.errorSql, function() {
-//			});
 			
 		});
 				
@@ -1029,7 +1002,7 @@ var Arbiter = {
 	readLayers: function(serverList, radioNumber){
 		var li = "";
 		var layers;
-		console.log("readLayers");
+		console.log("readLayers " + radioNumber + ": " + serverList);
 		for(var x in serverList){
 			layers = serverList[x].layers;
 			for(var y in layers){
@@ -1077,78 +1050,73 @@ var Arbiter = {
 	
 	//deleted is true if the server was deleted
 	setServerLayers : function(serverId, serverName) {
-		Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
-			var serversList;
+		var serversList;
 			
-			if(serverName)
-				serversList = Arbiter.currentProject.serverList[serverName];
-			else
-				serversList = Arbiter.currentProject.deletedServers[serverId];
+		if(serverName) {
+			serversList = Arbiter.currentProject.serverList[serverName];
+		} else { 
+			serversList = Arbiter.currentProject.deletedServers[serverId];
+		}
 															 
-			if(serverName)
-				console.log("server: " + serverName + " - " + serverId);
-			else
-				console.log("deleted server: " + serverId);
-			
-			console.log("SELECT * FROM layers where server_id=" + serverId);
-			tx.executeSql("SELECT * FROM layers where server_id=?", [serverId], function(tx, res) {
-				var layer;
+		if(serverName) {
+			console.log("server: " + serverName + " - " + serverId);
+		} else {
+			console.log("deleted server: " + serverId);
+		}
+		
+		console.log("SELECT * FROM layers where server_id=" + serverId);
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM layers where server_id=?", [serverId], function(tx, res) {
+			var layer;
 
-				for ( var j = 0; j < res.rows.length; j++) {
-					layer = res.rows.item(j);
-					serversList.layers[layer.layername] = {
-						featureNS : layer.featureNS,
-						featureType : layer.f_table_name,
-						typeName : layer.typeWithPrefix,
-						attributes : [],
-						attributeTypes: []
-					};
+			for ( var j = 0; j < res.rows.length; j++) {
+				layer = res.rows.item(j);
+				serversList.layers[layer.layername] = {
+					featureNS : layer.featureNS,
+					featureType : layer.f_table_name,
+					typeName : layer.typeWithPrefix,
+					attributes : [],
+					attributeTypes: []
+				};
 
-					// get the geometry name, type, and srs of the layer
-					Arbiter.currentProject.dataDatabase.transaction(function(tx) {
-						var layerObj = layer;
-						var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name='" + layerObj.f_table_name + "';";
+				// get the geometry name, type, and srs of the layer
+				var layerObj = layer;
+				var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name='" + layerObj.f_table_name + "';";
 
-						tx.executeSql(geomColumnsSql, [], function(tx, res) {
-							var geomName;
-							//var server = Arbiter.currentProject.serverList[serverName];
-							var serverLayer = serversList.layers[layerObj.layername];
+				Cordova.transaction(Arbiter.currentProject.variablesDatabase, geomColumnsSql, [], function(tx, res) {
+					var geomName;
+					//var server = Arbiter.currentProject.serverList[serverName];
+					var serverLayer = serversList.layers[layerObj.layername];
 
-							if (res.rows.length) { // should only be 1 right now
-								geomName = res.rows.item(0).f_geometry_column;
+					if (res.rows.length) { // should only be 1 right now
+						geomName = res.rows.item(0).f_geometry_column;
 
-								// get the attributes of the layer
-								Arbiter.currentProject.dataDatabase.transaction(function(tx) {
-									var tableSelectSql = "PRAGMA table_info (" + layerObj.f_table_name + ");";
+						// get the attributes of the layer
+						var tableSelectSql = "PRAGMA table_info (" + layerObj.f_table_name + ");";
 
-									serverLayer.geomName = geomName;
-									serverLayer.srsName = res.rows.item(0).srid;
-									serverLayer.geometryType = res.rows.item(0).geometry_type;
+						serverLayer.geomName = geomName;
+						serverLayer.srsName = res.rows.item(0).srid;
+						serverLayer.geometryType = res.rows.item(0).geometry_type;
+				
+						Cordova.transaction(Arbiter.currentProject.variablesDatabase, tableSelectSql, [], function(tx, res) {
+							var attr;
+							for ( var h = 0; h < res.rows.length; h++) {
+								attr = res.rows.item(h);
 
-									tx.executeSql(tableSelectSql, [], function(tx, res) {
-										var attr;
-										for ( var h = 0; h < res.rows.length; h++) {
-											attr = res.rows.item(h);
-
-											if (attr.name != 'fid' && attr.name != geomName && attr.name != 'id'){
-												serverLayer.attributes.push(attr.name);
-												serverLayer.attributeTypes.push({
-													type: attr.type,
-													notnull: attr.notnull
-												});
-											}
-										}
+								if (attr.name != 'fid' && attr.name != geomName && attr.name != 'id'){
+									serverLayer.attributes.push(attr.name);
+									serverLayer.attributeTypes.push({
+										type: attr.type,
+										notnull: attr.notnull
 									});
-								}, Arbiter.errorSql, function() {});
+								}
 							}
-						});
-					}, Arbiter.errorSql, function() {});
-				}
+						}, function(e){});
+					}
+				}, function(e){});
 
-				Arbiter.changePage_Pop(div_MapPage);
-			});
-
-		}, Arbiter.errorSql, function() {});
+			}
+			Arbiter.changePage_Pop(div_MapPage);
+		}, function(e) {});
 	},
 
 	setCurrentProject: function(projectName){
@@ -1165,10 +1133,8 @@ var Arbiter = {
 		// set dataDatabase and variablesDatabase
 		Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 		Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
-		
-		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 			// select servers and add to the project
-			tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
+			Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM servers;", [], function(tx, res){
 				var serverObj;
 				for(var i = 0; i < res.rows.length; i++){
 					serverObj = res.rows.item(i);
@@ -1176,9 +1142,8 @@ var Arbiter = {
 					console.log("before setting serverList");
 					
 					//query the global server table to get the server info
-					Arbiter.globalDatabase.transaction(function(tx){
 						var serverId = serverObj.server_id;
-						tx.executeSql("SELECT * FROM servers WHERE id=?;", [serverId], function(tx, res){
+						Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers WHERE id=?;", [serverId], function(tx, res){
 							if(res.rows.length){ //There should be one row that matches
 								var serverObj = res.rows.item(0);
 								Arbiter.currentProject.serverList[serverObj.name] = {
@@ -1200,13 +1165,12 @@ var Arbiter = {
 								};
 								Arbiter.setServerLayers(serverId);
 							}
-						});
-					}, Arbiter.errorSql, function(){});
+						}, function(e){});
 				}
-			});
+			}, function(e){});
 															 
 			//select area of interest and add to the project
-			tx.executeSql("SELECT * FROM settings;", [], function(tx, res){
+			Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM settings;", [], function(tx, res){
 				//should only be 1 row
 				if(res.rows.length){
 					var settings = res.rows.item(0);
@@ -1214,9 +1178,7 @@ var Arbiter = {
 						settings.aoi_left, settings.aoi_bottom, settings.aoi_right, settings.aoi_top
 					);
 				}
-			});
-												
-		}, Arbiter.errorSql, function(){});
+			}, function(e){});
 	},
 	
 	getAssociativeArraySize: function(obj) {
@@ -1581,34 +1543,35 @@ var Arbiter = {
 		console.log("User wants to edit his/her layers.");
 	},
 	
-	createMetaTables: function(tx){
+	createMetaTables: function(){
 		var createServersSql = "CREATE TABLE IF NOT EXISTS servers (id integer primary key, server_id integer not null);";
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createServersSql, [],
+			function(tx, res){ console.log("createServersSql win!"); }, function(e){ console.log("Error createServersSql - " + e); });
 		
 		var createDirtyTableSql = "CREATE TABLE IF NOT EXISTS dirty_table (id integer primary key, f_table_name text not null, fid text not null);";
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createDirtyTableSql, [],
+			function(tx, res){ console.log("createDirtyTableSql win!"); }, function(e){ console.log("Error createDirtyTableSql - " + e); });
 		
 		var createSettingsTableSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, aoi_left text not null, " +
 		"aoi_bottom text not null, aoi_right text not null, aoi_top text not null);";
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createSettingsTableSql, [],
+			function(tx, res){ console.log("createSettingsTableSql win!"); }, function(e){ console.log("Error createSettingsTableSql - " + e); });
 		
 		var createLayersTableSql = "CREATE TABLE IF NOT EXISTS layers (id integer primary key, server_id integer, " + 
 		"layername text not null, f_table_name text not null, featureNS text not null, typeWithPrefix text not null, " +
 		"FOREIGN KEY(server_id) REFERENCES servers(id));";
-		
-		tx.executeSql(createServersSql);
-		
-		tx.executeSql(createDirtyTableSql);
-		
-		tx.executeSql(createSettingsTableSql);
-		
-		tx.executeSql(createLayersTableSql);
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createLayersTableSql, [],
+			function(tx, res){ console.log("createLayersTableSql win!"); }, function(e){ console.log("Error createLayersTableSql - " + e); });
 	},
 	
-	createDataTables: function(tx){
+	createDataTables: function(){
 		
 		var createGeometryColumnsSql = "CREATE TABLE IF NOT EXISTS geometry_columns (f_table_name text not null, " +
 		"f_geometry_column text not null, geometry_type text not null, srid text not null, " +
 		"PRIMARY KEY(f_table_name, f_geometry_column));";
 		
-		tx.executeSql(createGeometryColumnsSql);
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createGeometryColumnsSql, [],
+			function(tx, res){ console.log("createGeometryColumnsSql win!"); }, function(e){ console.log("Error createGeometryColumnsSql - " + e); });
 	},
 	
 	onClick_AddProject: function() {
@@ -1621,26 +1584,27 @@ var Arbiter = {
 		
 		Arbiter.currentProject.aoi = aoiMap.getExtent();
 		
-		var insertCurrentProject = function(tx, projectId){
+		//TODO: 1) Issolate the problem. 2) FIX IT!
+		var insertCurrentProject = function(projectId){
 			var serverList = Arbiter.currentProject.serverList;
 			
 			var insertSettingsSql = "INSERT INTO settings (aoi_left, aoi_bottom, aoi_right, aoi_top) VALUES (" + 
 			Arbiter.squote(Arbiter.currentProject.aoi.left) + ", " + Arbiter.squote(Arbiter.currentProject.aoi.bottom) +
 			", " + Arbiter.squote(Arbiter.currentProject.aoi.right) + ", " + Arbiter.squote(Arbiter.currentProject.aoi.top) + ");";
 			
-			tx.executeSql(insertSettingsSql);
+			Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertSettingsSql, [], function(tx, res){}, function(e){});
 			
 			for(var x in serverList){
 				var _serverId = serverList[x].serverId;
 				var insertServerSql = "INSERT INTO servers (server_id) VALUES (" + _serverId +");";
-				Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+				//Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 					
 					console.log(insertServerSql);
 					var name = x;
 					console.log("server name: " + name);
 					var serverId = _serverId;
 																	 
-					tx.executeSql(insertServerSql, [], function(tx, res){
+					Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertServerSql, [], function(tx, res){
 						var insertLayerSql;
 						var layer;
 						var insertGeometryColumnRowSql;
@@ -1656,11 +1620,8 @@ var Arbiter = {
 							
 							insertLayerSql = "INSERT INTO layers (server_id, layername, f_table_name, featureNS, typeWithPrefix) VALUES (?,?,?,?,?);";
 							
-							Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-								tx.executeSql(insertLayerSql, [serverId, y, layer.featureType, layer.featureNS, layer.typeName]);															   
-							}, Arbiter.errorSql, function(){});
-								  
-							Arbiter.currentProject.dataDatabase.transaction(function(tx){
+							Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertLayerSql, [serverId, y, layer.featureType, layer.featureNS, layer.typeName], function(tx, res){
+							
 								insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
 									"f_geometry_column, geometry_type, srid) VALUES (?,?,?,?)";
 																			
@@ -1676,9 +1637,8 @@ var Arbiter = {
 								
 								createFeatureTableSql = "CREATE TABLE IF NOT EXISTS " + layer.featureType +
 									" (" + attributes + ");";
-									
-								
-								tx.executeSql(insertGeometryColumnRowSql, [layer.featureType, layer.geomName, layer.geometryType, layer.srsName]);
+
+								Cordova.transaction(Arbiter.currentProject.dataDatabase, insertGeometryColumnRowSql, [layer.featureType, layer.geomName, layer.geometryType, layer.srsName], function(tx, res){ console.log("Created table: " + layer.featureType); }, function(e){ console.log("Failed to create table: " + layer.featureType); });
 																	
 								var typeName = layer.typeName;
 								var geomName = layer.geomName;
@@ -1687,13 +1647,12 @@ var Arbiter = {
 								var url = serverList[name].url;
 								var username = serverList[name].username;
 								var password = serverList[name].password;
-																			
-								tx.executeSql(createFeatureTableSql, [], function(tx, res){
+								
+								Cordova.transaction(Arbiter.currentProject.dataDatabase, createFeatureTableSql, [], function(tx, res) {
 									var projectName = Arbiter.currentProject.name;
 									//name = server's name, y = layer's name
 									var featureIncrement = 0;
 									Arbiter.pullFeatures(typeName, geomName, featureType, srsName, url, username, password, function(featureCount){
-										
 										featureIncrement++;
 										if(featureIncrement >= featureCount){
 											console.log("featureIncrement: " + featureIncrement);
@@ -1703,24 +1662,22 @@ var Arbiter = {
 												Arbiter.setCurrentProject(projectName);
 											}else{
 												console.log("layerCount: " + Arbiter.layerCount);
-											}
+											 }
 										}else{
 											console.log("featureIncrement: " + featureIncrement);
 										}
-									});														  
-								});
-							}, Arbiter.errorSql, function(){});
+									});
+								}, function(e){ console.log("createFeatureTableSql error: " + e); });
+								
+								
+						}, function(e){ console.log("insertLayerSql error: " + e); });
 						}
-					});
-				}, Arbiter.errorSql, function(){});
-				
-				Arbiter.globalDatabase.transaction(function(tx){
-					var insertUsageSql = "INSERT INTO server_usage (project_id, server_id) VALUES (" + 
-						projectId + ", " + serverList[x].serverId + ");";
-					tx.executeSql(insertUsageSql, [], function(tx, res){
-						console.log("insert usage successful");
-					});	  
-				}, Arbiter.errorSql, function(){});
+					}, function(e){});
+			//}, Arbiter.errorSql, function(){});
+
+				var insertUsageSql = "INSERT INTO server_usage (project_id, server_id) VALUES (" +
+				projectId + ", " + serverList[x].serverId + ");";
+				Cordova.transaction(Arbiter.globalDatabase,insertUsageSql, [], function(tx, res){}, function(e){});
 			}
 			
 			// every project has a list of tiles it uses so that:
@@ -1752,8 +1709,10 @@ var Arbiter = {
 				//Add the project name to the projects table in globle.db
 				tx.executeSql("INSERT INTO projects (name) VALUES (" + Arbiter.squote(Arbiter.currentProject.name) + ");", [], function(tx, res){
 				
-					console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " added to projects table.");
-					Arbiter.globalDatabase.close();
+					var projectId = res.insertId;
+					insertCurrentProject(projectId);
+					
+					console.log("Project " + projectId + ": " + Arbiter.squote(Arbiter.currentProject.name) + " added to projects table.");
 					
 					var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
 						'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';
@@ -1769,6 +1728,10 @@ var Arbiter = {
 			Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 			Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
 			
+			Arbiter.createMetaTables();
+			Arbiter.createDataTables();
+			
+			/*
 			Arbiter.currentProject.variablesDatabase.transaction(Arbiter.createMetaTables, Arbiter.errorSql, function(){
 				Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 					Arbiter.currentProject.close();
@@ -2023,9 +1986,8 @@ var Arbiter = {
 					
 				//vectorLayer.destroyFeatures();
 												  
-				Arbiter.currentProject.dataDatabase.transaction(function(tx){
-																console.log("pragma transaction table name: " + f_table_name);
-					tx.executeSql("PRAGMA table_info (" + f_table_name + ");", [], function(tx, res){
+					console.log("pragma transaction table name: " + f_table_name);
+					Cordova.transaction(Arbiter.currentProject.dataDatabase, "PRAGMA table_info (" + f_table_name + ");", [], function(tx, res){
 						var dtAttributes = [];
 						var i;
 						var value;
@@ -2050,8 +2012,7 @@ var Arbiter = {
 						
 						console.log(features);
 						Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false, addProjectCallback, layernickname);
-					});
-				}, Arbiter.errorSql, function(){});
+					}, function(e) {});
 			},
 			failure: function(response){
 				console.log('something went wrong');
@@ -2259,8 +2220,7 @@ var Arbiter = {
 	readLayerFromDb: function(tableName, layerName, geomName, srsName){
 		var layer = map.getLayersByName(layerName + "-wfs")[0];
 		console.log("readLayerFromDb: " + tableName + ", " + layerName + ", " + geomName + ", " + srsName);
-		Arbiter.currentProject.dataDatabase.transaction(function(tx){
-			tx.executeSql("SELECT * FROM " + tableName, [], function(tx, res){
+			Cordova.transaction(Arbiter.currentProject.dataDatabase, "SELECT * FROM " + tableName, [], function(tx, res){
 				for(var i = 0; i < res.rows.length;i++){
 					var row = res.rows.item(i);
 						  
@@ -2285,21 +2245,16 @@ var Arbiter = {
 				}
 						  
 				//after the transaction is complete, check to see which features are dirty
-				Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-					tx.executeSql("SELECT * FROM dirty_table where f_table_name='" + tableName + "';", [], function(tx, res){
+					Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM dirty_table where f_table_name='" + tableName + "';", [], function(tx, res){
 						for(var i = 0; i < res.rows.length;i++){
 							var feature = layer.getFeatureByFid(res.rows.item(i).fid);
 							feature.modified = true;
 							feature.state = OpenLayers.State.UPDATE;	  	
 						}
-					}, function(tx, err){
-								  console.log("err: ", err);			  
+					}, function(e){
+						console.log("err: ", e);
 					});
-				}, Arbiter.errorSql, function(){});
-			});
-		}, Arbiter.errorSql, function(){
-			
-		});
+			}, function(e){ console.log("err: ", e); });
 	},
 	
 	/*escape &, <, >, "*/
@@ -2387,7 +2342,6 @@ var Arbiter = {
 		
 		for(var i = 0; i < features.length; i++){
 			var feature = features[i];
-			db.transaction(function(tx){
 				var selectSql;
 				var selectParams;
 				
@@ -2402,45 +2356,45 @@ var Arbiter = {
 						selectParams = [feature.rowid];
 					}
 					
-					tx.executeSql(selectSql, selectParams, function(tx, res){
+					console.log(selectSql);
+					console.log(selectParams);
+					
+					Cordova.transaction(Arbiter.currentProject.dataDatabase, selectSql, selectParams, function(tx, res){
 						//console.log(updateList);
 						//If this exists, then its an update, else its an insert
 						if(res.rows.length){
-							console.log("UPDATE", res.rows.item(0));
-							db.transaction(function(tx){											 
+							console.log("UPDATE", res.rows.item(0));											 
 								var updateSql = sqlObject.updateSql.substring(0, sqlObject.updateSql.length - 1) + " WHERE id=?";						
 										   console.log("update sql: " + updateSql, sqlObject);
 								sqlObject.params.push(res.rows.item(0).id);
 														
-								tx.executeSql(updateSql, sqlObject.params, function(tx, res){
+								Cordova.transaction(Arbiter.currentProject.dataDatabase, updateSql, sqlObject.params, function(tx, res){
 									console.log("update success");
 									$("#saveAttributesSucceeded").fadeIn(1000, function(){
 										$(this).fadeOut(3000);
 									});
 											  
 								  	if(feature.fid){						
-								  		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+								  		//Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 											var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid) VALUES (?,?);";
 																					   
 											console.log(insertDirtySql);
-											tx.executeSql(insertDirtySql, [f_table_name, feature.fid], function(tx, res){
+											Cordova.transaction(Arbiter.currentProject.dataDatabase, insertDirtySql, [f_table_name, feature.fid], function(tx, res){
 												console.log("insert dirty success");			 
-											}, function(tx, err){
-												console.log("insert dirty fail: ", err);
+											}, function(e){
+												console.log("insert dirty fail: ", e);
 											});
-										}, Arbiter.errorSql, function(){});
+										//}, Arbiter.errorSql, function(){});
 								  	}
-								}, function(tx, err){
-									console.log("update err: ", err);
+								}, function(e){
+									console.log("update err: ", e);
 									$("#saveAttributesFailed").fadeIn(1000, function(){
 										$(this).fadeOut(3000);
 									});
 								});
-							}, Arbiter.errorSql, function(){});
 						}else{
 							console.log('new insert');
-							db.transaction(function(tx){
-								tx.executeSql(sqlObject.insertSql, sqlObject.params, function(tx, res){
+								Cordova.transaction(Arbiter.currentProject.dataDatabase, sqlObject.insertSql, sqlObject.params, function(tx, res){
 									console.log("insert success");
 									if(isEdit){
 										console.log('isEdit: ' + res.insertId);
@@ -2462,24 +2416,22 @@ var Arbiter = {
 									}
 									
 									addProjectCallback.call(Arbiter, features.length);
-								}, function(tx, err){
-									console.log("insert err: ", err);
+								}, function(e){
+									console.log("insert err: ", e);
 								});
-							}, Arbiter.errorSql, function(){});
 						}
-					}, function(tx, err){
-						console.log("err: ", err);
+					}, function(e){
+						console.log("select err: ", e);
 					});
 				}else{ 
 					console.log('new insert');
 					console.log(sqlObject);
-					db.transaction(function(tx){
 						/*var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
 						  propertyValues + ");";
 										  
 						console.log(insertSql);*/
 						console.log(sqlObject);
-						tx.executeSql(sqlObject.insertSql, sqlObject.params, function(tx, res){
+						Cordova.transaction(Arbiter.currentProject.dataDatabase, sqlObject.insertSql, sqlObject.params, function(tx, res){
 							console.log("insert success");
 							if(isEdit){
 								console.log('isEdit: ' + res.insertId);
@@ -2488,12 +2440,10 @@ var Arbiter = {
 								else
 									feature.rowid = 1;
 							}
-						}, function(tx, err){
-							console.log("insert err: ", err);
+						}, function(e){
+							console.log("insert err: ", e);
 						});
-					}, Arbiter.errorSql, function(){});	
 				}
-			}, Arbiter.errorSql, function(){});
 		}
 	},
 	
@@ -2647,21 +2597,6 @@ var Arbiter = {
 		}
 	},
 	
-	//db filename, table in db file, featureType, featureNS, geomName, srsName, geoserverURL, nickname
-	StoreLayerMetadata: function(db, metadata){
-		var query = function(tx){
-			tx.executeSql("CREATE TABLE IF NOT EXISTS " + metadataTable + " (id integer primary key, file text not null, featuretable text not null," +
-				" featuretype text not null, featurens text not null, geomname text not null, srsname text not null, geoserverurl text not null," +
-				" nickname text not null);");
-			
-			tx.executeSql("INSERT INTO " + metadataTable + " (file, featuretable, featuretype, featurens, geomname, srsname, geoserverurl, nickname) VALUES ('" +
-				metadata.file + "', '" + metadata.table + "', '" + metadata.featureType + "', '" + metadata.featureNS + "', '" +
-				metadata.geomName + "', '" + metadata.srsName + "', '" + metadata.geoserverURL + "', '" + metadata.nickname + "');");
-		};
-		
-		db.transaction(query, Arbiter.errorSql, function(){});
-	},
-	
 	/*
 	 	meta: {
 	 		featureNS,
@@ -2730,11 +2665,7 @@ var Arbiter = {
 				// Remove the features for this layer from the table keeping
 				// track
 				// of dirty features
-				Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
-					tx.executeSql("DELETE FROM dirty_table;");
-				}, Arbiter.errorSql, function() {
-					console.log("delete success");
-				});
+				Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM dirty_table;", [], function(tx, res){}, function(e){});
 
 				var url = server.url;
 				var username = server.username;
@@ -2744,18 +2675,16 @@ var Arbiter = {
 				var featureType = serverLayer.featureType;
 				var srsName = serverLayer.srsName;
 
-				Arbiter.currentProject.dataDatabase.transaction(function(tx) {
-					tx.executeSql("DELETE FROM " + featureType, [], function(tx, res) {
+					Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM " + featureType, [], function(tx, res) {
 						// pull everything down
 						console.log("pull after delete");
 						console.log("pullFeatures after delete: " + serverLayer.typeName + serverLayer.geomName + serverLayer.featureType + serverLayer.srsName
 								+ server.url + server.username + server.password);
 						Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
 								server.username, server.password, null, meta.nickname);
-						}, function(tx, err){
-							console.log("save delete failure:", err);	  
+						}, function(e){
+							console.log("save delete failure:", e);
 						});
-				}, Arbiter.errorSql, function() {});
 			});
 		}
 		
