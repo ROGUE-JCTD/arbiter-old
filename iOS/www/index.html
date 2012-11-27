@@ -89,7 +89,7 @@
 		<div data-role="page" class="Page" id='idProjectsPage' data-theme="a">
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-				<a href="#idArbiterSettingsPage" class="ui-btn-left" data-icon="gear" data-localize="button.settings">Settings</a>
+				<a onClick="Arbiter.onShowArbiterSettings()" class="ui-btn-left" data-icon="gear" data-localize="button.settings">Settings</a>
 				<h1 data-localize="page.projects">Projects</h1>
 				<a onClick="Arbiter.onClick_EditProjects()" class="ui-btn-right" data-icon="info" data-localize="button.edit">Edit</a>
 			</div>
@@ -265,7 +265,7 @@
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
 				<a data-rel="back" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
 				<h1 id="projectName">Map</h1>
-				<a href="#idProjectSettingsPage" class="ui-btn-right" data-icon="gear" data-localize="button.settings">Settings</a>
+				<a onClick="Arbiter.onShowSettings()" class="ui-btn-right" data-icon="gear" data-localize="button.settings">Settings</a>
 			</div>
 			
 			<!-- Content -->
@@ -301,7 +301,6 @@
 					<div id="addPointFeature"><div class="ui-icon-glyphish-target" style="padding: 2px 2px;"></div></div>
 					<div id="editPointFeature"><div class="ui-icon-glyphish-stickynote" style="padding: 5px 5px;"></div></div>
 					
-					<div id="cacheTiles"><div class="ui-icon-glyphish-redo" style="padding: 3px 1px;"></div></div>
 					<div id="syncUpdates"><div class="ui-icon-glyphish-redo" style="padding: 3px 1px;"></div></div>
 				</div>
 			</div>
@@ -321,7 +320,7 @@
 		<div data-role="page" class="Page" id='idArbiterSettingsPage' data-theme="a">
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-				<a href="#idMapPage" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<a onClick="Arbiter.onBackFromSettings()" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
 				<h1 data-localize="page.settings">Settings</h1>
 			</div>
 			
@@ -334,8 +333,9 @@
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
-						<li><a href="#" data-icon="gear"><div data-localize="footer.arbiter">Arbiter</div></a></li>
-						<li><a href="#" data-icon="info"><div data-localize="footer.servers">Servers</div></a></li>
+						<li><a href="#idArbiterSettingsPage" data-icon="gear" class="ui-btn-active"><div data-localize="footer.arbiter">Arbiter</div></a></li>
+						<li><a href="#idProjectSettingsPage" data-icon="gear"><div data-localize="footer.project">Project</div></a></li>
+						<li><a href="#idServerSettingsPage" data-icon="info"><div data-localize="footer.servers">Servers</div></a></li>
 					</ul>
 				</div>
 			</div>
@@ -349,24 +349,26 @@
 		<div data-role="page" class="Page" id='idProjectSettingsPage' data-theme="a">
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-				<a href="#idMapPage" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<a onClick="Arbiter.onBackFromSettings()" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
 				<h1 data-localize="page.settings">Settings</h1>
 			</div>
 			
 			<!-- Content -->
 			<div data-role="content" class="ProjectSettingsPageContent" id='idProjectSettingsPageContent'>
-				
+				<a href="#idAreaOfInterestPage"><input type="submit" value="Area Of Interest" data-mini="true"></a>
+				<a href="#idAreaOfInterestPage"><input type="submit" value="Layers" data-mini="true"></a>
+				<!--
+				<a href="#idAreaOfInterestPage" data-icon="gear"><div data-localize="footer.arbiter">Area Of Interest</div></a>
+				-->
 			</div>
 			
 			<!-- Footer -->
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
-						<li><a href="#" data-icon="gear" class="ui-btn-active"><div data-localize="footer.arbiter">Arbiter</div></a></li>
-						<li><a href="#" data-icon="gear"><div data-localize="footer.project">Project</div></a></li>
+						<li><a href="#idArbiterSettingsPage" data-icon="gear"><div data-localize="footer.arbiter">Arbiter</div></a></li>
+						<li><a href="#idProjectSettingsPage" data-icon="gear" class="ui-btn-active"><div data-localize="footer.project">Project</div></a></li>
 						<li><a href="#idServerSettingsPage" data-icon="info"><div data-localize="footer.servers">Servers</div></a></li>
-						<li><a href="#" data-icon="gear"><div data-localize="footer.layers">Layers</div></a></li>
-						<li><a href="#" data-icon="gear"><div data-localize="footer.area">Area</div></a></li>
 					</ul>
 				</div>
 			</div>
@@ -380,7 +382,7 @@
 		<div data-role="page" class="Page" id='idServerSettingsPage' data-theme="a">
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-				<a href="#idMapPage" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<a onClick="Arbiter.onBackFromSettings()" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
 				<h1 data-localize="page.servers">Servers</h1>
 				<a onClick="Arbiter.populateAddServerDialog()" class="ui-btn-right" data-icon="plus" data-iconpos="notext"></a>
 			</div>
@@ -394,11 +396,9 @@
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
-						<li><a href="#" data-icon="gear"><div data-localize="footer.arbiter">Arbiter</div></a></li>
-						<li><a href="#" data-icon="gear"><div data-localize="footer.project">Project</div></a></li>
-						<li><a href="#" data-icon="info" class="ui-btn-active"><div data-localize="footer.servers">Servers</div></a></li>
-						<li><a href="#" data-icon="gear"><div data-localize="footer.layers">Layers</div></a></li>
-						<li><a href="#" data-icon="gear"><div data-localize="footer.area">Area</div></a></li>
+						<li><a href="#idArbiterSettingsPage" data-icon="gear"><div data-localize="footer.arbiter">Arbiter</div></a></li>
+						<li><a href="#idProjectSettingsPage" data-icon="gear"><div data-localize="footer.project">Project</div></a></li>
+						<li><a href="#idServerSettingsPage" data-icon="info" class="ui-btn-active"><div data-localize="footer.servers">Servers</div></a></li>
 					</ul>
 				</div>
 			</div>

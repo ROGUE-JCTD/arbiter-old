@@ -153,7 +153,8 @@ startCachingTiles: function(successCallback) {
 		layer: layer,
 		counterCached: 0,
 		counterEstimatedMax: TileUtil.countTilesInBounds(Arbiter.currentProject.aoi),
-		successCallback: successCallback
+		successCallback: successCallback, 
+		startZoom: -1
 	};
 
 	if (TileUtil.debug){
@@ -162,8 +163,8 @@ startCachingTiles: function(successCallback) {
 
 	// TODO: zoom to a level other than caching.extent
 	// make sure the next setCenter triggers a load
-	var startZoom = map.getZoomForExtent(caching.extent, true);
-	map.zoomTo(startZoom === layer.numZoomLevels ? startZoom - 1 : startZoom + 1);
+	caching.startZoom = map.getZoomForExtent(caching.extent, true);
+	map.zoomTo(caching.startZoom === layer.numZoomLevels ? caching.startZoom - 1 : caching.startZoom + 1);
 
 	layer.events.register("loadend", null, TileUtil.cacheTilesForCurrentZoom);
 
@@ -180,6 +181,7 @@ cacheTilesForCurrentZoom: function() {
     var nextZoom = map.getZoom() + 1;
 
     if (nextZoom === layer.numZoomLevels) {
+    	console.log("caching.startZoom: " + caching.startZoom + ", nextZoom: " + nextZoom + ", layer.numZoomLevels: " + layer.numZoomLevels);
     	console.log("caching tiles completed: additional " + caching.counterCached + " cached. estimated max: " + caching.counterEstimatedMax);
         TileUtil.stopCachingTiles();
     } else {

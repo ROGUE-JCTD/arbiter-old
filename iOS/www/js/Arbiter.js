@@ -85,7 +85,6 @@ var jqAttributeTab;
 var jqExistingServers;
 var jqAddFeature;
 var jqEditFeature;
-var jqCacheTiles;
 var jqSyncUpdates;
 var jqProjectPageContent;
 
@@ -105,6 +104,7 @@ var LanguageType = {
 var isFirstTime = true;
 var CurrentLanguage = LanguageType.ENGLISH;
 
+var awayFromMap = false;
 var editorTabOpen = false;
 
 var Arbiter = { 
@@ -176,7 +176,6 @@ var Arbiter = {
 		jqAttributeTab = $('#attributeTab');
 		jqAddFeature	 = $('#addPointFeature');
 		jqEditFeature	 = $('#editPointFeature');
-		jqCacheTiles = $('#cacheTiles');
 		jqSyncUpdates	 = $('#syncUpdates');
 		jqProjectPageContent = $('#idProjectPageContent');
 		jqServersPageContent = $('.ServersPageContent');
@@ -483,11 +482,7 @@ var Arbiter = {
 		jqAttributeTab.mouseup(function(event){
 			Arbiter.ToggleAttributeMenu();
 		});
-		
-		jqCacheTiles.mouseup(function(event){
-			TileUtil.cacheTiles();
-		});
-		
+				
 		$(".layer-list-item").mouseup(function(event){
 			Arbiter.populateAddLayerDialog($(this).text());
 		});
@@ -915,101 +910,110 @@ var Arbiter = {
     
     onBeforeShowMap: function(){
     	console.log("---- onBeforeShowMap");
-		// this catches the case where a project is opened after one already has been open and helps
-    	// zoom to the new project's aoi before the map shows so that the map doesn't zoom a bit later 
-    	// allowing the user to notice it
-		if (map && Arbiter.currentProject.aoi) {
-			map.zoomToExtent(Arbiter.currentProject.aoi, true);
+    	
+    	if (awayFromMap === false) {
+			// this catches the case where a project is opened after one already has been open and helps
+	    	// zoom to the new project's aoi before the map shows so that the map doesn't zoom a bit later 
+	    	// allowing the user to notice it
+			if (map && Arbiter.currentProject.aoi) {
+				map.zoomToExtent(Arbiter.currentProject.aoi, true);
+	    	}
+			
+			//TODO: hmm, still delays. might have to refresh...
+			$('#projectName').text(Arbiter.currentProject.name);
     	}
-		
-		
-		//TODO: hmm, still delays. might have to refresh...
-		$('#projectName').text(Arbiter.currentProject.name);
     },
     
     onShowMap: function(){
     	console.log("---- onShowMap");
+ 
+    	if (awayFromMap === true) {
+    		console.log("---- onShowMap.awayFromMap");
+    		awayFromMap = false;
+    		//Node: do not do anything
     	
-    	if (map){
-    		Arbiter.error("map should not exist!");
+    	} else {
+	    	if (map){
+	    		Arbiter.error("map should not exist!");
+	    	}
+	    	
+			osmLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
+					transitionEffect : 'resize',
+					singleTile : false,
+					ratio : 1.3671875,
+					isBaseLayer : true,
+					visibility : true,
+					getURL : TileUtil.getURL
+				}			
+			);    	
+	    	
+			map = new OpenLayers.Map({
+				div: "map",
+				projection: WGS84_Google_Mercator,
+				displayProjection: WGS84,
+				theme: null,
+				numZoomLevels: 18,
+				layers: [osmLayer],
+				controls: [
+				new OpenLayers.Control.Attribution(),
+				new OpenLayers.Control.TouchNavigation({
+					dragPanOptions: {
+						enableKinetic: true
+					}
+				}),
+				new OpenLayers.Control.Zoom()
+				]
+			});
+			
+			
+			// we have a map, lets zoom and center based on the aoi
+			if (map && Arbiter.currentProject.aoi) {
+				map.zoomToExtent(Arbiter.currentProject.aoi, true);
+	    	}else{
+	    		Arbiter.error("cannot zoom to extent. see console. map is " + (map?"not null": "NULL"));
+	    	}
+			
+			var serverList = Arbiter.currentProject.serverList;
+			var url;
+			var username;
+			var password;
+			var layers;
+			var li = "";
+			var radioNumber = 1;
+				
+			
+			//add the layers to the map and read the data in from the local database
+			radioNumber = Arbiter.readLayers(Arbiter.currentProject.serverList, radioNumber);
+			Arbiter.readLayers(Arbiter.currentProject.deletedServers, radioNumber);
+			
+			$("ul#editor-layer-list").listview("refresh");
+			
+			$("input[type='radio']").bind( "change", function(event, ui) {
+				console.log("Radio Change");
+				console.log($("input[type=radio]:checked").attr('id'));
+				
+				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.deactivate();
+				Arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
+				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
+			});
+			
+				
+			Arbiter.setSyncColor();			
+	
+	
+			// if the TileIds table is empty, cache tiles.
+			Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
+				var statement = "SELECT * FROM tileIds;";
+				tx.executeSql(statement, [], function(tx, res) {
+					if (res.rows.length === 0) {
+						TileUtil.cacheTiles();
+					} else {
+						console.log("---->> tile have been cached already. not re-caching");
+					}
+				}, Arbiter.error);
+			}, Arbiter.error, function() {
+			});
     	}
-    	
-		osmLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
-				transitionEffect : 'resize',
-				singleTile : false,
-				ratio : 1.3671875,
-				isBaseLayer : true,
-				visibility : true,
-				getURL : TileUtil.getURL
-			}			
-		);    	
-    	
-		map = new OpenLayers.Map({
-			div: "map",
-			projection: WGS84_Google_Mercator,
-			displayProjection: WGS84,
-			theme: null,
-			numZoomLevels: 18,
-			layers: [osmLayer],
-			controls: [
-			new OpenLayers.Control.Attribution(),
-			new OpenLayers.Control.TouchNavigation({
-				dragPanOptions: {
-					enableKinetic: true
-				}
-			}),
-			new OpenLayers.Control.Zoom()
-			]
-		});
-		
-		
-		// we have a map, lets zoom and center based on the aoi
-		if (map && Arbiter.currentProject.aoi) {
-			map.zoomToExtent(Arbiter.currentProject.aoi, true);
-    	}else{
-    		Arbiter.error("cannot zoom to extent. see console. map is " + (map?"not null": "NULL"));
-    	}
-		
-		var serverList = Arbiter.currentProject.serverList;
-		var url;
-		var username;
-		var password;
-		var layers;
-		var li = "";
-		var radioNumber = 1;
-			
-		
-		//add the layers to the map and read the data in from the local database
-		radioNumber = Arbiter.readLayers(Arbiter.currentProject.serverList, radioNumber);
-		Arbiter.readLayers(Arbiter.currentProject.deletedServers, radioNumber);
-		
-		$("ul#editor-layer-list").listview("refresh");
-		
-		$("input[type='radio']").bind( "change", function(event, ui) {
-			console.log("Radio Change");
-			console.log($("input[type=radio]:checked").attr('id'));
-			
-			Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.deactivate();
-			Arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
-			Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
-		});
-		
-			
-		Arbiter.setSyncColor();			
-
-
-		// if the TileIds table is empty, cache tiles.
-		Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
-			var statement = "SELECT * FROM tileIds;";
-			tx.executeSql(statement, [], function(tx, res) {
-				if (res.rows.length === 0) {
-					TileUtil.cacheTiles();
-				} else {
-					console.log("---->> tile have been cached already. not re-caching");
-				}
-			}, Arbiter.error);
-		}, Arbiter.error, function() {
-		});
 	},
 	
     onShowAOIMap: function(){
@@ -1044,7 +1048,31 @@ var Arbiter = {
 			center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
 			zoom: 12
 		});
-    },	
+    },
+    
+    onShowSettings: function(){
+    	console.log("---- onShowSettings");
+    	Arbiter.changePage_Pop(div_ArbiterSettingsPage);
+    	$('#idArbiterSettingsPage .PageFooter').animate({ "left": "0%" }, 0);
+    	awayFromMap = true;
+    },
+	
+    onShowArbiterSettings: function(){
+    	console.log("---- onShowArbiterSettings");
+    	Arbiter.changePage_Pop(div_ArbiterSettingsPage);
+    	$('#idArbiterSettingsPage .PageFooter').animate({ "left": "100%" }, 0);
+    },
+    
+    onBackFromSettings: function(){
+    	console.log("---- onBackFromSettings. awayFromMap: ", awayFromMap);
+    	var currentPage = $.mobile.activePage.attr("id");
+    	
+    	if (awayFromMap === true){
+			Arbiter.changePage_Pop(div_MapPage);
+    	} else {
+    		Arbiter.changePage_Pop(div_ProjectsPage);
+    	}
+    },
 	
 	ToggleEditorMenu: function() {
 		if(!editorTabOpen) {
