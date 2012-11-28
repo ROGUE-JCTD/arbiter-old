@@ -454,3 +454,13 @@ html, body {
 	position:absolute;
 	top: -3px;
 }
+
+#idLayerSettingsAddLayer div{
+	width: 70%;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+#idLayerSettingsList{
+	margin-top: 15px;	
+}

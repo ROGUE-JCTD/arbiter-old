@@ -129,6 +129,13 @@ var Arbiter = {
 	
 	layersSettingsList: null,
 	
+	//if this isn't null, then the save callback will call at the end
+	tempDeleteLayerFromProject: null,
+	
+	//keep track of how many features are left, so we'll know when
+	//to call tempDeleteLayerFromProject
+	tempDeleteFeatureCount: 0,
+	
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); // http://www.youtube.com/watch?v=nhcHoUj4GlQ
 		
@@ -362,14 +369,40 @@ var Arbiter = {
 			div_id: "idLayerSettingsList", 
 			before_delete: function(itemInfo, deleteRow){
 				console.log("before_delete - itemInfo: ", itemInfo);
-				Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-					tx.executeSql("DELETE FROM layers WHERE layername=?;", [itemInfo.layername], function(tx, res){
-						console.log("before_delete: success!");
-						delete Arbiter.currentProject.serverList[itemInfo.servername].layers[itemInfo.layername];
-					});
-				}, function(){}, function(){});
 				
-				deleteRow();
+				var ans = confirm('Are you sure you want to remove "' + itemInfo.layername + '" from the project?');
+				
+				if(ans){
+					Arbiter.tempDeleteLayerFromProject = function(){
+						console.log("tempDeleteLayerFromProject called!");
+						Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+							tx.executeSql("DELETE FROM layers WHERE layername=?;", [itemInfo.layername], function(tx, res){
+								console.log("before_delete: success!", itemInfo);
+								
+								var wfsLayer = map.getLayersByName(itemInfo.layername + '-wfs');
+								
+								console.log("before_delete: wfsLayer - ", wfsLayer);
+								if(wfsLayer.length)
+									wfsLayer[0].destroy();
+								
+								var wmsLayer = map.getLayersByName(itemInfo.layername + '-wms');
+								console.log("before_delete: wmsLayer - ", wmsLayer);
+								
+								if(wmsLayer.length)
+									wmsLayer[0].destroy();
+								
+								console.log("before remove layer from currentProject obj", itemInfo);
+								delete Arbiter.currentProject.serverList[itemInfo.servername].layers[itemInfo.layername];
+								
+								deleteRow();
+								
+								Arbiter.tempDeleteLayerFromProject = null;
+							});
+						}, function(){}, function(){});
+					};
+					
+					jqSyncUpdates.mouseup();
+				}
 			},
 			edit_button_id: "layersSettingsEditButton"
 		});
@@ -2572,6 +2605,14 @@ var Arbiter = {
 										  	console.log("insert sync end:", feature);
 										}
 									}
+									
+									//If this is a sync before removing a layer from the project,
+									//remove the layer from the project.  Arbiter.tempDeleteLayerFromProject
+									//is responsible for setting itself to null at its end.
+									if(Arbiter.tempDeleteLayerFromProject){
+										if(++(Arbiter.tempDeleteCountFeatures) == featuresLength)
+											Arbiter.tempDeleteLayerFromProject();
+									}
 								}
 								
 								if(addProjectCallback)
@@ -2585,7 +2626,7 @@ var Arbiter = {
 					console.log("err: ", err);
 				});
 			}else{ 
-				console.log('new insert');
+				console.log('insert no fid or rowid');
 				console.log(sqlObject);
 				db.transaction(function(tx){
 					/*var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
@@ -2614,8 +2655,13 @@ var Arbiter = {
 		console.log("insertFeaturesIntoTable: ", features);
 		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
 		
+		Arbiter.tempDeleteCountFeatures = 0;
+		
 		if(addProjectCallback && !features.length)
 			addProjectCallback.call(Arbiter, features.length);
+		
+		if(Arbiter.tempDeleteLayerFromProject && !features.length)
+			Arbiter.tempDeleteLayerFromProject();
 		
 		for(var i = 0; i < features.length; i++){
 			var feature = features[i];
@@ -2880,9 +2926,9 @@ var Arbiter = {
 								+ server.url + server.username + server.password);
 						Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
 								server.username, server.password, null, meta.nickname);
-						}, function(tx, err){
-							console.log("save delete failure:", err);	  
-						});
+					}, function(tx, err){
+						console.log("save delete failure:", err);	  
+					});
 				}, Arbiter.error, function() {});
 			});
 		}
