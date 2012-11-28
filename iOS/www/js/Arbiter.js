@@ -591,17 +591,12 @@ var Arbiter = {
 	onCreateProject: function() {
 		console.log("---- onCreateProject");
 		
-		Arbiter.currentProject.aoi = aoiMap.getExtent();
-		
 		var insertCurrentProject = function(tx, projectId){
+
+			Arbiter.saveAreaOfInterest(true);
+			
 			var serverList = Arbiter.currentProject.serverList;
-			
-			var insertSettingsSql = "INSERT INTO settings (aoi_left, aoi_bottom, aoi_right, aoi_top) VALUES (" + 
-			Arbiter.squote(Arbiter.currentProject.aoi.left) + ", " + Arbiter.squote(Arbiter.currentProject.aoi.bottom) +
-			", " + Arbiter.squote(Arbiter.currentProject.aoi.right) + ", " + Arbiter.squote(Arbiter.currentProject.aoi.top) + ");";
-			
-			tx.executeSql(insertSettingsSql);
-			
+
 			for(var x in serverList){
 				var _serverId = serverList[x].serverId;
 				var insertServerSql = "INSERT INTO servers (server_id) VALUES (" + _serverId +");";
@@ -1044,10 +1039,14 @@ var Arbiter = {
 					}
 				}),
 				new OpenLayers.Control.Zoom()
-			],
-			center: new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),
-			zoom: 12
+			]
 		});
+		
+		if (Arbiter.currentProject && Arbiter.currentProject.aoi) {
+			aoiMap.zoomToExtent(Arbiter.currentProject.aoi, true);
+		} else {
+			aoiMap.setCenter(new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),12);
+		}
     },
     
     onShowSettings: function(){
@@ -1074,6 +1073,57 @@ var Arbiter = {
     	}
     },
 	
+    onSetAreaOfInterest: function() {
+    	
+    	// if creaing a new project, aoi will be null
+    	if (Arbiter.currentProject && Arbiter.currentProject.aoi === null){
+        	Arbiter.onCreateProject();
+    	} else {
+    		// if aoi is not null, means we are changing it from the in project settings menu
+    		console.log("---- onSetAreaOfInterest. changing existing aoi");
+
+    		Arbiter.changePage_Pop(div_MapPage);
+    		console.log("---- go and show map before starting to cache");
+    		
+    		var successSaveAreaOfInterest = function(){
+        		console.log("---- try to start caching");
+    			
+    			var successCacheTiles = function(){
+        			console.log("**** now resync vector data");
+        			
+        			console.log('~~~ zoom to extent');
+        			map.zoomToExtent(Arbiter.currentProject.aoi, true);
+    				
+    				//TODO: this really should happen after showmap completes
+        			//jqSyncUpdates.mouseup();
+    			};
+
+    			TileUtil.cacheTiles(successCacheTiles);    				
+    		};
+    		
+    		Arbiter.saveAreaOfInterest(false, successSaveAreaOfInterest);
+    	}
+    	
+    },
+    
+    saveAreaOfInterest: function(insertNotUpdate, successCallback) {
+		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+			Arbiter.currentProject.aoi = aoiMap.getExtent();
+
+			var statement = "";
+			
+			if (insertNotUpdate) {
+				statement = "INSERT INTO settings (aoi_left, aoi_bottom, aoi_right, aoi_top) VALUES (?, ?, ?, ?);";
+			} else {
+				 //fake where clause. change table to key value json pair!
+				statement = "UPDATE settings SET aoi_left=?, aoi_bottom=?, aoi_right=?, aoi_top=? WHERE aoi_left <> '';"; 
+			}
+
+			//TODO: use arg list insetad
+			tx.executeSql(statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], successCallback, Arbiter.error);
+		}, Arbiter.error);    	
+    },
+    
 	ToggleEditorMenu: function() {
 		if(!editorTabOpen) {
 			Arbiter.OpenEditorMenu();
@@ -2224,14 +2274,17 @@ var Arbiter = {
 		$("[data-localize]").localize("locale/Arbiter", { language: CurrentLanguage.locale });
 	},
 	
-	error: function(err){
-		console.log('Error: ' + err);
+	error: function(err, description){
+		console.log('Error Object: ');
+		console.log(err);
+		console.log("Error description: ");
+		console.log(description);
 		var trace = Arbiter.getStackTrace();
 		
 		console.log("StackTrace: \n" + trace);
 		
 		if (Arbiter.debugAlertOnError) {
-			alert("error: " + err + "\n" + trace);
+			alert("error: " + err + " description: " + description + "\n" + trace);
 		}		
 	},
 	
