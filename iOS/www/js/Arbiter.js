@@ -640,6 +640,83 @@ var Arbiter = {
     	Arbiter.currentProject = Arbiter.initializeCurrentProject();
     },
     
+    insertIntoGeometryColumnTable: function(layer){
+    	var insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
+		"f_geometry_column, geometry_type, srid) VALUES (?,?,?,?)";
+    
+    	Cordova.transaction(Arbiter.currentProject.dataDatabase, insertGeometryColumnRowSql, [layer.featureType, layer.geomName, layer.geometryType, layer.srsName], 
+				function(tx, res){ 
+					console.log("INSERT INTO geometry_columns"); 
+				}, function(e){ 
+					console.log("Failed to INSERT INTO geometry_columns"); 
+				}
+		);
+    },
+    
+    createFeatureTable: function(serverName, layer){
+    	var server = Arbiter.currentProject.serverList[serverName];
+    	
+    	var attributeSql = "id integer primary key, fid text, " + layer.geomName + " text not null";
+		
+		for(var i = 0; i < layer.attributes.length; i++){
+			attributeSql += ", " + layer.attributes[i] + " " + layer.attributeTypes[i].type;
+			if(layer.attributeTypes[i].notnull)
+				attributeSql += " not null";
+		}
+		
+		var createFeatureTableSql = "CREATE TABLE IF NOT EXISTS " + layer.featureType +
+			" (" + attributeSql + ");";
+		
+		Cordova.transaction(Arbiter.currentProject.dataDatabase, createFeatureTableSql, [], function(tx, res) {
+			console.log("createFeatureTable success", layer);
+			var featureIncrement = 0;
+			Arbiter.pullFeatures(layer.typeName, layer.geomName, layer.featureType, layer.srsName, server.url, server.username, server.password, function(featureCount){
+				console.log("addProjectCallback: " + featureIncrement);
+				featureIncrement++;
+				if(featureIncrement >= featureCount){
+					console.log("featureIncrement: " + featureIncrement);
+					Arbiter.layerCount--;
+					if(Arbiter.layerCount == 0){
+						console.log("layerCount is 0! yay!");
+						Arbiter.onOpenProject(Arbiter.currentProject.name);
+					}else{
+						console.log("layerCount: " + Arbiter.layerCount);
+					 }
+				}else{
+					console.log("featureIncrement: " + featureIncrement);
+				}
+			}, function(e){ console.log("createFeatureTableSql error: " + e); });
+		});
+    },
+    
+    insertProjectsLayer: function(serverId, serverName, layerName, layer){
+    	var insertLayerSql = "INSERT INTO layers (server_id, layername, f_table_name, featureNS, typeWithPrefix) VALUES (?,?,?,?,?);";
+    	console.log("insertProjectsLayer", layer);
+    	Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertLayerSql, 
+    			[serverId, layerName, layer.featureType, layer.featureNS, layer.typeName], function(tx, res){
+    		console.log("insertProjectsLayer success");
+    		Arbiter.insertIntoGeometryColumnTable(layer);
+    		Arbiter.createFeatureTable(serverName, layer);
+    	}, function(e){ console.log("insertLayerSql error: " + e); });
+    },
+    
+    insertProjectsServer: function(serverId, serverName){
+    	var insertServerSql = "INSERT INTO servers (server_id) VALUES (" + serverId +");";
+    	console.log(insertServerSql);
+    	
+    	Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertServerSql, [], function(tx, res){
+    		var layerList = Arbiter.currentProject.serverList[serverName].layers;
+    		var layerCount = Arbiter.getAssociativeArraySize(layerList);
+			Arbiter.layerCount += layerCount;
+			
+    		for(var layerKey in layerList){
+    			Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey]);
+    		}
+    	}, function(e){
+    		
+    	});
+    },
+    
     // gets called once we have collected all the information about the new project
 	onCreateProject: function() {
 		console.log("---- onCreateProject");
@@ -650,99 +727,11 @@ var Arbiter = {
 			var serverList = Arbiter.currentProject.serverList;
 						
 			for(var x in serverList){
-				var _serverId = serverList[x].serverId;
-				var insertServerSql = "INSERT INTO servers (server_id) VALUES (" + _serverId +");";
-				//Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-					
-					console.log(insertServerSql);
-					var name = x;
-					console.log("server name: " + name);
-					var serverId = _serverId;
-																	 
-					Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertServerSql, [], function(tx, res){
-						var insertLayerSql;
-						var layer;
-						var insertGeometryColumnRowSql;
-						var createFeatureTableSql;
-						var attributes;	
-						
-						var layerCount = Arbiter.getAssociativeArraySize(serverList[name].layers);
-						Arbiter.layerCount += layerCount;
-						
-						for(var y in serverList[name].layers){
-							layer = serverList[name].layers[y];
-							var layername = y;
-							
-							insertLayerSql = "INSERT INTO layers (server_id, layername, f_table_name, featureNS, typeWithPrefix) VALUES (?,?,?,?,?);";
-							
-							Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertLayerSql, [serverId, y, layer.featureType, layer.featureNS, layer.typeName], function(tx, res){
-							
-								insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
-									"f_geometry_column, geometry_type, srid) VALUES (?,?,?,?)";
-																			
-								//made fid not unique to be able to handle multiple inserts while offline.
-								//fid is null until the server knows about the feature
-								attributes = "id integer primary key, fid text, " + layer.geomName + " text not null";
-								
-								for(var i = 0; i < layer.attributes.length; i++){
-									attributes += ", " + layer.attributes[i] + " " + layer.attributeTypes[i].type;
-									if(layer.attributeTypes[i].notnull)
-										attributes += " not null";
-								}
-								
-								createFeatureTableSql = "CREATE TABLE IF NOT EXISTS " + layer.featureType +
-									" (" + attributes + ");";
+				Arbiter.insertProjectsServer(serverList[x].serverId, x);
 
-								console.log("KEVIN: INSERT geometry columns\n" +
-										insertGeometryColumnRowSql, layer);
-								
-								Cordova.transaction(Arbiter.currentProject.dataDatabase, insertGeometryColumnRowSql, [layer.featureType, layer.geomName, layer.geometryType, layer.srsName], 
-										function(tx, res){ 
-											console.log("INSERT INTO geometry_columns"); 
-										}, function(e){ 
-											console.log("Failed to INSERT INTO geometry_columns"); 
-										}
-								);
-																	
-								var typeName = layer.typeName;
-								var geomName = layer.geomName;
-								var featureType = layer.featureType;
-								var srsName = layer.srsName;
-								var url = serverList[name].url;
-								var username = serverList[name].username;
-								var password = serverList[name].password;
-								
-								Cordova.transaction(Arbiter.currentProject.dataDatabase, createFeatureTableSql, [], function(tx, res) {
-									var projectName = Arbiter.currentProject.name;
-									//name = server's name, y = layer's name
-									var featureIncrement = 0;
-									Arbiter.pullFeatures(typeName, geomName, featureType, srsName, url, username, password, function(featureCount){
-										console.log("addProjectCallback: " + featureIncrement);
-										featureIncrement++;
-										if(featureIncrement >= featureCount){
-											console.log("featureIncrement: " + featureIncrement);
-											Arbiter.layerCount--;
-											if(Arbiter.layerCount == 0){
-												console.log("layerCount is 0! yay!");
-												Arbiter.onOpenProject(projectName);
-											}else{
-												console.log("layerCount: " + Arbiter.layerCount);
-											 }
-										}else{
-											console.log("featureIncrement: " + featureIncrement);
-										}
-									});
-								}, function(e){ console.log("createFeatureTableSql error: " + e); });
-								
-								
-						}, function(e){ console.log("insertLayerSql error: " + e); });
-						}
-					}, function(e){});
-			//}, Arbiter.errorSql, function(){});
-
-				var insertUsageSql = "INSERT INTO server_usage (project_id, server_id) VALUES (" +
-				projectId + ", " + serverList[x].serverId + ");";
-				Cordova.transaction(Arbiter.globalDatabase,insertUsageSql, [], function(tx, res){}, function(e){});
+				var insertUsageSql = "INSERT INTO server_usage (project_id, server_id) VALUES (?, ?);";
+				
+				Cordova.transaction(Arbiter.globalDatabase,insertUsageSql, [projectId, serverList[x].serverId], function(tx, res){}, function(e){});
 			}
 			
 			// every project has a list of tiles it uses so that:
