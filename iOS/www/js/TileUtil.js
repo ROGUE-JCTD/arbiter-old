@@ -201,6 +201,7 @@ stopCachingTiles: function() {
     map.zoomToExtent(caching.extentOriginal, true);
     
     console.log("---- stopCachingTiles");
+    console.log(caching);
 
 	if (caching.successCallback){
 		caching.successCallback();
@@ -217,9 +218,11 @@ cacheTiles: function(successCallback){
 
 	if (typeof caching === 'undefined'){
 		TileUtil.clearCache("osm", function(){
+			console.log("~~~~ done clearing clearing cache");
 			// once all the cache for this project is cleared, start caching again. 
 			TileUtil.startCachingTiles(
 				function(){
+					console.log("~~~~ done caching");
 					Arbiter.HideCachingTilesMenu();
 				}
 			);
@@ -382,15 +385,23 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 									console.log("download error target " + error.target);
 									console.log("upload error code" + error.code);
 									
+									Arbiter.error(error, "Failed download or save file to: " + filePath);
+									
 									if (errorCallback){
 										errorCallback(fileUrl, filePath, error);
 									}
 								}
 							);
+						}, function(err) {
+							Arbiter.error(err, "Failed to get X Dir");
 						}
 					);
+				}, function(err) {
+					Arbiter.error(err, "Failed to get Z Dir");
 				}
 			);
+		}, function(err) {
+			Arbiter.error(err, "Failed to get Tileset Dir");
 		}
 	);
 
