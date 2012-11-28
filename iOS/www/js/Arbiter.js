@@ -693,7 +693,16 @@ var Arbiter = {
 								createFeatureTableSql = "CREATE TABLE IF NOT EXISTS " + layer.featureType +
 									" (" + attributes + ");";
 
-								Cordova.transaction(Arbiter.currentProject.dataDatabase, insertGeometryColumnRowSql, [layer.featureType, layer.geomName, layer.geometryType, layer.srsName], function(tx, res){ console.log("INSERT INTO geometry_columns"); }, function(e){ console.log("Failed to INSERT INTO geometry_columns"); });
+								console.log("KEVIN: INSERT geometry columns\n" +
+										insertGeometryColumnRowSql, layer);
+								
+								Cordova.transaction(Arbiter.currentProject.dataDatabase, insertGeometryColumnRowSql, [layer.featureType, layer.geomName, layer.geometryType, layer.srsName], 
+										function(tx, res){ 
+											console.log("INSERT INTO geometry_columns"); 
+										}, function(e){ 
+											console.log("Failed to INSERT INTO geometry_columns"); 
+										}
+								);
 																	
 								var typeName = layer.typeName;
 								var geomName = layer.geomName;
