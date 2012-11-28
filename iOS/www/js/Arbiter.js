@@ -369,8 +369,7 @@ var Arbiter = {
 				if(ans){
 					Arbiter.tempDeleteLayerFromProject = function(){
 						console.log("tempDeleteLayerFromProject called!");
-						Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-							tx.executeSql("DELETE FROM layers WHERE layername=?;", [itemInfo.layername], function(tx, res){
+							Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM layers WHERE layername=?;", [itemInfo.layername], function(tx, res){
 								console.log("before_delete: success!", itemInfo);
 								
 								var wfsLayer = map.getLayersByName(itemInfo.layername + '-wfs');
@@ -391,8 +390,7 @@ var Arbiter = {
 								deleteRow();
 								
 								Arbiter.tempDeleteLayerFromProject = null;
-							});
-						}, function(){}, function(){});
+							}, Arbiter.error);
 					};
 					
 					jqSyncUpdates.mouseup();
@@ -1508,7 +1506,6 @@ var Arbiter = {
 	
 	//deleted is true if the server was deleted
 	setServerLayers : function(serverId, serverName) {
-		Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
 			var serversList;
 			
 			if(serverName)
@@ -1522,7 +1519,7 @@ var Arbiter = {
 				console.log("deleted server: " + serverId);
 			
 			console.log("SELECT * FROM layers where server_id=" + serverId);
-			tx.executeSql("SELECT * FROM layers where server_id=?", [serverId], function(tx, res) {
+			Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM layers where server_id=?", [serverId], function(tx, res) {
 				var layer;
 
 				for ( var j = 0; j < res.rows.length; j++) {
@@ -1536,11 +1533,10 @@ var Arbiter = {
 					};
 
 					// get the geometry name, type, and srs of the layer
-					Arbiter.currentProject.dataDatabase.transaction(function(tx) {
 						var layerObj = layer;
 						var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name='" + layerObj.f_table_name + "';";
 
-						tx.executeSql(geomColumnsSql, [], function(tx, res) {
+						Cordova.transaction(Arbiter.currentProject.dataDatabase, geomColumnsSql, [], function(tx, res) {
 							var geomName;
 							//var server = Arbiter.currentProject.serverList[serverName];
 							var serverLayer = serversList.layers[layerObj.layername];
@@ -1549,14 +1545,13 @@ var Arbiter = {
 								geomName = res.rows.item(0).f_geometry_column;
 
 								// get the attributes of the layer
-								Arbiter.currentProject.dataDatabase.transaction(function(tx) {
 									var tableSelectSql = "PRAGMA table_info (" + layerObj.f_table_name + ");";
 
 									serverLayer.geomName = geomName;
 									serverLayer.srsName = res.rows.item(0).srid;
 									serverLayer.geometryType = res.rows.item(0).geometry_type;
 
-									tx.executeSql(tableSelectSql, [], function(tx, res) {
+									Cordova.transaction(Arbiter.currentProject.dataDatabase, tableSelectSql, [], function(tx, res) {
 										var attr;
 										for ( var h = 0; h < res.rows.length; h++) {
 											attr = res.rows.item(h);
@@ -1569,17 +1564,13 @@ var Arbiter = {
 												});
 											}
 										}
-									});
-								}, Arbiter.error, function() {});
+									}, Arbiter.error);
 							}
-						});
-					}, Arbiter.error, function() {});
+						}, Arbiter.error);
 				}
 
 				Arbiter.changePage_Pop(div_MapPage);
-			});
-
-		}, Arbiter.error, function() {});
+			}Arbiter.error);
 	},
 
 	getAssociativeArraySize: function(obj) {
