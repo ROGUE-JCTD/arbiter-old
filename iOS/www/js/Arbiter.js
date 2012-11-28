@@ -1568,7 +1568,7 @@ var Arbiter = {
 				}
 
 				Arbiter.changePage_Pop(div_MapPage);
-			}Arbiter.error);
+			}, Arbiter.error);
 	},
 
 	getAssociativeArraySize: function(obj) {
