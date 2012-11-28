@@ -145,6 +145,28 @@ var Cordova = {
 		return window.sqlitePlugin.openDatabase(_name, _version, _displayName, _size);
 	},
 	
+	transaction: function(_database, _sql, _variables, _success, _error) {
+		_database.transaction(function(tx) {
+			tx.executeSql(_sql, _variables, function(tx, res){
+				_success(tx, res);
+			}, _error);
+		});
+	},
+	
+	//For best results, try and do seperate transactions for all sql calls.
+	nestedTransaction: function(_tx, _sql, _variables, _success, _error) {
+		_tx.executeSql(_sql, _variables, function(tx, res){
+			_success(tx, res);
+		}, function(e) {
+			Cordova.sqliteError(e);
+			_error(e);
+		});
+	},
+	
+	sqliteError: function(e) {
+		console.log("SQLite Plugin Error: " + e);
+	},
+	
 	//=============
 	// GeoLocation
 	//=============
