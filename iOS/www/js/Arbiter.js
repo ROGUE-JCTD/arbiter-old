@@ -115,8 +115,6 @@ var Arbiter = {
 	
 	globalDatabase: null,
 	
-	featureIncrement: 0,
-	
 	layerCount: 0,
 	
 	//TODO: remove for now until actually supported
@@ -134,7 +132,7 @@ var Arbiter = {
 	
 	//keep track of how many features are left, so we'll know when
 	//to call tempDeleteLayerFromProject
-	tempDeleteFeatureCount: 0,
+	tempDeleteCountFeatures: 0,
 	
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); // http://www.youtube.com/watch?v=nhcHoUj4GlQ
@@ -719,7 +717,7 @@ var Arbiter = {
 											Arbiter.layerCount--;
 											if(Arbiter.layerCount == 0){
 												console.log("layerCount is 0! yay!");
-												Arbiter.setCurrentProject(projectName);
+												Arbiter.onOpenProject(projectName);
 											}else{
 												console.log("layerCount: " + Arbiter.layerCount);
 											 }
@@ -2564,7 +2562,7 @@ var Arbiter = {
 	},
 	
 	// quick hack to get the proper scope for insertFeaturesIntoTable when syncing...
-	tableInsertion: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, featureLength){
+	tableInsertion: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, featuresLength){
 		var selectSql;
 		var selectParams;
 							  
@@ -2638,11 +2636,18 @@ var Arbiter = {
 									console.log("insert sync end:", feature);
 								}
 							}
+							
+							//If this is a sync before removing a layer from the project,
+							//remove the layer from the project.  Arbiter.tempDeleteLayerFromProject
+							//is responsible for setting itself to null at its end.
+							if(Arbiter.tempDeleteLayerFromProject){
+								if(++(Arbiter.tempDeleteCountFeatures) == featuresLength)
+									Arbiter.tempDeleteLayerFromProject();
+							}
 						}
 
-						console.log("Calling callback...");
-						addProjectCallback.call(Arbiter, featureLength);
-						console.log("callback called!");
+						if(addProjectCallback)
+							addProjectCallback.call(Arbiter, featuresLength);
 					}, function(e){
 						console.log("insert err: ", e);
 					});
