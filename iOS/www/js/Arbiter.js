@@ -1127,7 +1127,7 @@ var Arbiter = {
     		Arbiter.changePage_Pop(div_MapPage);
     		console.log("---- go and show map before starting to cache");
     		
-    		var successSaveAreaOfInterest = function(){
+    		var successSaveAreaOfInterest = function(tx, res){
         		console.log("---- try to start caching");
     			
     			var successCacheTiles = function(){
@@ -1149,7 +1149,6 @@ var Arbiter = {
     },
     
     saveAreaOfInterest: function(insertNotUpdate, successCallback) {
-		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 			Arbiter.currentProject.aoi = aoiMap.getExtent();
 
 			var statement = "";
@@ -1162,8 +1161,7 @@ var Arbiter = {
 			}
 
 			//TODO: use arg list insetad
-			tx.executeSql(statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], successCallback, Arbiter.error);
-		}, Arbiter.error);    	
+			Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], successCallback, Arbiter.error);
     },
     
 	ToggleEditorMenu: function() {
