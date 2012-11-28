@@ -148,7 +148,8 @@ var Cordova = {
 	transaction: function(_database, _sql, _variables, _success, _error) {
 		_database.transaction(function(tx) {
 			tx.executeSql(_sql, _variables, function(tx, res){
-				_success(tx, res);
+				if(_success)
+					_success(tx, res);
 			}, _error);
 		});
 	},

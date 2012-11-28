@@ -1155,7 +1155,8 @@ var Arbiter = {
 			}
 
 			//TODO: use arg list insetad
-			Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], successCallback, Arbiter.error);
+			Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], 
+					successCallback, Arbiter.error);
     },
     
 	ToggleEditorMenu: function() {
@@ -2832,7 +2833,7 @@ var Arbiter = {
  		alreadyIn
  	}
 	 */
-	AddLayer : function(meta) {
+	AddLayer: function(meta) {
 		console.log("meta", meta);
 		var protocol = null;
 		var newLayers = [];
