@@ -46,6 +46,7 @@
 		<script type="text/javascript" src="js/jquery.localize.js"></script>
 		<script type="text/javascript" src="OpenLayers-2.12/OpenLayers.js"></script>
 		<script type="text/javascript" src="js/jquery.base64.min.js"></script>
+		<script type="text/javascript" src="js/ListWidget.js"></script>
         <title>Hello Cordova</title>
     </head>
     <body>
@@ -365,7 +366,7 @@
 						<li><a href="#" data-icon="gear" class="ui-btn-active"><div data-localize="footer.arbiter">Arbiter</div></a></li>
 						<li><a href="#" data-icon="gear"><div data-localize="footer.project">Project</div></a></li>
 						<li><a href="#idServerSettingsPage" data-icon="info"><div data-localize="footer.servers">Servers</div></a></li>
-						<li><a href="#" data-icon="gear"><div data-localize="footer.layers">Layers</div></a></li>
+						<li><a href="#idLayerSettingsPage" data-icon="gear"><div data-localize="footer.layers">Layers</div></a></li>
 						<li><a href="#" data-icon="gear"><div data-localize="footer.area">Area</div></a></li>
 					</ul>
 				</div>
@@ -398,6 +399,38 @@
 						<li><a href="#" data-icon="gear"><div data-localize="footer.project">Project</div></a></li>
 						<li><a href="#" data-icon="info" class="ui-btn-active"><div data-localize="footer.servers">Servers</div></a></li>
 						<li><a href="#" data-icon="gear"><div data-localize="footer.layers">Layers</div></a></li>
+						<li><a href="#" data-icon="gear"><div data-localize="footer.area">Area</div></a></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		
+		<!--
+		 // =============================
+		 //		Layer Settings Page
+		 // =============================
+		 -->
+		<div data-role="page" class="Page" id='idLayerSettingsPage' data-theme="a">
+			<!-- Header -->
+			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
+				<a href="#idMapPage" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<h1 data-localize="page.layers">Layers</h1>
+				<a class="ui-btn-right" data-localize="button.edit" id="layersSettingsEditButton">Edit</a>
+			</div>
+			
+			<!-- Content -->
+			<div data-role="content" class="LayerSettingsPageContent" id='idLayerSettingsPageContent'>
+				
+			</div>
+			
+			<!-- Footer -->
+			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
+				<div data-role="navbar" data-iconpos="top">
+					<ul>
+						<li><a href="#" data-icon="gear"><div data-localize="footer.arbiter">Arbiter</div></a></li>
+						<li><a href="#" data-icon="gear"><div data-localize="footer.project">Project</div></a></li>
+						<li><a href="#" data-icon="info"><div data-localize="footer.servers">Servers</div></a></li>
+						<li><a href="#" data-icon="gear" class="ui-btn-active"><div data-localize="footer.layers">Layers</div></a></li>
 						<li><a href="#" data-icon="gear"><div data-localize="footer.area">Area</div></a></li>
 					</ul>
 				</div>
