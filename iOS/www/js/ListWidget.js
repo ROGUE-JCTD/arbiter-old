@@ -133,7 +133,10 @@ function ListWidget(params){
 		// Create string from additonalAttributes to be added to the list-item head
 		var extraAttributes = '';
 		for(var key in additionalAttributes){
-			extraAttributes += ' ' + key + '="' + additionalAttributes[key] + '"';
+			if(key != 'id' && key != 'class')
+				extraAttributes += ' ' + key + '="' + additionalAttributes[key] + '"';
+			else
+				console.log("ListWidget: the " + key + " attribute is reserved for the widget");
 		}
 		
 		var html = 	'<div class="list-item" id="' + this_widget.div_id + '-' + this_widget.nextId + '"' + extraAttributes + '>' +
@@ -160,9 +163,9 @@ function ListWidget(params){
 			this_widget.afterAppending();
 	};
 	
-	/*//////////////////////////////////
-	 * 	Make the top and bottom corners rounded
-	 *//////////////////////////////////
+	/*//////////////////////////////////////////////////////
+	 * 	Make the top and bottom corners of the list rounded
+	 *//////////////////////////////////////////////////////
 	this.setRoundedCorners = function(){
 		var rows = this_widget.listContainer.find('.list-item');
 		
@@ -212,9 +215,10 @@ function ListWidget(params){
 				this_widget.afterDeleting();
 		};
 		
-		if(this_widget.before_delete)
-			this_widget.before_delete(deleteRow);
-		else
+		if(this_widget.before_delete){
+			var itemInfo = this_widget.getListItemParams(listItem);
+			this_widget.before_delete(itemInfo, deleteRow);
+		}else
 			deleteRow();
 	});
 	

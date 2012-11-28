@@ -359,9 +359,16 @@ var Arbiter = {
 		});
 		
 		Arbiter.layersSettingsList = new ListWidget({
-			div_id: "idLayerSettingsPageContent", 
-			before_delete: function(deleteRow){
-				console.log("before delete has been called!");
+			div_id: "idLayerSettingsList", 
+			before_delete: function(itemInfo, deleteRow){
+				console.log("before_delete - itemInfo: ", itemInfo);
+				Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+					tx.executeSql("DELETE FROM layers WHERE layername=?;", [itemInfo.layername], function(tx, res){
+						console.log("before_delete: success!");
+						delete Arbiter.currentProject.serverList[itemInfo.servername].layers[itemInfo.layername];
+					});
+				}, function(){}, function(){});
+				
 				deleteRow();
 			},
 			edit_button_id: "layersSettingsEditButton"
@@ -377,7 +384,8 @@ var Arbiter = {
 			for(var serverKey in serverList){
 				for(var layerKey in serverList[serverKey].layers){
 					Arbiter.layersSettingsList.append(layerKey, {
-						serverName: serverKey
+						"serverName": serverKey,
+						"layerName": layerKey
 					});
 				}
 			}
@@ -2489,7 +2497,7 @@ var Arbiter = {
 	},
 	
 	// quick hack to get the proper scope for insertFeaturesIntoTable when syncing...
-	tableInsertion: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername){
+	tableInsertion: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, featuresLength){
 		var db = Arbiter.currentProject.dataDatabase;
 		db.transaction(function(tx){
 			var selectSql;
@@ -2567,7 +2575,7 @@ var Arbiter = {
 								}
 								
 								if(addProjectCallback)
-									addProjectCallback.call(Arbiter, features.length);
+									addProjectCallback.call(Arbiter, featuresLength);
 							}, function(tx, err){
 								console.log("insert err: ", err);
 							});
@@ -2611,7 +2619,7 @@ var Arbiter = {
 		
 		for(var i = 0; i < features.length; i++){
 			var feature = features[i];
-			Arbiter.tableInsertion(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername);
+			Arbiter.tableInsertion(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, features.length);
 		}
 	},
 	
