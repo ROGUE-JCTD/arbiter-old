@@ -561,7 +561,7 @@ clearCache : function(tileset, successCallback, vDb) {
 					}
 					
 					if (removeCounter === res.rows.length) {
-						TileUtil.deleteTileIds();
+						TileUtil.deleteAllTileIds();
 						if (successCallback){
 							successCallback();
 						}
@@ -596,14 +596,14 @@ clearCache : function(tileset, successCallback, vDb) {
 }, 
 
 deleteAllTileIds: function(){
-	console.log("---- TileUtil.deleteTileIds");
+	console.log("---- TileUtil.deleteAllTileIds");
 
 	// Remove everything from tileIds table
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 		var statement = "DELETE FROM tileIds;";
 		tx.executeSql(statement, [], function(tx, res){
 			if (TileUtil.debug) {
-				console.log("---- TileUtil.deleteTileIds done");
+				console.log("---- TileUtil.deleteAllTileIds done");
 			}
 		}, function(e1, e2) {
 			alert("chk9");
