@@ -224,6 +224,10 @@ cacheTiles: function(successCallback){
 				function(){
 					console.log("~~~~ done caching");
 					Arbiter.HideCachingTilesMenu();
+					
+					if (successCallback){
+						successCallback();
+					}
 				}
 			);
 		});

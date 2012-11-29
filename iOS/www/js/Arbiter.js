@@ -109,7 +109,9 @@ var editorTabOpen = false;
 
 var Arbiter = { 
 	
-	debugAlertOnError: true,	
+	debugAlertOnError: true,
+	
+	debugCallstack: true,	
 	
 	fileSystem: null,
 	
@@ -136,6 +138,8 @@ var Arbiter = {
 	
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); // http://www.youtube.com/watch?v=nhcHoUj4GlQ
+		
+		//sqlitePlugin.DEBUG = true;
 		
 		Cordova.Initialize(Arbiter);
 		
@@ -345,6 +349,7 @@ var Arbiter = {
 		div_MapPage.live('pagebeforeshow', Arbiter.onBeforeShowMap);
 		
 		div_AreaOfInterestPage.live('pageshow', Arbiter.onShowAOIMap);
+		div_AreaOfInterestPage.live('pagehide', Arbiter.onHideAOIMap);
 
 		div_AddLayersPage.live('pagebeforeshow', function(){
 			//populate the servers drop down from the currentProject.serverList
@@ -1050,8 +1055,6 @@ var Arbiter = {
     onShowAOIMap: function(){
     	console.log("---- onShowAOIMap");
     	
-    	console.log("---- onShowAreaOfInterestPage");
-    	
     	if (aoiMap){
     		Arbiter.error("aoiMap should not exist!");
     	}
@@ -1083,6 +1086,15 @@ var Arbiter = {
 		} else {
 			aoiMap.setCenter(new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),12);
 		}
+    },
+    
+    onHideAOIMap: function(){
+    	console.log("---- onHideAOIMap");
+
+    	if (aoiMap){
+    		aoiMap.destroy();
+    		aoiMap = null;
+    	}
     },
     
     onShowSettings: function(){
@@ -1120,7 +1132,7 @@ var Arbiter = {
 
     		Arbiter.changePage_Pop(div_MapPage);
     		console.log("---- go and show map before starting to cache");
-    		
+
     		var successSaveAreaOfInterest = function(tx, res){
         		console.log("---- try to start caching");
     			
@@ -1136,7 +1148,6 @@ var Arbiter = {
 
     			TileUtil.cacheTiles(successCacheTiles);    				
     		};
-    		
     		Arbiter.saveAreaOfInterest(false, successSaveAreaOfInterest);
     	}
     	
@@ -2294,17 +2305,28 @@ var Arbiter = {
 		$("[data-localize]").localize("locale/Arbiter", { language: CurrentLanguage.locale });
 	},
 	
-	error: function(err, description){
-		console.log('Error Object: ');
-		console.log(err);
-		console.log("Error description: ");
-		console.log(description);
+	error: function(arg1){
+		console.log('==== Arbiter.Error');
+		
+		var argsStr = "";
+		
+		for(var i = 0; i < arguments.length; i++) {
+			console.log("arg" + i + ": ", arguments[i]);
+			
+			if (argsStr !== "") {
+				argsStr += ", ";
+			}
+			
+			argsStr += "arg" + i + ": " + arguments[i];
+		}
+		
+		console.log("args as string: " + argsStr);
 		var trace = Arbiter.getStackTrace();
 		
 		console.log("StackTrace: \n" + trace);
 		
 		if (Arbiter.debugAlertOnError) {
-			alert("error: " + err + " description: " + description + "\n" + trace);
+			alert("error: " + argsStr + "\n" + trace);
 		}		
 	},
 	
@@ -2313,7 +2335,7 @@ var Arbiter = {
 			
 		if (typeof resolveFunctionNamesFrom === 'undefined') {
 			//TODO: add other objects that we can use to resolve member function
-			resolveFunctionNamesFrom = new Array(Arbiter,TileUtil);
+			resolveFunctionNamesFrom = new Array(Arbiter, TileUtil);
 		}			
 	
 		var currentFunction = arguments.callee.caller;
@@ -2345,6 +2367,10 @@ var Arbiter = {
 			}
 			
 			callstack.push(fname);
+			if (fname === "function"){
+				console.log("dumping content of anon function: ");
+				console.log(currentFunction);
+			}
 			currentFunction = currentFunction.caller;
 		}
 
