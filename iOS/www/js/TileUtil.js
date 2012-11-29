@@ -623,7 +623,7 @@ insertIntoTileIds: function(id) {
     }
     
     //var idsBeforeTx = TileUtil.tableToString(Arbiter.currentProject.variablesDatabase, "tileIds");
-    console.log("dumping before inserting id into tileIds. id: " + id);
+    //console.log("dumping before inserting id into tileIds. id: " + id);
     //TileUtil.dumpTileIds();
     
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
