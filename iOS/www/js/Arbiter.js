@@ -378,14 +378,18 @@ var Arbiter = {
 								var wfsLayer = map.getLayersByName(itemInfo.layername + '-wfs');
 								
 								console.log("before_delete: wfsLayer - ", wfsLayer);
-								if(wfsLayer.length)
-									wfsLayer[0].destroy();
+								if(wfsLayer.length){
+									map.removeLayer(wfsLayer[0]);
+									//wfsLayer[0].destroy();
+								}
 								
 								var wmsLayer = map.getLayersByName(itemInfo.layername + '-wms');
 								console.log("before_delete: wmsLayer - ", wmsLayer);
 								
-								if(wmsLayer.length)
-									wmsLayer[0].destroy();
+								if(wmsLayer.length){
+									map.removeLayer(wmsLayer[0]);
+									//wmsLayer[0].destroy();
+								}
 								
 								console.log("before remove layer from currentProject obj", itemInfo);
 								delete Arbiter.currentProject.serverList[itemInfo.servername].layers[itemInfo.layername];
@@ -2650,7 +2654,7 @@ var Arbiter = {
 						}else{ // from sync
 							console.log("syncing: " + layername + ", ", map);
 							if(layername && map){
-								var vectorLayer = map.getLayersByName(layername);
+								var vectorLayer = map.getLayersByName(layername + "-wfs");
 								if(vectorLayer.length){
 									console.log("insert sync:", feature);
 									feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
