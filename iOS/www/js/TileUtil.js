@@ -392,10 +392,10 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 								},
 								function(err) {
 									console.log("download error source " + err.source);
-e									console.log("download error target " + err.target);
+									console.log("download error target " + err.target);
 									console.log("upload error code" + err.code);
 									
-									Arbiter.error(err, "Failed download or save file to: " + filePath);
+									Arbiter.error("Failed download or save file to: " + filePath, err);
 									
 									if (errorCallback){
 										errorCallback(fileUrl, filePath, err);
