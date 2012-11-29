@@ -690,8 +690,8 @@ var Arbiter = {
 				}else{
 					console.log("featureIncrement: " + featureIncrement);
 				}
-			}, function(e){ console.log("createFeatureTableSql error: " + e); });
-		});
+			});
+		}, function(e){ console.log("createFeatureTableSql error: " + e); });
     },
     
     insertProjectsLayer: function(serverId, serverName, layerName, layer){
@@ -1469,9 +1469,10 @@ var Arbiter = {
 		console.log("readLayers " + radioNumber + ": " + serverList);
 		for(var x in serverList){
 			layers = serverList[x].layers;
+			console.log("readLayers check layers", layers);
 			for(var y in layers){
 				//add the wms and wfs layers to the map
-				console.log("add layer");
+				console.log("add layer", layers[y]);
 				Arbiter.AddLayer({
 					featureNS: layers[y].featureNS,
 					url: serverList[x].url,
@@ -1503,6 +1504,7 @@ var Arbiter = {
 				radioNumber++;
 				 
 				//add the data from local storage
+				console.log("checking scope issue with readLayerFromDb call", layers[y]);
 				Arbiter.readLayerFromDb(layers[y].featureType, y, layers[y].geomName, layers[y].srsName);
 			}
 		}
@@ -1512,7 +1514,47 @@ var Arbiter = {
 		return radioNumber;
 	},
 	
-	//deleted is true if the server was deleted
+	setLayerAttributeInfo: function(serverList, layername, f_table_name){
+		console.log("layername: " + layername + ", f_table_name: " + f_table_name, serverList);
+		// get the geometry name, type, and srs of the layer
+		var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name='" + f_table_name + "';";
+
+		Cordova.transaction(Arbiter.currentProject.dataDatabase, geomColumnsSql, [], function(tx, res) {
+			var geomName;
+			//var server = Arbiter.currentProject.serverList[serverName];
+			var serverLayer = serverList.layers[layername];
+			console.log("serverLayer: bugga", serverLayer);
+			if (res.rows.length) { // should only be 1 right now
+				console.log("geometry_columns: ", res.rows.item(0));
+				geomName = res.rows.item(0).f_geometry_column;
+
+				// get the attributes of the layer
+				var tableSelectSql = "PRAGMA table_info (" + f_table_name + ");";
+
+				serverLayer.geomName = geomName;
+				serverLayer.srsName = res.rows.item(0).srid;
+				serverLayer.geometryType = res.rows.item(0).geometry_type;
+
+				Cordova.transaction(Arbiter.currentProject.dataDatabase, tableSelectSql, [], function(tx, res) {
+					var attr;
+					for ( var h = 0; h < res.rows.length; h++) {
+						attr = res.rows.item(h);
+
+						if (attr.name != 'fid' && attr.name != geomName && attr.name != 'id'){
+							serverLayer.attributes.push(attr.name);
+							serverLayer.attributeTypes.push({
+								type: attr.type,
+								notnull: attr.notnull
+							});
+						}
+					}
+				}, Arbiter.error);
+			}
+		}, Arbiter.error);
+	},
+	
+	//if the serverName doesn't exist, use the serverList object
+	//otherwise use the deletedServers object
 	setServerLayers : function(serverId, serverName) {
 			var serversList;
 			
@@ -1540,41 +1582,7 @@ var Arbiter = {
 						attributeTypes: []
 					};
 
-					// get the geometry name, type, and srs of the layer
-						var layerObj = layer;
-						var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name='" + layerObj.f_table_name + "';";
-
-						Cordova.transaction(Arbiter.currentProject.dataDatabase, geomColumnsSql, [], function(tx, res) {
-							var geomName;
-							//var server = Arbiter.currentProject.serverList[serverName];
-							var serverLayer = serversList.layers[layerObj.layername];
-
-							if (res.rows.length) { // should only be 1 right now
-								geomName = res.rows.item(0).f_geometry_column;
-
-								// get the attributes of the layer
-									var tableSelectSql = "PRAGMA table_info (" + layerObj.f_table_name + ");";
-
-									serverLayer.geomName = geomName;
-									serverLayer.srsName = res.rows.item(0).srid;
-									serverLayer.geometryType = res.rows.item(0).geometry_type;
-
-									Cordova.transaction(Arbiter.currentProject.dataDatabase, tableSelectSql, [], function(tx, res) {
-										var attr;
-										for ( var h = 0; h < res.rows.length; h++) {
-											attr = res.rows.item(h);
-
-											if (attr.name != 'fid' && attr.name != geomName && attr.name != 'id'){
-												serverLayer.attributes.push(attr.name);
-												serverLayer.attributeTypes.push({
-													type: attr.type,
-													notnull: attr.notnull
-												});
-											}
-										}
-									}, Arbiter.error);
-							}
-						}, Arbiter.error);
+					Arbiter.setLayerAttributeInfo(serversList, layer.layername, layer.f_table_name);
 				}
 
 				Arbiter.changePage_Pop(div_MapPage);
@@ -2200,7 +2208,7 @@ var Arbiter = {
 						
 						console.log("pullFeatures: ", features);
 						Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false, addProjectCallback, layernickname);
-
+						
 					}, Arbiter.error);
 			},
 			failure: function(response){
