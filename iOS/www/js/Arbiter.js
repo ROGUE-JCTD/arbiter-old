@@ -560,7 +560,7 @@ var Arbiter = {
 		
 		jqSyncUpdates.taphold(function(){
 			// do the same things as mouseup event
-			jqSyncUpdates.mouseup();
+//			jqSyncUpdates.mouseup();
 			
 			// but also re-cache tiles
 			TileUtil.cacheTiles();
