@@ -337,8 +337,14 @@ getURL: function(bounds) {
 					console.log("====>> ERROR: TileUtil.getURL: Multiple Entries for tile " + TileUtil.rowsToString(res.rows));
 					Arbiter.error("TileUtil.getURL: Multiple Entries for tile! see console for details. count: " + res.rows.length);
 				}					
-			}, Arbiter.error);	
-		}, Arbiter.error);	
+			}, function(e1, e2) {
+				alert("chk27");
+				Arbiter.error(e1, e2);
+			});	
+		}, function(e1, e2) {
+			alert("chk28");
+			Arbiter.error(e1, e2);
+		});	
 		
 	} else {
 		//TODO: if not chached, if we have connection, just return URL aka finalUrl
@@ -353,9 +359,9 @@ getURL: function(bounds) {
 }, 
 
 saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
-	if (TileUtil.debug) {
+	//if (TileUtil.debug) {
 		console.log("---- TileUtil.saveTile. tileset: " + tileset + ", z: " + z + ", x: " + x + ", y: " + y + ", url: " + fileUrl);
-	}
+	//}
 
 	var extention = fileUrl.substr(fileUrl.lastIndexOf("."));
 	//console.log("---- TileUtil.saveTile.extention: " + extention);
@@ -396,16 +402,19 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 									}
 								}
 							);
-						}, function(err) {
-							Arbiter.error(err, "Failed to get X Dir");
+						}, function(e1, e2) {
+							alert("chk28");
+							Arbiter.error(e1, e2);
 						}
 					);
-				}, function(err) {
-					Arbiter.error(err, "Failed to get Z Dir");
+				}, function(e1, e2) {
+					alert("chk29");
+					Arbiter.error(e1, e2);
 				}
 			);
-		}, function(err) {
-			Arbiter.error(err, "Failed to get Tileset Dir");
+		}, function(e1, e2) {
+			alert("chk30");
+			Arbiter.error(e1, e2);
 		}
 	);
 
@@ -455,8 +464,14 @@ addTile : function(url, path, tileset, z, x, y) {
 						    if (TileUtil.debug) {
 								console.log("inserted new url in tiles. res.insertId: " + res.insertId);
 							}
-						}, Arbiter.error);
-					}, Arbiter.error);
+						}, function(e1, e2) {
+							alert("chk1");
+							Arbiter.error(e1, e2);
+						});
+					}, function(e1, e2) {
+						alert("chk2");
+						Arbiter.error(e1, e2);
+					});
 
 			} else if (res.rows.length === 1) {
 				
@@ -474,15 +489,27 @@ addTile : function(url, path, tileset, z, x, y) {
 						if (TileUtil.debug) {
 							console.log("updated tiles. for url : " + url);
 						}
-					}, Arbiter.error);
-				}, Arbiter.error);
+					}, function(e1, e2) {
+						alert("chk3");
+						Arbiter.error(e1, e2);
+					});
+				}, function(e1, e2) {
+					alert("chk4");
+					Arbiter.error(e1, e2);
+				});
 
 			} else {
 				console.log("TileUtil.addTile rows length not 0 not 1: " + TileUtil.rowsToString(res.rows))
 				Arbiter.error("tiles has duplicate entry for a given url. see console");
 			}
-		}, Arbiter.error);
-	}, Arbiter.error);
+		}, function(e1, e2) {
+			alert("chk5");
+			Arbiter.error(e1, e2);
+		});
+	}, function(e1, e2) {
+		alert("chk6");
+		Arbiter.error(e1, e2);
+	});
 
 }, 
 
@@ -551,7 +578,10 @@ clearCache : function(tileset, successCallback, vDb) {
 				}				
 			}
 
-		}, Arbiter.error);
+		}, function(e1, e2) {
+			alert("chk7");
+			Arbiter.error(e1, e2);
+		});
 	};
 	
 	if (vDb == null){
@@ -559,7 +589,10 @@ clearCache : function(tileset, successCallback, vDb) {
 	}
 		
 	//alert("inserted tile. id: " + res.insertId);
-	vDb.transaction(op, Arbiter.error);		
+	vDb.transaction(op, function(e1, e2) {
+		alert("chk8");
+		Arbiter.error(e1, e2);
+	});		
 }, 
 
 deleteTileIds: function(){
@@ -574,23 +607,42 @@ deleteTileIds: function(){
 			if (TileUtil.debug) {
 				console.log("---- TileUtil.deleteTileIds done");
 			}
-		}, Arbiter.error);					
-	}, Arbiter.error);	
+		}, function(e1, e2) {
+			alert("chk9");
+			Arbiter.error(e1, e2);
+		});					
+	}, function(e1, e2) {
+		alert("chk10");
+		Arbiter.error(e1, e2);
+	});	
 },
 
 insertIntoTileIds: function(id) {
     if (TileUtil.debug) {
     	console.log("---- TileUtil.addToTileIds. id: " + id);
     }
-	
+    
+    //var idsBeforeTx = TileUtil.tableToString(Arbiter.currentProject.variablesDatabase, "tileIds");
+    console.log("dumping before inserting id into tileIds. id: " + id);
+    //TileUtil.dumpTileIds();
+    
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
 		var statement = "INSERT INTO tileIds (id) VALUES (?);";
 		tx.executeSql(statement, [id], function(tx, res) {
 			if (TileUtil.debug) {
 				console.log("inserted in tileIds. id: " + id);
 			}
-		}, Arbiter.error);
-	}, Arbiter.error);
+		}, function(e1, e2) {
+			console.log("dumping after error for id: " + id);
+			//TileUtil.dumpTileIds();
+			console.log("CHK: " + statement + ": " + id);
+			alert("chk11");
+			Arbiter.error(e1, e2);
+		});
+	}, function(e1, e2) {
+		alert("chk12");
+		Arbiter.error(e1, e2);
+	});
 },
 
 /**
@@ -653,8 +705,14 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 									Arbiter.error("err" + err);
 								}
 							);
-						}, Arbiter.error);
-					}, Arbiter.error);							
+						}, function(e1, e2) {
+							alert("chk13");
+							Arbiter.error(e1, e2);
+						});
+					}, function(e1, e2) {
+						alert("chk14");
+						Arbiter.error(e1, e2);
+					});							
 					
 				} else if (tileEntry.ref_counter > 1){
 					Arbiter.globalDatabase.transaction(function(tx){
@@ -669,8 +727,14 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 							if (successCallback){
 								successCallback();
 							}
-						}, Arbiter.error);
-					}, Arbiter.error);	
+						}, function(e1, e2) {
+							alert("chk15");
+							Arbiter.error(e1, e2);
+						});
+					}, function(e1, e2) {
+						alert("chk16");
+						Arbiter.error(e1, e2);
+					});	
 					
 				} else {
 					Arbiter.error("Error: tileEntry.ref_counter <= 0");
@@ -683,8 +747,14 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 				// should not happen
 				console.log("====> Error: tiles has multiple entries for id");
 			}
-		}, Arbiter.error);
-	}, Arbiter.error);	
+		}, function(e1, e2) {
+			alert("chk17");
+			Arbiter.error(e1, e2);
+		});
+	}, function(e1, e2) {
+		alert("chk18");
+		Arbiter.error(e1, e2);
+	});	
 	
 
 }, 
@@ -694,21 +764,50 @@ dumpTableNames: function(database){
 	database.transaction(function(tx){
 		tx.executeSql("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;", [], function(tx, res){
 			console.log(TileUtil.rowsToString(res.rows));
-		}, Arbiter.error);	
-	}, Arbiter.error);
+		}, function(e1, e2) {
+			alert("chk19");
+			Arbiter.error(e1, e2);
+		});	
+	}, function(e1, e2) {
+		alert("chk20");
+		Arbiter.error(e1, e2);
+	});
 },
+// TODO: neds a call baclk instead
+//tableToString: function(database, tableName){
+//	console.log("---- TileUtil.tableToString");
+//	var str = "";
+//	database.transaction(function(tx){
+//		tx.executeSql("SELECT * FROM " + tableName + ";", [], function(tx, res){
+//			str = TileUtil.rowsToString(res.rows);
+//		}, function(e1, e2) {
+//			alert("chk21");
+//			Arbiter.error(e1, e2);
+//		});	
+//	}, function(e1, e2) {
+//		alert("chk22");
+//		Arbiter.error(e1, e2);
+//	});
+//	
+//	return str;
+//},
 
 dumpTableRows: function(database, tableName){
 	console.log("---- TileUtil.dumpTableRows");
 	database.transaction(function(tx){
 		tx.executeSql("SELECT * FROM " + tableName + ";", [], function(tx, res){
 			console.log(TileUtil.rowsToString(res.rows));
-		}, Arbiter.error);	
-	}, Arbiter.error);
+		}, function(e1, e2) {
+			alert("chk21");
+			Arbiter.error(e1, e2);
+		});	
+	}, function(e1, e2) {
+		alert("chk22");
+		Arbiter.error(e1, e2);
+	});
 },
 
 rowsToString: function(rows) {
-	
 	for(var x in row){
 		if(x != "id" && x != "fid" && x != geomName){
 			feature.attributes[x] = row[x];
@@ -748,14 +847,20 @@ dumpTilesWithRefCount: function(count){
 				function(tx, res){
 					console.log(TileUtil.rowsToString(res.rows));
 				}, 
-				Arbiter.error
+				function(e1, e2) {
+					alert("chk23");
+					Arbiter.error(e1, e2);
+				}
 			);	
 		}, 
-		Arbiter.error
+		function(e1, e2) {
+			alert("chk24");
+			Arbiter.error(e1, e2);
+		}
 	);
 },
 
-dumpTileIds: function(count){
+dumpTileIds: function(){
 	console.log("---- TileUtil.dumpTileIds");
 	Arbiter.currentProject.variablesDatabase.transaction(
 		function(tx){
@@ -765,10 +870,16 @@ dumpTileIds: function(count){
 				function(tx, res){
 					console.log(TileUtil.rowsToString(res.rows));
 				}, 
-				Arbiter.error
+				function(e1, e2) {
+					alert("chk25");
+					Arbiter.error(e1, e2);
+				}
 			);	
 		}, 
-		Arbiter.error
+		function(e1, e2) {
+			alert("chk26");
+			Arbiter.error(e1, e2);
+		}
 	);
 }
 
