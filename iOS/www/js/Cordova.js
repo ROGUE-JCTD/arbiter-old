@@ -183,6 +183,10 @@ var Cordova = {
 		}
 	},
 	
+	getGeolocation: function(_success, _error){
+		navigator.geolocation.getCurrentPosition(_success, _error, this.CordovaOptions_GeoLocation);
+	},
+	
 	geolocationSuccess: function(_position) {
 		Cordova.CurrentUser.GeoLocation.latitude			= _position.coords.latitude;
 		Cordova.CurrentUser.GeoLocation.longitude			= _position.coords.longitude;

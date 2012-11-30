@@ -84,10 +84,10 @@ var jqEditorTab;
 var jqAttributeTab;
 var jqExistingServers;
 var jqAddFeature;
-var jqEditFeature;
 var jqSyncUpdates;
 var jqProjectPageContent;
-
+var jqGoToAOI;
+var jqFindMeButton;
 
 var tempLayerToEdit = null;
 var fileSystem = null;
@@ -188,7 +188,8 @@ var Arbiter = {
 		jqEditorTab = $('#editorTab');
 		jqAttributeTab = $('#attributeTab');
 		jqAddFeature	 = $('#addPointFeature');
-		jqEditFeature	 = $('#editPointFeature');
+		jqGoToAOI = $('#goToAreaOfInterest');
+		jqFindMeButton = $('#findMeButton');
 		jqSyncUpdates	 = $('#syncUpdates');
 		jqProjectPageContent = $('#idProjectPageContent');
 		jqServersPageContent = $('.ServersPageContent');
@@ -530,8 +531,20 @@ var Arbiter = {
 			}
 		});
 		
-		jqEditFeature.mouseup(function(event){
-			console.log("Edit Feature");
+		jqGoToAOI.mouseup(function(event){
+			map.zoomToExtent(Arbiter.currentProject.aoi);
+		});
+		
+		jqFindMeButton.mouseup(function(event){
+			Cordova.getGeolocation(function(position){
+				console.log(position);
+				var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
+				console.log("center: ", center);
+				
+				map.setCenter(center);
+			}, function(error){
+				
+			});
 		});
 		
 		jqSyncUpdates.mouseup(function(event){
