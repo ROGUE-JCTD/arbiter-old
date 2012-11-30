@@ -21,16 +21,16 @@ dumpFiles: function() {
 							 }
 						 }
 					},
-					function(){
-						console.log("====>> failDirectoryReader");
+					function(err){
+						Arbiter.error("dumpFiles.exception", err);
 					}
 				);
 			} catch (e) {
-				console.log("====>> dumpFiles.exception: "+ e);
+				Arbiter.error("dumpFiles.exception", e);
 			}
 		}, 
-		function(error) {
-			console.log("====>> failed to get fs (fileSystem) error: " + error.code);
+		function(err) {
+			Arbiter.error("failed to get fs (fileSystem)", err);
 		}
 	);	
 },
@@ -308,8 +308,8 @@ getURL: function(bounds) {
 							}
 						};
 						
-						var saveTileError = function(url, path, error){
-							console.log("========>> saveTileError filename: " + url + ", path: " + path);
+						var saveTileError = function(url, path, err){
+							Arbiter.error("saveTileError filename: " + url + ", path: " + path, err);
 							//alert("failed to download file. todo.");
 							//TODO: failed to download file and save to disk so just remove it from global.tiles and project.tileIds tables
 							// if save failed, remove it. 
@@ -390,30 +390,30 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 										successCallback(fileUrl, filePath);
 									}
 								},
-								function(error) {
-									console.log("download error source " + error.source);
-									console.log("download error target " + error.target);
-									console.log("upload error code" + error.code);
+								function(err) {
+									console.log("download error source " + err.source);
+									console.log("download error target " + err.target);
+									console.log("upload error code" + err.code);
 									
-									Arbiter.error(error, "Failed download or save file to: " + filePath);
+									Arbiter.error("Failed download or save file to: " + filePath, err);
 									
 									if (errorCallback){
-										errorCallback(fileUrl, filePath, error);
+										errorCallback(fileUrl, filePath, err);
 									}
 								}
 							);
 						}, function(e1, e2) {
-							alert("chk28");
+							alert("chk29");
 							Arbiter.error(e1, e2);
 						}
 					);
 				}, function(e1, e2) {
-					alert("chk29");
+					alert("chk30");
 					Arbiter.error(e1, e2);
 				}
 			);
 		}, function(e1, e2) {
-			alert("chk30");
+			alert("chk31");
 			Arbiter.error(e1, e2);
 		}
 	);
@@ -561,7 +561,7 @@ clearCache : function(tileset, successCallback, vDb) {
 					}
 					
 					if (removeCounter === res.rows.length) {
-						TileUtil.deleteTileIds();
+						TileUtil.deleteAllTileIds();
 						if (successCallback){
 							successCallback();
 						}
@@ -595,17 +595,15 @@ clearCache : function(tileset, successCallback, vDb) {
 	});		
 }, 
 
-deleteTileIds: function(){
-    if (TileUtil.debug) {
-    	console.log("---- TileUtil.deleteTileIds");
-    }
+deleteAllTileIds: function(){
+	console.log("---- TileUtil.deleteAllTileIds");
 
 	// Remove everything from tileIds table
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 		var statement = "DELETE FROM tileIds;";
 		tx.executeSql(statement, [], function(tx, res){
 			if (TileUtil.debug) {
-				console.log("---- TileUtil.deleteTileIds done");
+				console.log("---- TileUtil.deleteAllTileIds done");
 			}
 		}, function(e1, e2) {
 			alert("chk9");
@@ -623,7 +621,7 @@ insertIntoTileIds: function(id) {
     }
     
     //var idsBeforeTx = TileUtil.tableToString(Arbiter.currentProject.variablesDatabase, "tileIds");
-    console.log("dumping before inserting id into tileIds. id: " + id);
+    //console.log("dumping before inserting id into tileIds. id: " + id);
     //TileUtil.dumpTileIds();
     
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx) {
@@ -695,14 +693,12 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 											}
 										},
 										function(err){
-											console.log("====> Error: TileUtil.removeTileById. Error removing tile from disk: " + tileEntry.path + ", err: " + err);
-											Arbiter.error("failed to delete tile from disk!");
+											Arbiter.error("failed to delete tile from disk! " + tileEntry.path, err);
 										}
 									);
 								}, 
 								function(err){
-									console.log("get file from root failed. path: " + tileEntry.path);
-									Arbiter.error("err" + err);
+									Arbiter.error("get file from root failed. path: " + tileEntry.path, err);
 								}
 							);
 						}, function(e1, e2) {
@@ -742,10 +738,13 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 				
 			} else if (res.rows.length === 0){
 				// should not happen
-				console.log("====> Error: tile id from tileIds not in tiles table");
+				Arbiter.error("Warning: tile id from tileIds not in tiles table. Will return succes so the tileIds table gets flushed anyway.");
+				if (successCallback){
+					successCallback();
+				}
 			} else {
 				// should not happen
-				console.log("====> Error: tiles has multiple entries for id");
+				Arbiter.error("tiles table has multiple entries for id!");
 			}
 		}, function(e1, e2) {
 			alert("chk17");
