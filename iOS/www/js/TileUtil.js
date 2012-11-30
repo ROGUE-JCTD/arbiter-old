@@ -480,8 +480,7 @@ addTile : function(url, path, tileset, z, x, y) {
 							//					catch it and assume it was id of 1
 							if (res.insertId == null){
 								res.insertId = 1;
-								console.log("@@@@@@ caught res.insertId == null inserintg into tiles. using 1 as workaround");
-								//alert("@@@@@@ caught res.insertId == null inserintg into tiles. using 1 as workaround");
+								Arbiter.warning("@@@@@@ caught res.insertId == null inserintg into tiles. using 1 as workaround");
 							}
 							
 						    TileUtil.insertIntoTileIds(res.insertId);
@@ -500,7 +499,7 @@ addTile : function(url, path, tileset, z, x, y) {
 
 			} else if (res.rows.length === 1) {
 				//TODO: remove. only for testing single project
-				alert("about to increment existing tiles refcounter for id: " + resTiles.rows.item(0).id);
+				//alert("about to increment existing tiles refcounter for id: " + resTiles.rows.item(0).id);
 				
 				if (TileUtil.debug) {
 					console.log("found tile in global.tiles. TileUtil.rowsToString(resTiles.rows): " + TileUtil.rowsToString(resTiles.rows));
