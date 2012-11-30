@@ -2,6 +2,9 @@ var TileUtil = {
 
 debug: false,
 debugProgress: false,
+cacheTilesTest1Couter: 0,
+getURLCounter : 0,
+
 		
 dumpFiles: function() {
 	console.log("---- TileUtil.dumpFiles");
@@ -218,7 +221,7 @@ stopCachingTiles: function() {
 	caching = undefined;
 },
 
-cacheTiles: function(successCallback){
+cacheTiles: function(successCallback, errorCallback){
 	
 	if (typeof caching !== 'undefined') {
 		Arbiter.warning("Tile Caching already in progress. Aborting new request");
@@ -229,6 +232,45 @@ cacheTiles: function(successCallback){
 	TileUtil.getURLCounter = 0;
 	Arbiter.ShowCachingTilesMenu();
 
+	
+	TileUtil.clearCache("osm", function(){
+		console.log("cleared cache. starting testTilesTableIsEmpty");
+		
+		TileUtil.testTilesTableIsEmpty(
+			function(){
+				console.log("----[ cacheTiles.clearCache: success no tiles in Tiles table");
+				console.log("~~~~ done clearing clearing cache");
+				
+				// once all the cache for this project is cleared, start caching again. 
+				TileUtil.startCachingTiles(
+					function(){
+						console.log("~~~~ done caching");
+						Arbiter.HideCachingTilesMenu();
+						
+						console.log("######## tiles with ref count of 2");
+						TileUtil.dumpTilesWithRefCount(2);
+						
+						if (successCallback){
+							successCallback();
+						}
+					}
+				);
+			},
+			function(){
+				TileUtil.dumpTilesTable();
+				Arbiter.error("----[ cacheTiles.clearCache: failed!!Tiles Table not empty. just dumped tilestable");
+				Arbiter.HideCachingTilesMenu();
+
+				if (errorCallback){
+					errorCallback();
+				}
+			}
+		);
+	});
+	
+	
+	//Original
+/*
 	TileUtil.clearCache("osm", function(){
 		console.log("~~~~ done clearing clearing cache");
 		// once all the cache for this project is cleared, start caching again. 
@@ -237,8 +279,8 @@ cacheTiles: function(successCallback){
 				console.log("~~~~ done caching");
 				Arbiter.HideCachingTilesMenu();
 				
-				console.log("######## tiles with ref count of 2");
-				TileUtil.dumpTilesWithRefCount(2);
+				//console.log("######## tiles with ref count of 2");
+				//TileUtil.dumpTilesWithRefCount(2);
 				
 				if (successCallback){
 					successCallback();
@@ -246,10 +288,66 @@ cacheTiles: function(successCallback){
 			}
 		);
 	});
+*/
+	
 	
 },
 
-getURLCounter : 0,
+testCacheTilesRepeatStart: function(millisec){
+	
+	var onTimeout = function(){
+		TileUtil.cacheTilesTest1Couter += 1;
+		console.log("---[ cacheTilesTest1Couter: " + TileUtil.cacheTilesTest1Couter );
+
+		TileUtil.cacheTiles(null, function(){ 
+			console.log("stoping test, testCacheTilesRepeatStop");
+			TileUtil.testCacheTilesRepeatStop();
+		});
+	};
+	
+	cacheTilesTest1Timer = setInterval(onTimeout, millisec);
+},
+
+testCacheTilesRepeatStop: function(){
+	clearTimeout(cacheTilesTest1Timer);
+},
+
+// make sure all ids in tileIds are in tiles table
+testTileIdsTableIntegrity: function(){
+},
+
+// make sure entries in tiles table exist on disk
+testTilesTableIntegrity: function(){
+},
+
+// make sure there are no entries in Tiles table
+testTilesTableIsEmpty: function(_success, _error){
+	Cordova.transaction(
+		Arbiter.globalDatabase,
+		"SELECT * FROM tiles;", 
+		[], 
+		function(tx, res){
+			if (res.rows.length == 0){
+				if (_success){
+					_success();
+				}
+			} else {
+				if (_error){
+					_error();
+				}
+			}
+		},
+		function(e1, e2){
+			Arbiter.error("testTilesTableIsEmpty. ", e1, e2);
+		}
+	);
+},
+
+// count how many png files are actually on file system
+testPngTileCount: function(){
+},
+
+
 
 getURL: function(bounds) {
 	
@@ -499,7 +597,7 @@ addTile : function(url, path, tileset, z, x, y) {
 
 			} else if (res.rows.length === 1) {
 				//TODO: remove. only for testing single project
-				//alert("about to increment existing tiles refcounter for id: " + resTiles.rows.item(0).id);
+				alert("about to increment existing tiles refcounter for id: " + resTiles.rows.item(0).id);
 				
 				if (TileUtil.debug) {
 					console.log("found tile in global.tiles. TileUtil.rowsToString(resTiles.rows): " + TileUtil.rowsToString(resTiles.rows));
@@ -588,7 +686,7 @@ clearCache : function(tileset, successCallback, vDb) {
 					}
 					
 					if (removeCounter === res.rows.length) {
-						TileUtil.deleteAllTileIds();
+						TileUtil.deleteTileIdsEntries();
 						if (successCallback){
 							successCallback();
 						}
@@ -622,15 +720,15 @@ clearCache : function(tileset, successCallback, vDb) {
 	});		
 }, 
 
-deleteAllTileIds: function(){
-	console.log("---- TileUtil.deleteAllTileIds");
+deleteTileIdsEntries: function(){
+	console.log("---- TileUtil.deleteTileIdsEntries");
 
 	// Remove everything from tileIds table
 	Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 		var statement = "DELETE FROM tileIds;";
 		tx.executeSql(statement, [], function(tx, res){
 			if (TileUtil.debug) {
-				console.log("---- TileUtil.deleteAllTileIds done");
+				console.log("---- TileUtil.deleteTileIdsEntries done");
 			}
 		}, function(e1, e2) {
 			alert("chk9");
@@ -640,6 +738,49 @@ deleteAllTileIds: function(){
 		alert("chk10");
 		Arbiter.error(e1, e2);
 	});	
+},
+
+deleteTilesEntries: function(){
+	console.log("---- TileUtil.deleteTileIdsEntries");
+
+	// Remove everything from tiles table
+	Cordova.transaction(
+		Arbiter.globalDatabase,
+		"DELETE FROM tiles;",
+		[], 
+		function(tx, res){
+			if (TileUtil.debug) {
+				console.log("---- TileUtil.deleteTilesEntries done");
+			}
+		}, 
+		function(e1, e2) {
+			alert("chk101");
+			Arbiter.error(e1, e2);
+		}					
+	);
+},
+
+deleteAllTileTableEntriesAndTheirPngFiles: function(){
+	console.log("---- TileUtil.deleteAllTileTableEntriesAndTheirPngFiles");
+
+	Cordova.transaction(
+		Arbiter.globalDatabase,
+		"SELECT * FROM tiles;", 
+		[], 
+		function(tx, res){
+			console.log("deleting pngs mapped to entries. count:" + res.rows.length);
+			
+			for(var i = 0; i < res.rows.length; i++){
+				var row = res.rows.item(i);
+				TileUtil.removeTileFromDevice(row.path, row.id, null, function(){alert("chk100");});
+				
+				TileUtil.deleteTilesEntries();
+			}	
+		},
+		function(e1, e2){
+			Arbiter.error("deleteAllTileTableEntriesAndTheirPngFiles. ", e1, e2);
+		}
+	);
 },
 
 insertIntoTileIds: function(id) {
@@ -673,6 +814,37 @@ insertIntoTileIds: function(id) {
 		Arbiter.error(e1, e2);
 	});
 },
+
+removeTileFromDevice: function(path, id, successCallback, errorCallback){
+	// remove tile from disk
+	Arbiter.fileSystem.root.getFile(path, {create: false},
+		function(fileEntry){
+			fileEntry.remove(
+				function(fileEntry){
+	
+				    if (TileUtil.debug) {
+				    	console.log("-- TileUtil.removeTileById. removed tile from disk . tiles.id: " + id + ", path: " + path);
+				    }
+					
+					if (successCallback){
+						successCallback();
+					}
+				},
+				function(err){
+					Arbiter.error("failed to delete tile from disk. tiles.id: " + id + ", path: " + path, err);
+				}
+			);
+		}, 
+		function(err){
+			Arbiter.warning("get file from root failed. will assume success. tiles.id: " + id + ", path: " + path, err);
+	
+			if (successCallback){
+				successCallback();
+			}
+		}
+	);
+},
+
 
 /**
  * given a tileId, remove it from the project's tileIds table
@@ -709,33 +881,8 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 						var statement = "DELETE FROM tiles WHERE id=?;";
 						tx.executeSql(statement, [id], function(tx, res){
 	
-							// remove tile from disk
-							Arbiter.fileSystem.root.getFile(tileEntry.path, {create: false},
-								function(fileEntry){
-									fileEntry.remove(
-										function(fileEntry){
-	
-										    if (TileUtil.debug) {
-										    	console.log("-- TileUtil.removeTileById. removed tile from disk . tiles.id: " + id + ", path: " + tileEntry.path);
-										    }
-											
-											if (successCallback){
-												successCallback();
-											}
-										},
-										function(err){
-											Arbiter.error("failed to delete tile from disk. tiles.id: " + id + ", path: " + tileEntry.path, err);
-										}
-									);
-								}, 
-								function(err){
-									Arbiter.warning("get file from root failed. will assume success. tiles.id: " + id + ", path: " + tileEntry.path, err);
-
-									if (successCallback){
-										successCallback();
-									}
-								}
-							);
+							TileUtil.removeTileFromDevice(tileEntry.path, id, successCallback, errorCallback);
+							
 						}, function(e1, e2) {
 							alert("chk13");
 							Arbiter.error(e1, e2);
@@ -768,18 +915,18 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 					});	
 					
 				} else {
-					Arbiter.error("Error: tileEntry.ref_counter <= 0");
+					Arbiter.error("Error: tileEntry.ref_counter <= 0 for id: " + id);
 				}
 				
 			} else if (res.rows.length === 0){
 				// should not happen
-				Arbiter.warning("tile id from tileIds not in tiles table. Will return succes so the tileIds table gets flushed anyway.");
+				Arbiter.warning("tile id from tileIds not in tiles table. Will return succes so the tileIds table gets flushed anyway. id: " + id);
 				if (successCallback){
 					successCallback();
 				}
 			} else {
 				// should not happen
-				Arbiter.error("tiles table has multiple entries for id!");
+				Arbiter.error("tiles table has multiple entries for id: " + id);
 			}
 		}, function(e1, e2) {
 			alert("chk17");
@@ -842,12 +989,6 @@ dumpTableRows: function(database, tableName){
 },
 
 rowsToString: function(rows) {
-	for(var x in row){
-		if(x != "id" && x != "fid" && x != geomName){
-			feature.attributes[x] = row[x];
-		}
-	}	
-	
 	var rowsStr = "rows.length: " + rows.length + "\n";
 	for(var i = 0; i < rows.length; i++){
 		var row = rows.item(i);
