@@ -111,6 +111,8 @@ var Arbiter = {
 	
 	debugAlertOnError: true,
 	
+	debugAlertOnWarning: false,
+	
 	debugCallstack: true,	
 	
 	fileSystem: null,
@@ -536,7 +538,7 @@ var Arbiter = {
 		
 		jqSyncUpdates.taphold(function(){
 			// do the same things as mouseup event
-//			jqSyncUpdates.mouseup();
+			jqSyncUpdates.mouseup();
 			
 			// but also re-cache tiles
 			TileUtil.cacheTiles();
@@ -1147,7 +1149,7 @@ var Arbiter = {
         			map.zoomToExtent(Arbiter.currentProject.aoi, true);
     				
     				//TODO: this really should happen after showmap completes
-        			//jqSyncUpdates.mouseup();
+        			jqSyncUpdates.mouseup();
     			};
 
     			TileUtil.cacheTiles(successCacheTiles);    				
@@ -1169,7 +1171,6 @@ var Arbiter = {
 				statement = "UPDATE settings SET aoi_left=?, aoi_bottom=?, aoi_right=?, aoi_top=? WHERE aoi_left <> '';"; 
 			}
 
-			//TODO: use arg list insetad
 			Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], 
 					successCallback, Arbiter.error);
     },
@@ -2318,7 +2319,7 @@ var Arbiter = {
 	},
 	
 	error: function(arg1){
-		console.log('==== Arbiter.Error');
+		console.log('==== Arbiter.error');
 		
 		var argsStr = "";
 		
@@ -2338,7 +2339,32 @@ var Arbiter = {
 		console.log("StackTrace: \n" + trace);
 		
 		if (Arbiter.debugAlertOnError) {
-			alert("error: " + argsStr + "\n" + trace);
+			alert("ERORR: " + argsStr + "\n" + trace);
+		}		
+	},
+	
+	warning: function(arg1){
+		console.log('==^^ Arbiter.warning');
+		
+		var argsStr = "";
+		
+		for(var i = 0; i < arguments.length; i++) {
+			console.log("arg" + i + ": ", arguments[i]);
+			
+			if (argsStr !== "") {
+				argsStr += ", ";
+			}
+			
+			argsStr += "arg" + i + ": " + arguments[i];
+		}
+		
+		console.log("args as string: " + argsStr);
+		var trace = Arbiter.getStackTrace();
+		
+		console.log("StackTrace: \n" + trace);
+		
+		if (Arbiter.debugAlertOnWarning) {
+			alert("Just WARNING: " + argsStr + "\n" + trace);
 		}		
 	},
 	
