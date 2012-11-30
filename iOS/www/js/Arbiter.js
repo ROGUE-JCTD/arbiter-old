@@ -774,6 +774,7 @@ var Arbiter = {
 
 		var insertCurrentProject = function(projectId){
 			Arbiter.saveAreaOfInterest(true);
+			Arbiter.layerCount = 0;
 			
 			var serverList = Arbiter.currentProject.serverList;
 						
