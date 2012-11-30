@@ -207,19 +207,17 @@ var Arbiter = {
 				//Open/Create global.db
 				Arbiter.globalDatabase = Cordova.openDatabase("Arbiter/global", "1.0", "Global Database", 1000000);
 				
-				//Add tables to global.db
-				Arbiter.globalDatabase.transaction(function(tx) {
 					//Create settings table
-					tx.executeSql("CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);", [], function(tx, res){
+					Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);", [], function(tx, res){
 						console.log("global.db: 'settings' table created.");
 							
 							//Create server_usage table
-							tx.executeSql("CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);",
+							Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);",
 								[], function(tx, res){
 								console.log("global.db: 'server_usage' table created.");	
 								
 								//Create projects table
-								tx.executeSql("CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, project_id integer, " +
+								Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, project_id integer, " +
 									"FOREIGN KEY(server_id) REFERENCES servers(id), FOREIGN KEY(project_id) REFERENCES projects(id));",
 									[], function(tx, res){
 									console.log("global.db: 'projects' table created.");
@@ -236,12 +234,12 @@ var Arbiter = {
 										"ref_counter integer not null);";
 										
 										//Create servers table
-										tx.executeSql("CREATE TABLE IF NOT EXISTS servers (id integer primary key autoincrement, name text not null, " + 
+										Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS servers (id integer primary key autoincrement, name text not null, " +
 											"url text not null, username text not null, password text not null);", [], function(tx, res){
 											console.log("global.db: 'servers' table created.");	
 											
 											//Populate the existing server dropdown
-											tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
+											Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers;", [], function(tx, res){
 												console.log("SELECT * FROM servers and add them to the list!");
 												var row;
 												var html = '';
@@ -284,9 +282,9 @@ var Arbiter = {
 												for(var i = 0; i < jqServersPageContent.length;i++)
 													$(jqServersPageContent[i]).html(html);
 										
-											});
+											}, Arbiter.error);
 							
-									tx.executeSql(createTilesSql, [], function(tx, res){
+									Cordova.transaction(Arbiter.globalDatabase, createTilesSql, [], function(tx, res){
 										console.log("global.db: 'tiles' table created.");	
 																	 
 									}, function(e) {
@@ -308,7 +306,6 @@ var Arbiter = {
 					}, function(e) {
 						console.log("global.db: 'settings' table failed to create. - " + e);
 					});
-				});
 				
 			}, function(error){
 				console.log("Arbiter.fileSystem: Couldn't create 'Arbiter' directory.");
@@ -877,7 +874,10 @@ var Arbiter = {
 				//query the global server table to get the server info
 					var serverId = serverObj.server_id;
 					Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers WHERE id=?;", [serverId], function(tx, res){
-						if(res.rows.length){ //There should be one row that matches
+						console.log("Android debug");
+						console.log(" - res.rows.length: " + res.rows.length);
+						if(res.rows.length && res.rows.length > 0){ //There should be one row that matches
+							console.log("Select layers and add to server.");
 							var serverObj = res.rows.item(0);
 							Arbiter.currentProject.serverList[serverObj.name] = {
 								layers: {},
@@ -889,9 +889,13 @@ var Arbiter = {
 						  
 						  	//select layers and add to the appropriate server
 							//var _serverId = serverObj.id;
+							console.log(serverObj);
+							console.log("Name: " + serverObj.name);
+							console.log("ID:  " + serverObj.id);
 							Arbiter.setServerLayers(serverObj.id, serverObj.name);
 						}else{
 							//server was deleted - so add the layers to the deletedServers list
+							console.log("Server was deleted.");
 							Arbiter.currentProject.deletedServers.length++;
 							Arbiter.currentProject.deletedServers[serverId] = {
 								layers: {}  
