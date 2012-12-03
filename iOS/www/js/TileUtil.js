@@ -160,6 +160,8 @@ startCachingTiles: function(successCallback) {
 		buffer: layer.buffer,
 		layer: layer,
 		counterCached: 0,
+		counterSaveTileInProgress: 0,
+		counterSaveTileInProgressWaitAttempt: 0,
 		counterEstimatedMax: TileUtil.countTilesInBounds(Arbiter.currentProject.aoi),
 		successCallback: successCallback, 
 		startZoom: -1,
@@ -211,14 +213,42 @@ stopCachingTiles: function() {
     
     console.log("---- stopCachingTiles");
     console.log(caching);
+    
+    var cachingComplete = function(){
+        console.log("---- caching complete!");
+        console.log(caching);
 
-	if (caching.successCallback){
-		caching.successCallback();
-	}
+        if (caching.successCallback){
+			caching.successCallback();
+		}
+    	
+        // keep for debugging
+        cachingLast = caching;
+    	caching = undefined;
+    };
 
-    // keep for debugging
-    cachingLast = caching;
-	caching = undefined;
+	if (caching.counterSaveTileInProgress === 0){
+		cachingComplete();
+	} else {
+       console.log("***** caching.counterSaveTileInProgress is not ZERO: " + caching.counterSaveTileInProgress);
+        
+    	var checkCachingStatus = function(){
+    		caching.counterSaveTileInProgressWaitAttempt += 1;
+    		console.log("---[ waiting for caching.counterSaveTileInProgress to get 0:  " + caching.counterSaveTileInProgress + ", waiting attempts: " + caching.counterSaveTileInProgressWaitAttempt );
+    		
+    		if (caching.counterSaveTileInProgress === 0){
+    			console.log("************************* DONE **********************. not setting timeout!");
+    			//clearTimeout(caching.counterSaveTileInProgressWaitTimer);
+    			cachingComplete();
+    			//alert("BINGO!");
+    		} else {
+    	    	// wait one second to see if the tiles finish caching. 
+    			caching.counterSaveTileInProgressWaitTimer = setTimeout(checkCachingStatus, 1000);
+    		}
+    	};
+    	
+    	checkCachingStatus();
+    }
 },
 
 cacheTiles: function(successCallback, errorCallback){
@@ -234,40 +264,50 @@ cacheTiles: function(successCallback, errorCallback){
 
 	
 	TileUtil.clearCache("osm", function(){
-		console.log("cleared cache. starting testTilesTableIsEmpty");
 		
-		TileUtil.testTilesTableIsEmpty(
-			function(){
-				console.log("----[ cacheTiles.clearCache: success no tiles in Tiles table");
-				console.log("~~~~ done clearing clearing cache");
-				
-				// once all the cache for this project is cleared, start caching again. 
-				TileUtil.startCachingTiles(
-					function(){
-						console.log("~~~~ done caching");
-						Arbiter.HideCachingTilesMenu();
-						
-						console.log("######## tiles with ref count of 2");
-						TileUtil.dumpTilesWithRefCount(2);
-						
-						if (successCallback){
-							successCallback();
+		if (TileUtil.cacheTilesTest1Couter > 0) {
+			console.log("~~~~ cacheTiles. done clear cache. starting testTilesTableIsEmpty MAKE sure there is only one project in arbiter!");
+			TileUtil.testTilesTableIsEmpty(
+				function(){
+					console.log("---- cacheTiles.clearCache: success no tiles in Tiles table");
+					
+					// once all the cache for this project is cleared, start caching again. 
+					TileUtil.startCachingTiles(
+						function(){
+							console.log("~~~~ done caching");
+							Arbiter.HideCachingTilesMenu();
+							
+							if (successCallback){
+								successCallback();
+							}
 						}
-					}
-				);
-			},
-			function(){
-				TileUtil.dumpTilesTable();
-				Arbiter.error("----[ cacheTiles.clearCache: failed!!Tiles Table not empty. just dumped tilestable");
-				Arbiter.HideCachingTilesMenu();
-
-				if (errorCallback){
-					errorCallback();
-				}
-			}
-		);
-	});
+					);
+				},
+				function(){
+					TileUtil.dumpTilesTable();
+					Arbiter.error("----[ TEST FAILED: testTilesTableIsEmpty cacheTiles.clearCache: failed! Tiles Table not empty. just dumped tilestable");
+					Arbiter.HideCachingTilesMenu();
 	
+					if (errorCallback){
+						errorCallback();
+					}
+				}
+			);
+		} else {
+			console.log("~~~~ cacheTiles, done clearing clearing cache. starting caching");
+			// once all the cache for this project is cleared, start caching again. 
+			TileUtil.startCachingTiles(
+				function(){
+					console.log("~~~~ done caching");
+					Arbiter.HideCachingTilesMenu();
+					
+					if (successCallback){
+						successCallback();
+					}
+				}
+			);
+		}
+	});
 	
 	//Original
 /*
@@ -289,8 +329,6 @@ cacheTiles: function(successCallback, errorCallback){
 		);
 	});
 */
-	
-	
 },
 
 testCacheTilesRepeatStart: function(millisec){
@@ -408,20 +446,18 @@ getURL: function(bounds) {
 							// we do not download the tile multiple times
 				    		TileUtil.addTile(finalUrl, tilePath, "osm", xyz.z, xyz.x, xyz.y);
 							
-							var saveTileSuccess = function(url, path){
-								if (typeof caching !== 'undefined' && typeof caching.counterCached !== 'undefined') {
-									caching.counterCached += 1;
-									var percent = Math.round((caching.counterCached/caching.counterEstimatedMax * 100));
-									
-									if (percent > 100) {
-										percent = 100;
-									}
-									
-									$("#cachingPercentComplete").html("<center>Cached " + percent + "%</center>");
-									
-									if (TileUtil.debugProgress) {
-										console.log("caching estimated percent complete: " + percent + ". counterCached: " + caching.counterCached + ", counterEstimatedMax: " + caching.counterEstimatedMax);
-									}
+							var saveTileSuccess = function(url, path){								
+								caching.counterCached += 1;
+								var percent = Math.round((caching.counterCached/caching.counterEstimatedMax * 100));
+								
+								if (percent > 100) {
+									percent = 100;
+								}
+								
+								$("#cachingPercentComplete").html("<center>Cached " + percent + "%</center>");
+								
+								if (TileUtil.debugProgress) {
+									console.log("caching estimated percent complete: " + percent + ". counterCached: " + caching.counterCached + ", counterEstimatedMax: " + caching.counterEstimatedMax);
 								}
 							};
 							
@@ -458,12 +494,10 @@ getURL: function(bounds) {
 						Arbiter.error("TileUtil.getURL: Multiple Entries for tile! see console for details. count: " + res.rows.length);
 					}					
 				}, function(e1, e2) {
-					alert("chk27");
-					Arbiter.error(e1, e2);
+					Arbiter.error("chk27", e1, e2);
 				});	
 			}, function(e1, e2) {
-				alert("chk28");
-				Arbiter.error(e1, e2);
+				Arbiter.error("chk28", e1, e2);
 			});
  		} else {
  			Arbiter.warning("saved trying to cache a url more than once this session: " + finalUrl);
@@ -485,6 +519,11 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 	if (TileUtil.debug) {
 		console.log("---- TileUtil.saveTile. tileset: " + tileset + ", z: " + z + ", x: " + x + ", y: " + y + ", url: " + fileUrl);
 	}
+	
+	// track that we are starting to save this tile so that incase the save takes along time in rare cases, 
+	// we can detect that caching is not really complete yet. once we save the file or the attempt fails for ANY reason, 
+	// we'll decrement the counter. 
+	caching.counterSaveTileInProgress += 1;
 
 	var extention = fileUrl.substr(fileUrl.lastIndexOf("."));
 	//console.log("---- TileUtil.saveTile.extention: " + extention);
@@ -509,11 +548,14 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 								uri,
 								filePath,
 								function(entry) {
+									caching.counterSaveTileInProgress -= 1;
 									if (successCallback){
 										successCallback(fileUrl, filePath);
 									}
 								},
 								function(err) {
+									caching.counterSaveTileInProgress -= 1;
+
 									console.log("download error source " + err.source);
 									console.log("download error target " + err.target);
 									console.log("upload error code" + err.code);
@@ -526,18 +568,18 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 								}
 							);
 						}, function(e1, e2) {
-							alert("chk29");
-							Arbiter.error(e1, e2);
+							caching.counterSaveTileInProgress -= 1;
+							Arbiter.error("chk29", e1, e2);
 						}
 					);
 				}, function(e1, e2) {
-					alert("chk30");
-					Arbiter.error(e1, e2);
+					caching.counterSaveTileInProgress -= 1;
+					Arbiter.error("chk30", e1, e2);
 				}
 			);
 		}, function(e1, e2) {
-			alert("chk31");
-			Arbiter.error(e1, e2);
+			caching.counterSaveTileInProgress -= 1;
+			Arbiter.error("chk31", e1, e2);
 		}
 	);
 
@@ -587,12 +629,10 @@ addTile : function(url, path, tileset, z, x, y) {
 								console.log("inserted new url in tiles. res.insertId: " + res.insertId);
 							}
 						}, function(e1, e2) {
-							alert("chk1");
-							Arbiter.error(e1, e2);
+							Arbiter.error("chk1", e1, e2);
 						});
 					}, function(e1, e2) {
-						alert("chk2");
-						Arbiter.error(e1, e2);
+						Arbiter.error("chk2", e1, e2);
 					});
 
 			} else if (res.rows.length === 1) {
@@ -615,12 +655,10 @@ addTile : function(url, path, tileset, z, x, y) {
 							console.log("updated tiles. for url : " + url);
 						}
 					}, function(e1, e2) {
-						alert("chk3");
-						Arbiter.error(e1, e2);
+						Arbiter.error("chk3", e1, e2);
 					});
 				}, function(e1, e2) {
-					alert("chk4");
-					Arbiter.error(e1, e2);
+					Arbiter.error("chk4", e1, e2);
 				});
 
 			} else {
@@ -628,12 +666,10 @@ addTile : function(url, path, tileset, z, x, y) {
 				Arbiter.error("tiles has duplicate entry for a given url. see console");
 			}
 		}, function(e1, e2) {
-			alert("chk5");
-			Arbiter.error(e1, e2);
+			Arbiter.error("chk5", e1, e2);
 		});
 	}, function(e1, e2) {
-		alert("chk6");
-		Arbiter.error(e1, e2);
+		Arbiter.error("chk6", e1, e2);
 	});
 
 }, 
@@ -704,8 +740,7 @@ clearCache : function(tileset, successCallback, vDb) {
 			}
 
 		}, function(e1, e2) {
-			alert("chk7");
-			Arbiter.error(e1, e2);
+			Arbiter.error("chk7", e1, e2);
 		});
 	};
 	
@@ -715,8 +750,7 @@ clearCache : function(tileset, successCallback, vDb) {
 		
 	//alert("inserted tile. id: " + res.insertId);
 	vDb.transaction(op, function(e1, e2) {
-		alert("chk8");
-		Arbiter.error(e1, e2);
+		Arbiter.error("chk8", e1, e2);
 	});		
 }, 
 
@@ -731,12 +765,10 @@ deleteTileIdsEntries: function(){
 				console.log("---- TileUtil.deleteTileIdsEntries done");
 			}
 		}, function(e1, e2) {
-			alert("chk9");
-			Arbiter.error(e1, e2);
+			Arbiter.error("chk9", e1, e2);
 		});					
 	}, function(e1, e2) {
-		alert("chk10");
-		Arbiter.error(e1, e2);
+		Arbiter.error("chk10", e1, e2);
 	});	
 },
 
@@ -754,8 +786,7 @@ deleteTilesEntries: function(){
 			}
 		}, 
 		function(e1, e2) {
-			alert("chk101");
-			Arbiter.error(e1, e2);
+			Arbiter.error("chk101", e1, e2);
 		}					
 	);
 },
@@ -772,7 +803,9 @@ deleteAllTileTableEntriesAndTheirPngFiles: function(){
 			
 			for(var i = 0; i < res.rows.length; i++){
 				var row = res.rows.item(i);
-				TileUtil.removeTileFromDevice(row.path, row.id, null, function(){alert("chk100");});
+				TileUtil.removeTileFromDevice(row.path, row.id, null, function(){
+					Arbiter.error("chk100");
+				});
 				
 				TileUtil.deleteTilesEntries();
 			}	
@@ -806,12 +839,10 @@ insertIntoTileIds: function(id) {
 			console.log("dumping after error for id: " + id);
 			//TileUtil.dumpTileIds();
 			console.log("CHK: " + statement + ": " + id);
-			alert("chk11");
-			Arbiter.error(e1, e2);
+			Arbiter.error("chk11", e1, e2);
 		});
 	}, function(e1, e2) {
-		alert("chk12");
-		Arbiter.error(e1, e2);
+		Arbiter.error("chk12", e1, e2);
 	});
 },
 
@@ -884,12 +915,10 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 							TileUtil.removeTileFromDevice(tileEntry.path, id, successCallback, errorCallback);
 							
 						}, function(e1, e2) {
-							alert("chk13");
-							Arbiter.error(e1, e2);
+							Arbiter.error("chk13", e1, e2);
 						});
 					}, function(e1, e2) {
-						alert("chk14");
-						Arbiter.error(e1, e2);
+						Arbiter.error("chk14", e1, e2);
 					});							
 					
 				} else if (tileEntry.ref_counter > 1){
@@ -906,12 +935,10 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 								successCallback();
 							}
 						}, function(e1, e2) {
-							alert("chk15");
-							Arbiter.error(e1, e2);
+							Arbiter.error("chk15", e1, e2);
 						});
 					}, function(e1, e2) {
-						alert("chk16");
-						Arbiter.error(e1, e2);
+						Arbiter.error("chk16", e1, e2);
 					});	
 					
 				} else {
@@ -929,12 +956,10 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 				Arbiter.error("tiles table has multiple entries for id: " + id);
 			}
 		}, function(e1, e2) {
-			alert("chk17");
-			Arbiter.error(e1, e2);
+			Arbiter.error("chk17", e1, e2);
 		});
 	}, function(e1, e2) {
-		alert("chk18");
-		Arbiter.error(e1, e2);
+		Arbiter.error("chk18", e1, e2);
 	});	
 	
 
@@ -946,12 +971,10 @@ dumpTableNames: function(database){
 		tx.executeSql("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;", [], function(tx, res){
 			console.log(TileUtil.rowsToString(res.rows));
 		}, function(e1, e2) {
-			alert("chk19");
-			Arbiter.error(e1, e2);
+			Arbiter.error("chk19", e1, e2);
 		});	
 	}, function(e1, e2) {
-		alert("chk20");
-		Arbiter.error(e1, e2);
+		Arbiter.error("chk20", e1, e2);
 	});
 },
 // TODO: neds a call baclk instead
@@ -979,12 +1002,10 @@ dumpTableRows: function(database, tableName){
 		tx.executeSql("SELECT * FROM " + tableName + ";", [], function(tx, res){
 			console.log(TileUtil.rowsToString(res.rows));
 		}, function(e1, e2) {
-			alert("chk21");
-			Arbiter.error(e1, e2);
+			Arbiter.error("chk21", e1, e2);
 		});	
 	}, function(e1, e2) {
-		alert("chk22");
-		Arbiter.error(e1, e2);
+		Arbiter.error("chk22", e1, e2);
 	});
 },
 
@@ -1023,14 +1044,12 @@ dumpTilesWithRefCount: function(count){
 					console.log(TileUtil.rowsToString(res.rows));
 				}, 
 				function(e1, e2) {
-					alert("chk23");
-					Arbiter.error(e1, e2);
+					Arbiter.error("chk23", e1, e2);
 				}
 			);	
 		}, 
 		function(e1, e2) {
-			alert("chk24");
-			Arbiter.error(e1, e2);
+			Arbiter.error("chk24", e1, e2);
 		}
 	);
 },
@@ -1046,14 +1065,12 @@ dumpTileIds: function(){
 					console.log(TileUtil.rowsToString(res.rows));
 				}, 
 				function(e1, e2) {
-					alert("chk25");
-					Arbiter.error(e1, e2);
+					Arbiter.error("chk25", e1, e2);
 				}
 			);	
 		}, 
 		function(e1, e2) {
-			alert("chk26");
-			Arbiter.error(e1, e2);
+			Arbiter.error("chk26", e1, e2);
 		}
 	);
 }

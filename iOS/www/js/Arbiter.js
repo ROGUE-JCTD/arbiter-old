@@ -818,6 +818,9 @@ var Arbiter = {
 		    			Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
 		    		}
 		    		
+					Console.log("~~ CORDOVA TRANSACTION ERROR LINE 822 ~~");
+					console.log("ProjectID: " + projectId);
+					console.log("ServerID: " + serverId);
 		    		Arbiter.insertServerUsage(projectId, serverId, function(tx, res){
 						console.log("insert server usage success");
 					});
@@ -983,8 +986,10 @@ var Arbiter = {
 		Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 		Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
 		
+		console.log("~~ CORDOVA ERROR LINE 955 ~~");
+		console.log("Project Name: " + Arbiter.currentProject.name);
 		//get the project id
-		Cordova.transaction(Arbiter.globalDatabase, "select * from projects where name=?;", [Arbiter.currentProject.name], function(tx, res){
+		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects WHERE name=?;", [Arbiter.currentProject.name], function(tx, res){
 			if(res.rows.length){
 				Arbiter.currentProject.projectId = res.rows.item(0).id;
 			}else{
@@ -2557,13 +2562,19 @@ var Arbiter = {
 		var argsStr = "";
 		
 		for(var i = 0; i < arguments.length; i++) {
-			console.log("arg" + i + ": ", arguments[i]);
+			var val = "_undefined_";
+			
+			if (typeof arguments[i] !== 'undefined'){ 
+				val = arguments[i];
+			}
+			
+			console.log("arg" + i + ": ", val);
 			
 			if (argsStr !== "") {
 				argsStr += ", ";
 			}
 			
-			argsStr += "arg" + i + ": " + arguments[i];
+			argsStr += "arg" + i + ": " + val;
 		}
 		
 		console.log("args as string: " + argsStr);
@@ -2582,13 +2593,19 @@ var Arbiter = {
 		var argsStr = "";
 		
 		for(var i = 0; i < arguments.length; i++) {
-			console.log("arg" + i + ": ", arguments[i]);
+			var val = "_undefined_";
+			
+			if (typeof arguments[i] !== 'undefined'){ 
+				val = arguments[i];
+			}
+			
+			console.log("arg" + i + ": ", val);
 			
 			if (argsStr !== "") {
 				argsStr += ", ";
 			}
 			
-			argsStr += "arg" + i + ": " + arguments[i];
+			argsStr += "arg" + i + ": " + val;
 		}
 		
 		console.log("args as string: " + argsStr);
@@ -2638,8 +2655,8 @@ var Arbiter = {
 			}
 			
 			callstack.push(fname);
-			if (fname === "function"){
-				console.log("dumping content of anon function: ");
+			if (fname === "function" && Arbiter.debugCallstack){
+				console.log("====[ dumping content of anon function: ");
 				console.log(currentFunction);
 			}
 			currentFunction = currentFunction.caller;
