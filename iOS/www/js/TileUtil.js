@@ -234,21 +234,17 @@ cacheTiles: function(successCallback, errorCallback){
 
 	
 	TileUtil.clearCache("osm", function(){
-		console.log("cleared cache. starting testTilesTableIsEmpty");
+		console.log("cacheTiles. done clear cache. starting testTilesTableIsEmpty");
 		
 		TileUtil.testTilesTableIsEmpty(
 			function(){
-				console.log("----[ cacheTiles.clearCache: success no tiles in Tiles table");
-				console.log("~~~~ done clearing clearing cache");
+				console.log("---- cacheTiles.clearCache: success no tiles in Tiles table");
 				
 				// once all the cache for this project is cleared, start caching again. 
 				TileUtil.startCachingTiles(
 					function(){
 						console.log("~~~~ done caching");
 						Arbiter.HideCachingTilesMenu();
-						
-						console.log("######## tiles with ref count of 2");
-						TileUtil.dumpTilesWithRefCount(2);
 						
 						if (successCallback){
 							successCallback();

@@ -111,7 +111,7 @@ var Arbiter = {
 	
 	debugAlertOnError: true,
 	
-	debugAlertOnWarning: false,
+	debugAlertOnWarning: true,
 	
 	debugCallstack: true,	
 	
