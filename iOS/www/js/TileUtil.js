@@ -237,10 +237,10 @@ stopCachingTiles: function() {
     		console.log("---[ waiting for caching.counterSaveTileInProgress to get 0:  " + caching.counterSaveTileInProgress + ", waiting attempts: " + caching.counterSaveTileInProgressWaitAttempt );
     		
     		if (caching.counterSaveTileInProgress === 0){
-    			console.log("************************* DONE **********************. removed timeout!");
+    			console.log("************************* DONE **********************. not setting timeout!");
     			//clearTimeout(caching.counterSaveTileInProgressWaitTimer);
     			cachingComplete();
-    			alert("BINGO!");
+    			//alert("BINGO!");
     		} else {
     	    	// wait one second to see if the tiles finish caching. 
     			caching.counterSaveTileInProgressWaitTimer = setTimeout(checkCachingStatus, 1000);
@@ -264,36 +264,50 @@ cacheTiles: function(successCallback, errorCallback){
 
 	
 	TileUtil.clearCache("osm", function(){
-		console.log("cacheTiles. done clear cache. starting testTilesTableIsEmpty");
 		
-		TileUtil.testTilesTableIsEmpty(
-			function(){
-				console.log("---- cacheTiles.clearCache: success no tiles in Tiles table");
-				
-				// once all the cache for this project is cleared, start caching again. 
-				TileUtil.startCachingTiles(
-					function(){
-						console.log("~~~~ done caching");
-						Arbiter.HideCachingTilesMenu();
-						
-						if (successCallback){
-							successCallback();
+		if (TileUtil.cacheTilesTest1Couter > 0) {
+			console.log("~~~~ cacheTiles. done clear cache. starting testTilesTableIsEmpty MAKE sure there is only one project in arbiter!");
+			TileUtil.testTilesTableIsEmpty(
+				function(){
+					console.log("---- cacheTiles.clearCache: success no tiles in Tiles table");
+					
+					// once all the cache for this project is cleared, start caching again. 
+					TileUtil.startCachingTiles(
+						function(){
+							console.log("~~~~ done caching");
+							Arbiter.HideCachingTilesMenu();
+							
+							if (successCallback){
+								successCallback();
+							}
 						}
-					}
-				);
-			},
-			function(){
-				TileUtil.dumpTilesTable();
-				Arbiter.error("----[ cacheTiles.clearCache: failed!!Tiles Table not empty. just dumped tilestable");
-				Arbiter.HideCachingTilesMenu();
-
-				if (errorCallback){
-					errorCallback();
-				}
-			}
-		);
-	});
+					);
+				},
+				function(){
+					TileUtil.dumpTilesTable();
+					Arbiter.error("----[ TEST FAILED: testTilesTableIsEmpty cacheTiles.clearCache: failed! Tiles Table not empty. just dumped tilestable");
+					Arbiter.HideCachingTilesMenu();
 	
+					if (errorCallback){
+						errorCallback();
+					}
+				}
+			);
+		} else {
+			console.log("~~~~ cacheTiles, done clearing clearing cache. starting caching");
+			// once all the cache for this project is cleared, start caching again. 
+			TileUtil.startCachingTiles(
+				function(){
+					console.log("~~~~ done caching");
+					Arbiter.HideCachingTilesMenu();
+					
+					if (successCallback){
+						successCallback();
+					}
+				}
+			);
+		}
+	});
 	
 	//Original
 /*
@@ -315,8 +329,6 @@ cacheTiles: function(successCallback, errorCallback){
 		);
 	});
 */
-	
-	
 },
 
 testCacheTilesRepeatStart: function(millisec){
