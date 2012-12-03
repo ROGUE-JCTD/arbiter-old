@@ -209,19 +209,22 @@ function ListWidget(params){
 		console.log("deleteListItem " + attrName + "=" + attrValue);
 		var row = $('#' + this_widget.div_id + ' [' + attrName + '=' + attrValue + ']');
 		console.log('row: ', row);
-		var rowAttr = row.attr(attrName);
+		if(row.length){
+			var rowAttr = row.attr(attrName);
+			
+			if(rowAttr == this_widget.topListItem.attr(attrName))
+				this_widget.topListItem = row.next();
+			
+			if(rowAttr == this_widget.bottomListItem.attr(attrName))
+				this_widget.bottomListItem = row.prev();
+			
+			row.remove();
+			
+			//if the top or bottom doesn't exist, set them
+			this_widget.setRoundedCorners();
+		}
 		
-		if(rowAttr == this_widget.topListItem.attr(attrName))
-			this_widget.topListItem = row.next();
-		
-		if(rowAttr == this_widget.bottomListItem.attr(attrName))
-			this_widget.bottomListItem = row.prev();
-		
-		row.remove();
-		
-		//if the top or bottom doesn't exist, set them
-		this_widget.setRoundedCorners();
-		
+		console.log("after row stuff");
 		if(this_widget.afterDeleting)
 			this_widget.afterDeleting();
 	},

@@ -259,7 +259,20 @@ var Arbiter = {
 												Arbiter.serversList = new ListWidget({
 													div_id: "idServersList",
 													before_delete: function(itemInfo, deleteRow){
-														Arbiter.onClick_DeleteServer(itemInfo, deleteRow);
+														console.log("before_delete - itemInfo: ", itemInfo);
+														
+														var ans = confirm('Are you sure you want to remove "' + itemInfo.servername + '" from the project?');
+														
+														if(ans){
+															Arbiter.deletingLayersInfo = {
+																servername: itemInfo.servername,
+																layername: null
+															};
+															
+															Arbiter.deleteLayerCount = Arbiter.getAssociativeArraySize(Arbiter.currentProject.serverList[itemInfo.servername].layers);
+															
+															jqSyncUpdates.mouseup();
+														}
 													},
 													edit_button_id: "idEditServersButton",
 													checkbox: true,
@@ -436,6 +449,8 @@ var Arbiter = {
 						layername: itemInfo.layername
 					};
 					
+				//	Arbiter.deleteLayerCount = Arbiter.getAssociativeArraySize(Arbiter.currentProject.serverList[itemInfo.servername].layers);
+					Arbiter.deleteLayerCount = 1;
 					/*Arbiter.tempDeleteLayerFromProject = function(){
 						console.log("tempDeleteLayerFromProject called!");
 							Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM layers WHERE layername=?;", [itemInfo.layername], function(tx, res){
@@ -1453,10 +1468,6 @@ var Arbiter = {
 		Arbiter.changePage_Pop(jqAddServerPage);
 	},
 	
-	appendServerToList: function(serverName, serverId){
-		
-	},
-	
 	PopulateServersList: function() {
 		//Fill the servers list (id=idServersList) with the ones that are available.
 		// - Make the div's id = to ServerID number;
@@ -1468,7 +1479,7 @@ var Arbiter = {
 		if(!map){
 			//Load servers that are available
 			// - add them to the ServersList
-			/*Cordova.transaction(Arbiter.globalDatabase, "select * from servers;", [], function(tx, res){
+			Cordova.transaction(Arbiter.globalDatabase, "select * from servers;", [], function(tx, res){
 				var serverName = "";
 				
 				for(var i = 0; i < res.rows.length; i++){
@@ -1478,7 +1489,7 @@ var Arbiter = {
 						servername: serverName
 					}, (Arbiter.currentProject.serverList[serverName]) ? true : false);
 				}
-			}, Arbiter.error);*/
+			}, Arbiter.error)
 		}else{
 			for(var key in Arbiter.currentProject.serverList){
 				var server = Arbiter.currentProject.serverList[key];
@@ -1779,14 +1790,15 @@ var Arbiter = {
 	},
 
 	deleteLayer: function(servername, layername){
-		/*Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM layers WHERE layername=?;", [itemInfo.layername], function(tx, res){
-			var layer = Arbiter.currentProject.serverList[itemInfo.servername].layers[itemInfo.layername];
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM layers WHERE layername=?;", [layername], function(tx, res){
+			var server = Arbiter.currentProject.serverList[servername];
+			var layer = server.layers[layername];
 			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM geometry_columns WHERE f_table_name=?", [layer.featureType], function(tx, res){
 				Cordova.transaction(Arbiter.currentProject.dataDatabase, "DROP TABLE " + layer.featureType, [], function(tx, res){
-					console.log("before_delete: success!", itemInfo);
+					console.log("before_delete: success! " + servername + ", " + layername);
 					
 					//TODO: why is destroy not working?
-					var wfsLayer = map.getLayersByName(itemInfo.layername + '-wfs');
+					var wfsLayer = map.getLayersByName(layername + '-wfs');
 					
 					console.log("before_delete: wfsLayer - ", wfsLayer);
 					if(wfsLayer.length){
@@ -1794,7 +1806,7 @@ var Arbiter = {
 						//wfsLayer[0].destroy();
 					}
 					
-					var wmsLayer = map.getLayersByName(itemInfo.layername + '-wms');
+					var wmsLayer = map.getLayersByName(layername + '-wms');
 					console.log("before_delete: wmsLayer - ", wmsLayer);
 					
 					if(wmsLayer.length){
@@ -1802,52 +1814,74 @@ var Arbiter = {
 						//wmsLayer[0].destroy();
 					}
 					
-					console.log("before remove layer from currentProject obj", itemInfo);
-					delete Arbiter.currentProject.serverList[itemInfo.servername].layers[itemInfo.layername];
+					console.log("before remove layer from currentProject obj " + servername + ", " + layername);
+					delete Arbiter.currentProject.serverList[servername].layers[layername];
 					
 					//deleteRow();
-					Arbiter.layersSettingsList.deleteListItem("layername", itemInfo.layername);
+					Arbiter.layersSettingsList.deleteListItem("layername", layername);
 					
-					if(Arbiter.currentProject.activeLayer == itemInfo.layername){
+					console.log("after delete list item");
+					if(Arbiter.currentProject.activeLayer == layername){
 						Arbiter.currentProject.activeLayer = null;
 					}
 					
+					console.log("before deleting modify controls: " + layername, Arbiter.currentProject.modifyControls);
 					/*
 					 * Delete the controls for editing the layer
-					 /
-					var controls = Arbiter.currentProject.modifyControls[itemInfo.layername];
+					 */
+					var controls = Arbiter.currentProject.modifyControls[layername];
 					map.removeControl(controls.modifyControl);
 					map.removeControl(controls.insertControl);
 					controls.modifyControl.destroy();
 					controls.insertControl.destroy();
-					delete Arbiter.currentProject.modifyControls[itemInfo.layername];
+					delete Arbiter.currentProject.modifyControls[layername];
 					
-					$('ul#editor-layer-list #' + itemInfo.layername).parent().remove();
+					console.log("after delete modify controls");
+					$('ul#editor-layer-list #' + layername).parent().remove();
 					
 					//Arbiter.tempDeleteLayerFromProject = null;
 					Arbiter.deleteLayerCount--;
+					
 					if(Arbiter.deleteLayerCount == 0){
+						console.log("layers all deleted - time to party!");
+						
+						if(!Arbiter.deletingLayersInfo.layername){
+							Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM servers WHERE server_id=?;", [server.serverId], function(tx, res){
+								console.log(servername + " deleted!");
+								Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM server_usage WHERE project_id=?;", [Arbiter.currentProject.projectId], function(tx, res){
+									console.log(servername + " usage deleted!");
+								}, function(tx, err){
+									console.log(servername + " usage deletion fail!", err);
+								});
+							}, function(tx, err){
+								console.log(servername + "deletion fail!", err);
+							});
+							Arbiter.serversList.deleteListItem("servername", servername);
+						}
+						
 						Arbiter.deletingLayersInfo = null;
 					}
 				})
 			});
-		}, Arbiter.error);*/
+		}, Arbiter.error);
 	},
 	
-	deleteLayers: function(){
-		/*if(Arbiter.deletingLayersInfo && Arbiter.deletingLayersInfo.servername){
+/*	deleteLayers: function(){
+		if(Arbiter.deletingLayersInfo && Arbiter.deletingLayersInfo.servername){
 			if(Arbiter.deletingLayersInfo.layername){
+				console.log("deleting a layer");
 				Arbiter.deleteLayerCount = 1;
 				Arbiter.deleteLayer(Arbiter.deletingLayersInfo.servername, Arbiter.deletingLayersInfo.layername);
 			}else{
+				console.log("deleting a server");
 				var layers = Arbiter.currentProject.serverList[Arbiter.deletingLayersInfo.servername].layers;
 				Arbiter.deleteLayerCount = Arbiter.getAssociativeArraySize(layers);
 				for(var layername in layers){
 					Arbiter.deleteLayer(Arbiter.deletingLayersInfo.servername, layername);
 				}
 			}
-		}*/
-	},
+		}
+	},*/
 	
 	getAssociativeArraySize: function(obj) {
 		var size = 0, key;
@@ -2180,7 +2214,7 @@ var Arbiter = {
 				//remove the server
 				
 				//remove the server from the server_usage table for that project
-				Cordova.transaction(Arbiter.currentProject.variablesDatabase, )
+				//Cordova.transaction(Arbiter.currentProject.variablesDatabase, )
 			};
 			
 		}
@@ -3173,39 +3207,48 @@ var Arbiter = {
 				var featureType = serverLayer.featureType;
 				var srsName = serverLayer.srsName;
 
-				Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM " + featureType, [], function(tx, res) {
-					// pull everything down
-							  
-					newWFSLayer.destroyFeatures();
-					console.log("pull after delete");
-					console.log("pullFeatures after delete: " + serverLayer.typeName + serverLayer.geomName + serverLayer.featureType + serverLayer.srsName
-							+ server.url + server.username + server.password);
-					
-					if(Arbiter.deletingLayersInfo){
-						var featureIncrement = 0;
-						Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
-								server.username, server.password, function(featureCount){
-									console.log("addProjectCallback: " + featureIncrement);
-									featureIncrement++;
-									if(featureIncrement >= featureCount){
-										console.log("featureIncrement: " + featureIncrement);
-										Arbiter.deleteLayerCount--;
-										if(Arbiter.deleteLayerCount == 0){
-											Arbiter.deleteLayers();
+				if(Arbiter.deletingLayersInfo){
+					/*Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
+							server.username, server.password, function(featureCount){
+								console.log("deleteLayerCallback: " + featureIncrement);
+								featureIncrement++;
+								if(featureIncrement >= featureCount){
+									console.log("featureIncrement: " + featureIncrement);
+									Arbiter.deleteLayerCount--;
+									if(Arbiter.deleteLayerCount == 0){
+										if(Arbiter.deletingLayersInfo.layername){
+											Arbiter.deleteServer();
+											console.log("delete count = 0, now delete the damn server already!");
 										}else{
-											console.log("deleteLayerCount: " + Arbiter.deleteLayerCount);
-										 }
+											console.log("must be deleting a single layer!");
+										}
+										
+										Arbiter.deletingLayersInfo = null;
 									}else{
-										console.log("featureIncrement: " + featureIncrement);
-									}
-								}, meta.nickname);
-					}else{
+										console.log("deleteLayerCount: " + Arbiter.deleteLayerCount);
+									 }
+								}else{
+									console.log("featureIncrement: " + featureIncrement);
+								}
+							}, meta.nickname);*/
+					
+					//Arbiter.deleteLayerCount++;
+					Arbiter.deleteLayer(meta.serverName, meta.nickname);
+				}else{
+					Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM " + featureType, [], function(tx, res) {
+						// pull everything down
+								  
+						newWFSLayer.destroyFeatures();
+						console.log("pull after delete");
+						console.log("pullFeatures after delete: " + serverLayer.typeName + serverLayer.geomName + serverLayer.featureType + serverLayer.srsName
+								+ server.url + server.username + server.password);
+					
 						Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
 							server.username, server.password, null, meta.nickname);
-					}
-				}, function(e){
-						console.log("save delete failure:", e);
-				});
+					}, function(e){
+							console.log("save delete failure:", e);
+					});
+				}
 			});
 		}
 		
