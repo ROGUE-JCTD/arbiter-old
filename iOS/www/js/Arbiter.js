@@ -2557,13 +2557,19 @@ var Arbiter = {
 		var argsStr = "";
 		
 		for(var i = 0; i < arguments.length; i++) {
-			console.log("arg" + i + ": ", arguments[i]);
+			var val = "_undefined_";
+			
+			if (typeof arguments[i] !== 'undefined'){ 
+				val = arguments[i];
+			}
+			
+			console.log("arg" + i + ": ", val);
 			
 			if (argsStr !== "") {
 				argsStr += ", ";
 			}
 			
-			argsStr += "arg" + i + ": " + arguments[i];
+			argsStr += "arg" + i + ": " + val;
 		}
 		
 		console.log("args as string: " + argsStr);
@@ -2582,13 +2588,19 @@ var Arbiter = {
 		var argsStr = "";
 		
 		for(var i = 0; i < arguments.length; i++) {
-			console.log("arg" + i + ": ", arguments[i]);
+			var val = "_undefined_";
+			
+			if (typeof arguments[i] !== 'undefined'){ 
+				val = arguments[i];
+			}
+			
+			console.log("arg" + i + ": ", val);
 			
 			if (argsStr !== "") {
 				argsStr += ", ";
 			}
 			
-			argsStr += "arg" + i + ": " + arguments[i];
+			argsStr += "arg" + i + ": " + val;
 		}
 		
 		console.log("args as string: " + argsStr);
@@ -2638,8 +2650,8 @@ var Arbiter = {
 			}
 			
 			callstack.push(fname);
-			if (fname === "function"){
-				console.log("dumping content of anon function: ");
+			if (fname === "function" && Arbiter.debugCallstack){
+				console.log("====[ dumping content of anon function: ");
 				console.log(currentFunction);
 			}
 			currentFunction = currentFunction.caller;
