@@ -19,7 +19,8 @@
 		"settings": "Settings",
 		"more" : "More",
 		"edit": "Edit",
-		"add" : "Add"
+		"add" : "Add",
+		"done" : "Done"
 	},
 	"label" : {
 		"name": "Name your Project *",

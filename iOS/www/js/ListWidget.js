@@ -35,9 +35,14 @@ function ListWidget(params){
 	this.afterDeleting = null;
 	
 	/*
-	 * 
+	 * Function to be called afterEditing
 	 */
 	this.afterEditing = null;
+	
+	/*
+	 * Function to be called when the content is clicked
+	 */
+	this.onContentClicked = null;
 	
 	/*
 	 * Boolean - Include a checkbox? 
@@ -100,7 +105,7 @@ function ListWidget(params){
 	/*///////////////////////////////////
 	 *	Append to the List
 	 *///////////////////////////////////
-	this.append = function(display_text, additionalAttributes){
+	this.append = function(display_text, additionalAttributes, startChecked){
 		if(this_widget.bottomListItem){
 			this_widget.bottomListItem.find('.bottom-left').removeClass('bottom-left');
 			this_widget.bottomListItem.find('.bottom-right').removeClass('bottom-right');
@@ -124,8 +129,14 @@ function ListWidget(params){
 		
 		var leftplaceholder = '<div class="left-placeholder list-item-delete ui-icon ui-icon-minus"></div>';
 		
+		var checked = "";
+		
 		if(this_widget.checkbox){
-			leftplaceholder += '<input type="checkbox" class="left-placeholder list-item-checkbox" style="width:20px;height:20px;" />';
+			if(startChecked === true){
+				checked = "checked";
+			}
+			
+			leftplaceholder += '<input type="checkbox" class="left-placeholder list-item-checkbox" ' + checked + ' style="width:20px;height:20px;" />';
 		}
 		
 		var aElement = '<a class="' + aClass + '"><span style="position:absolute;top:10px;left:10px;font-weight:bold;">' + display_text + '</span></a>';
@@ -190,36 +201,61 @@ function ListWidget(params){
 		}
 	};
 	
-	/*///////////////////////////////////
+	/*//////////////////////////////////////////
 	 * 	Delete list item
-	 *///////////////////////////////////
+	 *//////////////////////////////////////////
+	this.deleteListItem = function(attrName, attrValue){
+		//var row = $(deleteButton).parent().parent().parent();
+		console.log("deleteListItem " + attrName + "=" + attrValue);
+		var row = $('#' + this_widget.div_id + ' [' + attrName + '=' + attrValue + ']');
+		console.log('row: ', row);
+		var rowAttr = row.attr(attrName);
+		
+		if(rowAttr == this_widget.topListItem.attr(attrName))
+			this_widget.topListItem = row.next();
+		
+		if(rowAttr == this_widget.bottomListItem.attr(attrName))
+			this_widget.bottomListItem = row.prev();
+		
+		row.remove();
+		
+		//if the top or bottom doesn't exist, set them
+		this_widget.setRoundedCorners();
+		
+		if(this_widget.afterDeleting)
+			this_widget.afterDeleting();
+	},
+	
+	/*//////////////////////////////////////////
+	 * 	Delete list item on delete button click
+	 *//////////////////////////////////////////
 	$('#' + this.div_id + ' .ui-icon-minus').live('mouseup', function(){
-		var listItem = this;
+		var deleteButton = this;
 
 		var deleteRow = function(){
-			var row = $(listItem).parent().parent().parent();
+			var row = $(deleteButton).parent().parent().parent();
 			var rowId = row.attr('id');
 			
-			if(rowId == this_widget.topListItem.attr('id'))
-				this_widget.topListItem = row.next();
-			
-			if(rowId == this_widget.bottomListItem.attr('id'))
-				this_widget.bottomListItem = row.prev();
-			
-			row.remove();
-			
-			//if the top or bottom doesn't exist, set them
-			this_widget.setRoundedCorners();
-			
-			if(this_widget.afterDeleting)
-				this_widget.afterDeleting();
+			this_widget.deleteListItem('id', rowId);
 		};
 		
 		if(this_widget.before_delete){
-			var itemInfo = this_widget.getListItemParams(listItem);
+			var itemInfo = this_widget.getListItemParams(deleteButton);
 			this_widget.before_delete(itemInfo, deleteRow);
 		}else
 			deleteRow();
+	});
+	
+	/*/////////////////////////////////////
+	 * Content was clicked
+	 */////////////////////////////////////
+	$('#' + this.div_id + ' a').live('mouseup', function(){
+		var aElement = this;
+		
+		if(this_widget.onContentClicked){
+			var itemInfo = this_widget.getListItemParams(aElement);
+			this_widget.onContentClicked(itemInfo);
+		}
 	});
 	
 	/*/////////////////////////////////////////////////////
@@ -250,7 +286,7 @@ function ListWidget(params){
 	/*/////////////////////////////////////////
 	 * 	Checkbox checked or unchecked callback
 	 */////////////////////////////////////////
-	$('#' + this.div_id + ' .list-item-checkbox').live('mouseup', function(){
+	$('#' + this.div_id + ' .list-item-checkbox').live('click', function(){
 		//Get the extra params related to the list-item
 		var attributes = this_widget.getListItemParams(this);
 		
