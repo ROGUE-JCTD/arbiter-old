@@ -290,8 +290,6 @@ var Arbiter = {
 																	serverId: row.id
 																};
 															}
-														}, function(e){
-																									 
 														});
 													},
 													checkbox_unchecked: function(itemInfo){
@@ -795,7 +793,7 @@ var Arbiter = {
     insertServerUsage: function(projectId, serverId, success){
     	var insertUsageSql = "INSERT INTO server_usage (project_id, server_id) VALUES (?, ?);";
 		
-		Cordova.transaction(Arbiter.globalDatabase,insertUsageSql, [projectId, serverId], success, function(e){});
+		Cordova.transaction(Arbiter.globalDatabase,insertUsageSql, [projectId, serverId], success);
     },
     
     // gets called once we have collected all the information about the new project
@@ -918,8 +916,6 @@ var Arbiter = {
 									console.log("deletion failure: " + projectId);
 								});
 							}
-						}, function(e){
-									  
 						});
 
 				}, function(){
@@ -1000,9 +996,9 @@ var Arbiter = {
 							};
 							Arbiter.setServerLayers(serverId);
 						}
-					}, function(e){});
+					});
 			}
-		}, function(e){});
+		});
 														 
 		//select area of interest and add to the project
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM settings;", [], function(tx, res){
@@ -1013,7 +1009,7 @@ var Arbiter = {
 					settings.aoi_left, settings.aoi_bottom, settings.aoi_right, settings.aoi_top
 				);
 			}
-		}, function(e){});
+		});
 
     },
 	
@@ -3194,7 +3190,7 @@ var Arbiter = {
 
 				newWMSLayer.redraw(true);
 
-				Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM dirty_table;", [], function(tx, res){}, function(e){});
+				Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM dirty_table;", []);
 
 				var url = server.url;
 				var username = server.username;
