@@ -191,15 +191,15 @@ html, body {
 	border-bottom-right-radius: 4px;
 }
 
-#addPointFeature {
+.first-map-tool {
 	top:80px;
 }
 
-#goToAreaOfInterest{
+.second-map-tool{
 	top:113px;
 }
 
-#findMeButton {
+.third-map-tool {
 	top:146px;		
 }
 
@@ -476,6 +476,16 @@ html, body {
 	margin-right: auto;
 }
 
+#idAddServerButton div{
+	width: 70%;
+	margin-left: auto;
+	margin-right: auto;
+}
+
 #idLayerSettingsList{
 	margin-top: 15px;	
+}
+
+#idServersList{
+	margin-top: 15px;
 }

@@ -19,7 +19,8 @@
 		"settings": "Spanish Settings",
 		"more" : "Spanish More",
 		"edit": "Spanish Edit",
-		"add" : "Spanish Add"
+		"add" : "Spanish Add",
+		"done" : "Terminado"
 	},
 	"label" : {
 		"name": "Spanish Name your Project *",

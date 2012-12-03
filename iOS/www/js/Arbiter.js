@@ -88,6 +88,7 @@ var jqSyncUpdates;
 var jqProjectPageContent;
 var jqGoToAOI;
 var jqFindMeButton;
+var jqAOIFindMeButton;
 
 var tempLayerToEdit = null;
 var fileSystem = null;
@@ -121,6 +122,9 @@ var Arbiter = {
 	
 	layerCount: 0,
 	
+	//can probably reuse layerCount, but just to be safe
+	deleteLayerCount: 0,
+	
 	//TODO: remove for now until actually supported
 	//grout tilesets db. primarily used to import grout tiles into global.tiles table since unlike grout's this table is optimized for access 
 	tilesetsDatabase: null, 
@@ -131,12 +135,17 @@ var Arbiter = {
 	
 	layersSettingsList: null,
 	
+	serversList: null,
+	
 	//if this isn't null, then the save callback will call at the end
-	tempDeleteLayerFromProject: null,
+//	tempDeleteLayerFromProject: null,
 	
 	//keep track of how many features are left, so we'll know when
 	//to call tempDeleteLayerFromProject
-	tempDeleteCountFeatures: 0,
+	//tempDeleteCountFeatures: 0,
+	
+	//object with the server and layername 
+	deletingLayersInfo: null,
 	
 	radioNumber: 1,
 
@@ -191,12 +200,13 @@ var Arbiter = {
 		jqAttributeTab = $('#attributeTab');
 		jqAddFeature	 = $('#addPointFeature');
 		jqGoToAOI = $('#goToAreaOfInterest');
-		jqFindMeButton = $('#findMeButton');
+		jqFindMeButton = $('#map #findMeButton');
+		jqAOIFindMeButton = $('#aoiMap #findMeButton');
 		jqSyncUpdates	 = $('#syncUpdates');
 		jqProjectPageContent = $('#idProjectPageContent');
 		jqServersPageContent = $('.ServersPageContent');
 		div_ProjectsPage.live('pageshow', Arbiter.PopulateProjectsList);
-		div_ServersPage.live('pageshow', Arbiter.PopulateServersList);
+		div_ServersPage.live('pagebeforeshow', Arbiter.PopulateServersList);
 		div_LayersPage.live('pageshow', Arbiter.PopulateLayersList);
 
 		//Acquire the file system
@@ -245,47 +255,68 @@ var Arbiter = {
 											
 											//Populate the existing server dropdown
 											Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers;", [], function(tx, res){
+												//Create the list for servers
+												Arbiter.serversList = new ListWidget({
+													div_id: "idServersList",
+													before_delete: function(itemInfo, deleteRow){
+														console.log("before_delete - itemInfo: ", itemInfo);
+														
+														var ans = confirm('Are you sure you want to remove "' + itemInfo.servername + '" from the project?');
+														
+														if(ans){
+															Arbiter.deletingLayersInfo = {
+																servername: itemInfo.servername,
+																layername: null
+															};
+															
+															Arbiter.deleteLayerCount = Arbiter.getAssociativeArraySize(Arbiter.currentProject.serverList[itemInfo.servername].layers);
+															
+															jqSyncUpdates.mouseup();
+														}
+													},
+													edit_button_id: "idEditServersButton",
+													checkbox: true,
+													checkbox_checked: function(itemInfo){
+														console.log("checkbox_checked", itemInfo);
+														Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers WHERE id=?;", [itemInfo.serverid], function(tx, res){
+															if(res.rows.length){
+																var row = res.rows.item(0);
+																	  
+																Arbiter.currentProject.serverList[row.name] = {
+																	layers: {},
+																	password: row.password,
+																	url: row.url,
+																	username: row.username,
+																	serverId: row.id
+																};
+															}
+														}, function(e){
+																									 
+														});
+													},
+													checkbox_unchecked: function(itemInfo){
+														console.log("checkbox_unchecked: ", itemInfo);
+														delete Arbiter.currentProject.serverList[itemInfo.servername];
+													},
+													onContentClicked: function(itemInfo){ //TODO : FIX THIS SHIAT
+														console.log("Content clicked!", itemInfo);
+																							
+															Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers WHERE name=?;", [itemInfo.servername], function(tx, res){
+																if(res.rows.length){
+																	var row = res.rows.item(0);
+																		  
+																	jqEditUsername.val(row.username);
+																	jqEditPassword.val(row.password);
+																	jqEditNickname.val(row.name);
+																	jqEditServerURL.val(row.url);
+																	jqEditServerButton.attr('server-id', row.id).attr('server-name', row.name);
+																}
+																Arbiter.changePage_Pop('#idEditServerPage');		  
+															}, Arbiter.error);
+													}
+												});
+																
 												console.log("SELECT * FROM servers and add them to the list!");
-												var row;
-												var html = '';
-												var contentClass;
-												var leftClass;
-												//var leftPositioning;
-										
-												for(var i = 0;i < res.rows.length;i++){
-													row = res.rows.item(i);
-													contentClass = 'existingServer-contentColumn';
-													leftClass = 'existingServer-leftColumn';
-											
-													if(i == 0){
-														contentClass += ' existingServer-top-right';
-														leftClass += ' existingServer-top-left';
-													}
-											
-													if(i == (res.rows.length - 1)){
-														contentClass += ' existingServer-bottom-right';
-														leftClass += ' existingServer-bottom-left';
-													}
-											
-													//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
-											
-													html += '<div class="existingServer-row">' +
-													'<div class="existingServer-contentWrapper">' +
-													'<div class="' + contentClass + '">' +
-													'<a class="existingServer-name" id="existingServer-' + row.id + '">' + row.name + '</a>' +
-													'</div>' +
-													'</div>' +
-													'<div class="' + leftClass + '">' +
-													'<div class="existingServer-checkbox-container">' +
-													'<input type="checkbox" class="existingServer-checkbox" server-id="' + row.id + '" name="' + row.name +
-													'" id="existingServer-checkbox-' + row.id + '" style="width:20px;height:20px;" />' +
-													'</div>' +
-													'</div>' +
-													'</div>';
-												}
-										
-												for(var i = 0; i < jqServersPageContent.length;i++)
-													$(jqServersPageContent[i]).html(html);
 										
 											}, Arbiter.error);
 							
@@ -372,7 +403,14 @@ var Arbiter = {
 				var ans = confirm('Are you sure you want to remove "' + itemInfo.layername + '" from the project?');
 				
 				if(ans){
-					Arbiter.tempDeleteLayerFromProject = function(){
+					Arbiter.deletingLayersInfo = {
+						servername: itemInfo.servername,
+						layername: itemInfo.layername
+					};
+					
+				//	Arbiter.deleteLayerCount = Arbiter.getAssociativeArraySize(Arbiter.currentProject.serverList[itemInfo.servername].layers);
+					Arbiter.deleteLayerCount = 1;
+					/*Arbiter.tempDeleteLayerFromProject = function(){
 						console.log("tempDeleteLayerFromProject called!");
 							Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM layers WHERE layername=?;", [itemInfo.layername], function(tx, res){
 								var layer = Arbiter.currentProject.serverList[itemInfo.servername].layers[itemInfo.layername];
@@ -402,15 +440,13 @@ var Arbiter = {
 										
 										deleteRow();
 										
-										Arbiter.tempDeleteLayerFromProject = null;
-										
 										if(Arbiter.currentProject.activeLayer == itemInfo.layername){
 											Arbiter.currentProject.activeLayer = null;
 										}
 										
 										/*
 										 * Delete the controls for editing the layer
-										 */
+										 /
 										var controls = Arbiter.currentProject.modifyControls[itemInfo.layername];
 										map.removeControl(controls.modifyControl);
 										map.removeControl(controls.insertControl);
@@ -419,15 +455,40 @@ var Arbiter = {
 										delete Arbiter.currentProject.modifyControls[itemInfo.layername];
 										
 										$('ul#editor-layer-list #' + itemInfo.layername).parent().remove();
+										
+										Arbiter.tempDeleteLayerFromProject = null;
 									})
 								});
 							}, Arbiter.error);
-					};
+					};*/
 					
 					jqSyncUpdates.mouseup();
 				}
 			},
-			edit_button_id: "layersSettingsEditButton"
+			edit_button_id: "layersSettingsEditButton",
+			onContentClicked: function(itemInfo){
+				console.log("content clicked!", itemInfo);
+			}
+		});
+		
+		$('#layersSettingsEditButton').live('mouseup', function(){
+			/*var locale = $(this).attr('data-localize');
+			
+			if(locale == "button.edit"){
+				$(this).attr('data-localize', 'button.done');
+			}else{
+				$(this).attr('data-localize', 'button.edit');
+			}*/
+			
+			//Arbiter.UpdateLocale();
+			
+			var currentText = $(this).find('.ui-btn-text');
+			
+			if(currentText.text() == "Edit"){
+				currentText.text('Done');
+			}else{
+				currentText.text('Edit');
+			}
 		});
 		
 		$('#idLayerSettingsPage').live('pagebeforeshow', function(){
@@ -488,6 +549,8 @@ var Arbiter = {
 				jqNewProjectName.addClass('invalid-field');
 				jqToServersButton.removeClass('ui-btn-active');
 			}
+			
+			Arbiter.onShowServers();
 		});
 		
 		jqServerSelect.change(function(event){
@@ -536,13 +599,29 @@ var Arbiter = {
 		
 		jqFindMeButton.mouseup(function(event){
 			Cordova.getGeolocation(function(position){
-				console.log(position);
 				var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
 				console.log("center: ", center);
 				
-				map.setCenter(center);
+				if(map.getZoom() < 12)
+					aoiMap.setCenter(center, 12);
+				else
+					map.setCenter(center);
 			}, function(error){
+				alert("Location not available... Please check that Location Services are on for Arbiter");
+			});
+		});
+		
+		jqAOIFindMeButton.mouseup(function(event){
+			Cordova.getGeolocation(function(position){
+				var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
+				console.log("aoi center: ", center);
 				
+				if(aoiMap.getZoom() < 12)
+					aoiMap.setCenter(center, 12);
+				else
+					aoiMap.setCenter(center);
+			}, function(error){
+				alert("Location not available... Please check that Location Services are on for Arbiter");
 			});
 		});
 		
@@ -590,36 +669,6 @@ var Arbiter = {
 			Arbiter.populateAddLayerDialog($(this).text());
 		});
 		
-		$(".server-list-item").mouseup(function(event){
-			Arbiter.populateAddServerDialog($(this).text());
-		});
-		
-		$(".existingServer-checkbox").live('click', function(event){
-			var element = $(this);
-			var id = element.attr('server-id');			
-			var name = element.attr('name');
-										   
-			if(element.is(":checked")){ // if checked, add the server to the projects serverList
-					Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers WHERE id=?;", [id], function(tx, res){
-						if(res.rows.length){
-							var row = res.rows.item(0);
-								  
-							Arbiter.currentProject.serverList[row.name] = {
-								layers: {},
-								password: row.password,
-								url: row.url,
-								username: row.username,
-								serverId: row.id
-							};
-						}
-					}, function(e){
-																 
-					});
-			}else{
-				delete Arbiter.currentProject.serverList[name];								
-			}
-		});
-		
 		$('.project-name').live('mouseup', function(event){
 			//alert("project name mouse up");
 			if(!$('.project-checkbox').is(':visible'))
@@ -639,24 +688,6 @@ var Arbiter = {
 				$('#idProjectPageContent input').textinput();
 				$('#' + oldname + '-edit-name').focus();
 			}
-		});
-		
-		$('.existingServer-contentColumn').live('mouseup', function(event){
-			var element = $(this);
-			var name = element.find('a').text();
-												
-				Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers WHERE name=?;", [name], function(tx, res){
-					if(res.rows.length){
-						var row = res.rows.item(0);
-							  
-						jqEditUsername.val(row.username);
-						jqEditPassword.val(row.password);
-						jqEditNickname.val(row.name);
-						jqEditServerURL.val(row.url);
-						jqEditServerButton.attr('server-id', row.id);
-					}
-					Arbiter.changePage_Pop('#idEditServerPage');		  
-				}, Arbiter.error);
 		});
 		
 		$('.project-checkbox').live('mouseup', function(event){
@@ -750,21 +781,21 @@ var Arbiter = {
     	}, function(e){ console.log("insertLayerSql error: " + e); });
     },
     
-    insertProjectsServer: function(serverId, serverName){
-    	var insertServerSql = "INSERT INTO servers (server_id) VALUES (" + serverId +");";
+    insertProjectsServer: function(serverId, serverName, success){
+    	console.log("insertProjectsServer: " + serverId + ", " + serverName, success);
+    	
+    	var insertServerSql = "INSERT INTO servers (server_id) VALUES (" + serverId + ");";
     	console.log(insertServerSql);
     	
     	Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertServerSql, [], function(tx, res){
-    		var layerList = Arbiter.currentProject.serverList[serverName].layers;
-    		var layerCount = Arbiter.getAssociativeArraySize(layerList);
-			Arbiter.layerCount += layerCount;
-			
-    		for(var layerKey in layerList){
-    			Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
-    		}
-    	}, function(e){
-    		
-    	});
+    		success(serverId, serverName);
+    	}, Arbiter.error);
+    },
+    
+    insertServerUsage: function(projectId, serverId, success){
+    	var insertUsageSql = "INSERT INTO server_usage (project_id, server_id) VALUES (?, ?);";
+		
+		Cordova.transaction(Arbiter.globalDatabase,insertUsageSql, [projectId, serverId], success, function(e){});
     },
     
     // gets called once we have collected all the information about the new project
@@ -774,15 +805,24 @@ var Arbiter = {
 		var insertCurrentProject = function(projectId){
 			Arbiter.saveAreaOfInterest(true);
 			Arbiter.layerCount = 0;
+			Arbiter.currentProject.projectId = projectId;
 			
-			var serverList = Arbiter.currentProject.serverList;
-						
+			var serverList = Arbiter.currentProject.serverList;		
 			for(var x in serverList){
-				Arbiter.insertProjectsServer(serverList[x].serverId, x);
-
-				var insertUsageSql = "INSERT INTO server_usage (project_id, server_id) VALUES (?, ?);";
-				
-				Cordova.transaction(Arbiter.globalDatabase,insertUsageSql, [projectId, serverList[x].serverId], function(tx, res){}, function(e){});
+				Arbiter.insertProjectsServer(serverList[x].serverId, x, function(serverId, serverName){
+					console.log("insertProjectServer success: " + serverName + ", ", serverList[serverName]);
+					var layerList = Arbiter.currentProject.serverList[serverName].layers;
+		    		var layerCount = Arbiter.getAssociativeArraySize(layerList);
+					Arbiter.layerCount += layerCount;
+					
+		    		for(var layerKey in layerList){
+		    			Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
+		    		}
+		    		
+		    		Arbiter.insertServerUsage(projectId, serverId, function(tx, res){
+						console.log("insert server usage success");
+					});
+				});
 			}
 			
 			// every project has a list of tiles it uses so that:
@@ -911,6 +951,15 @@ var Arbiter = {
 		// set dataDatabase and variablesDatabase
 		Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 		Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
+		
+		//get the project id
+		Cordova.transaction(Arbiter.globalDatabase, "select * from projects where name=?;", [Arbiter.currentProject.name], function(tx, res){
+			if(res.rows.length){
+				Arbiter.currentProject.projectId = res.rows.item(0).id;
+			}else{
+				console.log(res.rows.item(0));
+			}
+		}, Arbiter.error);
 		
 		// select servers and add to the project
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM servers;", [], function(tx, res){
@@ -1135,7 +1184,15 @@ var Arbiter = {
 		if (Arbiter.currentProject && Arbiter.currentProject.aoi) {
 			aoiMap.zoomToExtent(Arbiter.currentProject.aoi, true);
 		} else {
-			aoiMap.setCenter(new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),12);
+			//aoiMap.setCenter(new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),12);
+			Cordova.getGeolocation(function(position){
+				var center = new OpenLayers.LonLat(position.coords.longitude, 
+						position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
+				
+				aoiMap.setCenter(center, 12);
+			}, function(err){
+				aoiMap.zoomToMaxExtent();
+			});
 		}
     },
     
@@ -1152,6 +1209,9 @@ var Arbiter = {
     	console.log("---- onShowSettings");
     	Arbiter.changePage_Pop(div_ArbiterSettingsPage);
     	$('#idArbiterSettingsPage .PageFooter').animate({ "left": "0%" }, 0);
+    	$('#idServersPage .SettingsPageFooter').animate({ "left": "0%" }, 0);
+    	$('#idServersPage .CreatePageFooter').animate({ "left": "100%" }, 0);
+    	Arbiter.serversList.checkbox = false;
     	awayFromMap = true;
     },
 	
@@ -1159,6 +1219,14 @@ var Arbiter = {
     	console.log("---- onShowArbiterSettings");
     	Arbiter.changePage_Pop(div_ArbiterSettingsPage);
     	$('#idArbiterSettingsPage .PageFooter').animate({ "left": "100%" }, 0);
+    },
+    
+    onShowServers: function(){
+    	console.log("---- onShowArbiterSettings");
+    	Arbiter.serversList.checkbox = true;
+    	Arbiter.changePage_Pop(div_ServersPage);
+    	$('#idServersPage .SettingsPageFooter').animate({ "left": "100%" }, 0);
+    	$('#idServersPage .CreatePageFooter').animate({ "left": "0%"}, 0);
     },
     
     onBackFromSettings: function(){
@@ -1172,6 +1240,16 @@ var Arbiter = {
     	}
     },
 	
+    onBackFromServers: function(){
+    	console.log('------- onBackFromServers ---------');
+    	
+    	if(awayFromMap === true){
+    		Arbiter.changePage_Pop(div_MapPage);
+    	}else{ //change to the project name page
+    		window.history.back();
+    	}
+    },
+    
     onSetAreaOfInterest: function() {
     	
     	// if creaing a new project, aoi will be null
@@ -1346,13 +1424,46 @@ var Arbiter = {
 		}
 	},
 	
+	populateAddServerDialog: function(){
+		jqNewNickname.val("");
+		jqNewServerURL.val("");
+		jqNewUsername.val("");
+		jqNewPassword.val("");
+
+		Arbiter.changePage_Pop(jqAddServerPage);
+	},
+	
 	PopulateServersList: function() {
 		//Fill the servers list (id=idServersList) with the ones that are available.
 		// - Make the div's id = to ServerID number;
 		console.log("PopulateServersList");
 		
-		//TODO: Load servers that are available
-		// - add them to the ServersList
+		//clear the list
+		Arbiter.serversList.clearList();
+		
+		if(!map){
+			//Load servers that are available
+			// - add them to the ServersList
+			Cordova.transaction(Arbiter.globalDatabase, "select * from servers;", [], function(tx, res){
+				var serverName = "";
+				
+				for(var i = 0; i < res.rows.length; i++){
+					serverName = res.rows.item(i).name;
+					Arbiter.serversList.append(res.rows.item(i).name,{
+						serverid: res.rows.item(i).id,
+						servername: serverName
+					}, (Arbiter.currentProject.serverList[serverName]) ? true : false);
+				}
+			}, Arbiter.error)
+		}else{
+			for(var key in Arbiter.currentProject.serverList){
+				var server = Arbiter.currentProject.serverList[key];
+				Arbiter.serversList.append(key, {
+					serverid: server.serverId,
+					servername: key
+				}, true);
+			}
+		}
 	},
 	
 	//cancel == true if cancelling
@@ -1643,6 +1754,101 @@ var Arbiter = {
 			}, Arbiter.error);
 	},
 
+	deleteLayer: function(servername, layername){
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM layers WHERE layername=?;", [layername], function(tx, res){
+			var server = Arbiter.currentProject.serverList[servername];
+			var layer = server.layers[layername];
+			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM geometry_columns WHERE f_table_name=?", [layer.featureType], function(tx, res){
+				Cordova.transaction(Arbiter.currentProject.dataDatabase, "DROP TABLE " + layer.featureType, [], function(tx, res){
+					console.log("before_delete: success! " + servername + ", " + layername);
+					
+					//TODO: why is destroy not working?
+					var wfsLayer = map.getLayersByName(layername + '-wfs');
+					
+					console.log("before_delete: wfsLayer - ", wfsLayer);
+					if(wfsLayer.length){
+						map.removeLayer(wfsLayer[0]);
+						//wfsLayer[0].destroy();
+					}
+					
+					var wmsLayer = map.getLayersByName(layername + '-wms');
+					console.log("before_delete: wmsLayer - ", wmsLayer);
+					
+					if(wmsLayer.length){
+						map.removeLayer(wmsLayer[0]);
+						//wmsLayer[0].destroy();
+					}
+					
+					console.log("before remove layer from currentProject obj " + servername + ", " + layername);
+					delete Arbiter.currentProject.serverList[servername].layers[layername];
+					
+					//deleteRow();
+					Arbiter.layersSettingsList.deleteListItem("layername", layername);
+					
+					console.log("after delete list item");
+					if(Arbiter.currentProject.activeLayer == layername){
+						Arbiter.currentProject.activeLayer = null;
+					}
+					
+					console.log("before deleting modify controls: " + layername, Arbiter.currentProject.modifyControls);
+					/*
+					 * Delete the controls for editing the layer
+					 */
+					var controls = Arbiter.currentProject.modifyControls[layername];
+					map.removeControl(controls.modifyControl);
+					map.removeControl(controls.insertControl);
+					controls.modifyControl.destroy();
+					controls.insertControl.destroy();
+					delete Arbiter.currentProject.modifyControls[layername];
+					
+					console.log("after delete modify controls");
+					$('ul#editor-layer-list #' + layername).parent().remove();
+					
+					//Arbiter.tempDeleteLayerFromProject = null;
+					Arbiter.deleteLayerCount--;
+					
+					if(Arbiter.deleteLayerCount == 0){
+						console.log("layers all deleted - time to party!");
+						
+						if(!Arbiter.deletingLayersInfo.layername){
+							Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM servers WHERE server_id=?;", [server.serverId], function(tx, res){
+								console.log(servername + " deleted!");
+								Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM server_usage WHERE project_id=?;", [Arbiter.currentProject.projectId], function(tx, res){
+									console.log(servername + " usage deleted!");
+									delete Arbiter.currentProject.serverList[servername];
+								}, function(tx, err){
+									console.log(servername + " usage deletion fail!", err);
+								});
+							}, function(tx, err){
+								console.log(servername + "deletion fail!", err);
+							});
+							Arbiter.serversList.deleteListItem("servername", servername);
+						}
+						
+						Arbiter.deletingLayersInfo = null;
+					}
+				})
+			});
+		}, Arbiter.error);
+	},
+	
+/*	deleteLayers: function(){
+		if(Arbiter.deletingLayersInfo && Arbiter.deletingLayersInfo.servername){
+			if(Arbiter.deletingLayersInfo.layername){
+				console.log("deleting a layer");
+				Arbiter.deleteLayerCount = 1;
+				Arbiter.deleteLayer(Arbiter.deletingLayersInfo.servername, Arbiter.deletingLayersInfo.layername);
+			}else{
+				console.log("deleting a server");
+				var layers = Arbiter.currentProject.serverList[Arbiter.deletingLayersInfo.servername].layers;
+				Arbiter.deleteLayerCount = Arbiter.getAssociativeArraySize(layers);
+				for(var layername in layers){
+					Arbiter.deleteLayer(Arbiter.deletingLayersInfo.servername, layername);
+				}
+			}
+		}
+	},*/
+	
 	getAssociativeArraySize: function(obj) {
 		var size = 0, key;
 		for (key in obj) {
@@ -1764,31 +1970,38 @@ var Arbiter = {
 			var password = jqNewPassword.val();
 			
 			//It's a new server so add it to the global servers table
-			   var insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES (" +
-			   Arbiter.squote(name) + ", " + Arbiter.squote(url) + ", " + Arbiter.squote(username) + ", " + Arbiter.squote(password) + ");";
-			   
-			   Cordova.transaction(Arbiter.globalDatabase, insertServerSql, [], function(tx, res){
-					jqNewUsername.removeClass('invalid-field');
-					jqNewPassword.removeClass('invalid-field');
+			var insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES (?, ?, ?, ?);";
+			
+			var success = function(serverId){
+				jqNewUsername.removeClass('invalid-field');
+				jqNewPassword.removeClass('invalid-field');
 							 
-					Arbiter.currentProject.serverList[name] = {
-						url: url,
-						username: username,
-						password: password,
-						serverId: res.insertId,
-						layers: {}
-					};
-				   
-				   var leftplaceholder = '<input type="checkbox" checked class="existingServer-checkbox" server-id="' + res.insertId + '" name="' + name + 
-				   		'" id="existingServer-checkbox-' + res.insertId + '" style="width:20px;height:20px;" />';
-						
-				   Arbiter.appendToListView('existingServer', res.insertId, name, leftplaceholder);
+				Arbiter.currentProject.serverList[name] = {
+					url: url,
+					username: username,
+					password: password,
+					serverId: serverId,
+					layers: {}
+				};
 				
-				   jqAddServerButton.removeClass('ui-btn-active');
+				jqAddServerButton.removeClass('ui-btn-active');
 							 
-				   window.history.back();
-
-				}, Arbiter.error);
+				window.history.back();
+			};
+			
+			Cordova.transaction(Arbiter.globalDatabase, insertServerSql, [name, url, username, password], function(tx, res){
+				var serverId = res.insertId;
+				if(map && Arbiter.currentProject.variablesDatabase){
+					Arbiter.insertProjectsServer(res.insertId, name, function(tx, res){
+						Arbiter.insertServerUsage(projectId, Arbiter.currentProject.projectId, function(tx, res){
+							
+							success(serverId);
+						});
+					});
+				}else{
+					success(serverId);
+				}
+			}, Arbiter.error);
 		};
 		
 		if(Arbiter.validateAddServerFields(args)){
@@ -1877,15 +2090,13 @@ var Arbiter = {
 			var name = jqEditNickname.val();
 			var url = jqEditServerURL.val();
 			var id = jqEditServerButton.attr('server-id');	
-		
+			var oldname = jqEditServerButton.attr('server-name');
 				var updatesql = "UPDATE servers SET name=?, username=?, password=?, url=? WHERE id=?";
 				Cordova.transaction(Arbiter.globalDatabase, updatesql,[name, username, password, url, id], function(tx, res){
 							  console.log("server update success");
 					jqEditUsername.removeClass('invalid-field');
 					jqEditPassword.removeClass('invalid-field');
 					
-					//get the old name
-					var oldname = $('#existingServer-' + id).text();
 					
 					//TODO: need to check to see if the server is being used
 					
@@ -1901,9 +2112,6 @@ var Arbiter = {
 							layers: {}
 						};
 					}
-					//change the name of the server in the list
-					$('#existingServer-' + id).text(name);
-					$('#existingServer-checkbox-' + id).attr('name', name);
 							  
 					jqEditServerButton.removeClass('ui-btn-active');
 							  
@@ -1918,54 +2126,31 @@ var Arbiter = {
 		}
 	},
 	
-	onClick_DeleteServer: function(){
+	onClick_DeleteServer: function(itemInfo, deleteRow){
 		console.log("onClick_DeleteServer");
-		//TODO: check to see if the server is being used
-		var id = jqEditServerButton.attr('server-id');
 		
-		var deleteServer = function(){
-				//delete the server
-				Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM servers WHERE id=?", [id], function(tx, res){
-					//handle after delete - remove server usage info?
-					var existingServerButton;
-					
-					//remove from the currentProject object
-					for(var i = 0; i < jqServersPageContent.length;i++){
-						existingServerButton = $(jqServersPageContent[i]).find('#existingServer-' + id);
-						var serverName = existingServerButton.text();
-						if(Arbiter.currentProject.serverList[serverName])
-							delete Arbiter.currentProject.serverList[serverName];
-						
-						//remove from the serverList
-						existingServerButton.parent().parent().parent().remove();
-								  
-						//set the existing server list styling just in case the top is being removed
-						if(!$(jqServersPageContent[i]).find('.existingServer-top-left').length){
-							var firstChild = $(jqServersPageContent[i]).children(':first-child');
-							if(firstChild.length){
-								firstChild.find('.existingServer-contentColumn').addClass('existingServer-top-right');
-								firstChild.find('.existingServer-leftColumn').addClass('existingServer-top-left');
-							}
-						}
-						
-						//set the existing server list styling just in case the bottom is being removed
-						if(!$(jqServersPageContent[i]).find('.existingServer-bottom-left').length){
-							var lastChild = $(jqServersPageContent[i]).children(':last-child');
-							if(lastChild.length){
-								lastChild.find('.existingServer-contentColumn').addClass('existingServer-bottom-right');
-								lastChild.find('.existingServer-leftColumn').addClass('existingServer-bottom-left');
-							}	  
-						}
-					}
-					window.history.back();
-							  
-					$('#deleteServerButton').removeClass('ui-btn-active');
+		var removeFromProject = function(){
+			//remove from the currentProject object
+			if(Arbiter.currentProject.serverList[itemInfo.servername]){
+				delete Arbiter.currentProject.serverList[itemInfo.servername];
+			}
+			
+			deleteRow();
+		};
+		
+		var deleteServer;
+		
+		if(!map){ // global
+			deleteServer = function(){
+				//delete the server from the globalDatabase
+				Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM servers WHERE id=?", [itemInfo.serverid], function(tx, res){
+					removeFromProject();
 				}, function(e){
 					console.log("delete server err: ", e);
 				});								   
-		};
-		
-			Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM server_usage WHERE server_id=?", [id], function(tx, res){
+			};
+			
+			Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM server_usage WHERE server_id=?", [itemInfo.serverid], function(tx, res){
 				var ans;
 				if(res.rows.length){
 					if(res.rows.length > 1)
@@ -1988,6 +2173,17 @@ var Arbiter = {
 			}, function(e){
 				console.log("check server_usage err:", e);
 			});
+		}else{ // project
+			deleteServer = function(){
+				//sync with the server
+				
+				//remove the server
+				
+				//remove the server from the server_usage table for that project
+				//Cordova.transaction(Arbiter.currentProject.variablesDatabase, )
+			};
+			
+		}
 	},
 	
 	PopulateLayersList: function() {
@@ -2176,24 +2372,6 @@ var Arbiter = {
 	
 	saveLayer: function() {
 		console.log("Saving disabled for the time being.");
-	},
-	
-	populateAddServerDialog: function(serverName){
-		if(serverName){
-			jqNewNickname.val(serverName);
-			jqNewServerURL.val(Arbiter.currentProject.serverList[serverName].url);
-			jqNewUsername.val(Arbiter.currentProject.serverList[serverName].username);
-			jqNewPassword.val(Arbiter.currentProject.serverList[serverName].password);
-		}else{
-			jqNewNickname.val("");
-			jqNewServerURL.val("");
-			jqNewUsername.val("");
-			jqNewPassword.val("");
-			
-			jqGoToAddServer.removeClass('ui-btn-active');
-		}
-		
-		Arbiter.changePage_Pop(jqAddServerPage);
 	},
 	
 	//override: Bool, should override
@@ -2653,13 +2831,23 @@ var Arbiter = {
 		console.log("insertFeaturesIntoTable: ", features);
 		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
 		
-		Arbiter.tempDeleteCountFeatures = 0;
+		//Arbiter.tempDeleteCountFeatures = 0;
 		
-		if(addProjectCallback && !features.length)
+		if(!features.length){
+			if(addProjectCallback){
+				addProjectCallback(features.length);
+			}
+			
+			/*if(Arbiter.tempDeleteLayerFromProject){
+				Arbiter.tempDeleteLayerFromProject();
+			}*/
+		}
+		
+		/*if(addProjectCallback && !features.length)
 			addProjectCallback.call(Arbiter, features.length);
 		
 		if(Arbiter.tempDeleteLayerFromProject && !features.length)
-			Arbiter.tempDeleteLayerFromProject();
+			Arbiter.tempDeleteLayerFromProject();*/
 		
 		for(var i = 0; i < features.length; i++){
 			var feature = features[i];
@@ -2746,10 +2934,10 @@ var Arbiter = {
 							//If this is a sync before removing a layer from the project,
 							//remove the layer from the project.  Arbiter.tempDeleteLayerFromProject
 							//is responsible for setting itself to null at its end.
-							if(Arbiter.tempDeleteLayerFromProject){
+							/*if(Arbiter.tempDeleteLayerFromProject){
 								if(++(Arbiter.tempDeleteCountFeatures) == featuresLength)
 									Arbiter.tempDeleteLayerFromProject();
-							}
+							}*/
 						}
 
 						if(addProjectCallback)
@@ -3010,6 +3198,34 @@ var Arbiter = {
 				var featureType = serverLayer.featureType;
 				var srsName = serverLayer.srsName;
 
+				if(Arbiter.deletingLayersInfo){
+					/*Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
+							server.username, server.password, function(featureCount){
+								console.log("deleteLayerCallback: " + featureIncrement);
+								featureIncrement++;
+								if(featureIncrement >= featureCount){
+									console.log("featureIncrement: " + featureIncrement);
+									Arbiter.deleteLayerCount--;
+									if(Arbiter.deleteLayerCount == 0){
+										if(Arbiter.deletingLayersInfo.layername){
+											Arbiter.deleteServer();
+											console.log("delete count = 0, now delete the damn server already!");
+										}else{
+											console.log("must be deleting a single layer!");
+										}
+										
+										Arbiter.deletingLayersInfo = null;
+									}else{
+										console.log("deleteLayerCount: " + Arbiter.deleteLayerCount);
+									 }
+								}else{
+									console.log("featureIncrement: " + featureIncrement);
+								}
+							}, meta.nickname);*/
+					
+					//Arbiter.deleteLayerCount++;
+					Arbiter.deleteLayer(meta.serverName, meta.nickname);
+				}else{
 					Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM " + featureType, [], function(tx, res) {
 						// pull everything down
 								  
@@ -3017,12 +3233,13 @@ var Arbiter = {
 						console.log("pull after delete");
 						console.log("pullFeatures after delete: " + serverLayer.typeName + serverLayer.geomName + serverLayer.featureType + serverLayer.srsName
 								+ server.url + server.username + server.password);
+					
 						Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
-								server.username, server.password, null, meta.nickname);
-
-						}, function(e){
+							server.username, server.password, null, meta.nickname);
+					}, function(e){
 							console.log("save delete failure:", e);
-						});
+					});
+				}
 			});
 		}
 		
