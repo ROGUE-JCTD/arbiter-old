@@ -112,6 +112,8 @@ var Arbiter = {
 	
 	debugAlertOnError: true,
 	
+	debugAlertOnWarning: false,
+	
 	debugCallstack: true,	
 	
 	fileSystem: null,
@@ -220,19 +222,17 @@ var Arbiter = {
 				//Open/Create global.db
 				Arbiter.globalDatabase = Cordova.openDatabase("Arbiter/global", "1.0", "Global Database", 1000000);
 				
-				//Add tables to global.db
-				Arbiter.globalDatabase.transaction(function(tx) {
 					//Create settings table
-					tx.executeSql("CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);", [], function(tx, res){
+					Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);", [], function(tx, res){
 						console.log("global.db: 'settings' table created.");
 							
 							//Create server_usage table
-							tx.executeSql("CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);",
+							Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);",
 								[], function(tx, res){
 								console.log("global.db: 'server_usage' table created.");	
 								
 								//Create projects table
-								tx.executeSql("CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, project_id integer, " +
+								Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, project_id integer, " +
 									"FOREIGN KEY(server_id) REFERENCES servers(id), FOREIGN KEY(project_id) REFERENCES projects(id));",
 									[], function(tx, res){
 									console.log("global.db: 'projects' table created.");
@@ -249,12 +249,12 @@ var Arbiter = {
 										"ref_counter integer not null);";
 										
 										//Create servers table
-										tx.executeSql("CREATE TABLE IF NOT EXISTS servers (id integer primary key autoincrement, name text not null, " + 
+										Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS servers (id integer primary key autoincrement, name text not null, " +
 											"url text not null, username text not null, password text not null);", [], function(tx, res){
 											console.log("global.db: 'servers' table created.");	
 											
 											//Populate the existing server dropdown
-											tx.executeSql("SELECT * FROM servers;", [], function(tx, res){
+											Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers;", [], function(tx, res){
 												//Create the list for servers
 												Arbiter.serversList = new ListWidget({
 													div_id: "idServersList",
@@ -315,52 +315,12 @@ var Arbiter = {
 															}, Arbiter.error);
 													}
 												});
-												
+																
 												console.log("SELECT * FROM servers and add them to the list!");
-												/*var row;
-												var html = '';
-												var contentClass;
-												var leftClass;
-												//var leftPositioning;
 										
-												for(var i = 0;i < res.rows.length;i++){
-													row = res.rows.item(i);
-													contentClass = 'existingServer-contentColumn';
-													leftClass = 'existingServer-leftColumn';
-											
-													if(i == 0){
-														contentClass += ' existingServer-top-right';
-														leftClass += ' existingServer-top-left';
-													}
-											
-													if(i == (res.rows.length - 1)){
-														contentClass += ' existingServer-bottom-right';
-														leftClass += ' existingServer-bottom-left';
-													}
-											
-													//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
-											
-													html += '<div class="existingServer-row">' +
-													'<div class="existingServer-contentWrapper">' +
-													'<div class="' + contentClass + '">' +
-													'<a class="existingServer-name" id="existingServer-' + row.id + '">' + row.name + '</a>' +
-													'</div>' +
-													'</div>' +
-													'<div class="' + leftClass + '">' +
-													'<div class="existingServer-checkbox-container">' +
-													'<input type="checkbox" class="existingServer-checkbox" server-id="' + row.id + '" name="' + row.name +
-													'" id="existingServer-checkbox-' + row.id + '" style="width:20px;height:20px;" />' +
-													'</div>' +
-													'</div>' +
-													'</div>';
-												}
-										
-												for(var i = 0; i < jqServersPageContent.length;i++)
-													$(jqServersPageContent[i]).html(html);
-												*/
-											});
+											}, Arbiter.error);
 							
-									tx.executeSql(createTilesSql, [], function(tx, res){
+									Cordova.transaction(Arbiter.globalDatabase, createTilesSql, [], function(tx, res){
 										console.log("global.db: 'tiles' table created.");	
 																	 
 									}, function(e) {
@@ -382,7 +342,6 @@ var Arbiter = {
 					}, function(e) {
 						console.log("global.db: 'settings' table failed to create. - " + e);
 					});
-				});
 				
 			}, function(error){
 				console.log("Arbiter.fileSystem: Couldn't create 'Arbiter' directory.");
@@ -692,7 +651,7 @@ var Arbiter = {
 		
 		jqSyncUpdates.taphold(function(){
 			// do the same things as mouseup event
-//			jqSyncUpdates.mouseup();
+			jqSyncUpdates.mouseup();
 			
 			// but also re-cache tiles
 			TileUtil.cacheTiles();
@@ -1013,7 +972,10 @@ var Arbiter = {
 				//query the global server table to get the server info
 					var serverId = serverObj.server_id;
 					Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers WHERE id=?;", [serverId], function(tx, res){
-						if(res.rows.length){ //There should be one row that matches
+						console.log("Android debug");
+						console.log(" - res.rows.length: " + res.rows.length);
+						if(res.rows.length && res.rows.length > 0){ //There should be one row that matches
+							console.log("Select layers and add to server.");
 							var serverObj = res.rows.item(0);
 							Arbiter.currentProject.serverList[serverObj.name] = {
 								layers: {},
@@ -1025,9 +987,13 @@ var Arbiter = {
 						  
 						  	//select layers and add to the appropriate server
 							//var _serverId = serverObj.id;
+							console.log(serverObj);
+							console.log("Name: " + serverObj.name);
+							console.log("ID:  " + serverObj.id);
 							Arbiter.setServerLayers(serverObj.id, serverObj.name);
 						}else{
 							//server was deleted - so add the layers to the deletedServers list
+							console.log("Server was deleted.");
 							Arbiter.currentProject.deletedServers.length++;
 							Arbiter.currentProject.deletedServers[serverId] = {
 								layers: {}  
@@ -1306,7 +1272,7 @@ var Arbiter = {
         			map.zoomToExtent(Arbiter.currentProject.aoi, true);
     				
     				//TODO: this really should happen after showmap completes
-        			//jqSyncUpdates.mouseup();
+        			jqSyncUpdates.mouseup();
     			};
 
     			TileUtil.cacheTiles(successCacheTiles);    				
@@ -1328,7 +1294,6 @@ var Arbiter = {
 				statement = "UPDATE settings SET aoi_left=?, aoi_bottom=?, aoi_right=?, aoi_top=? WHERE aoi_left <> '';"; 
 			}
 
-			//TODO: use arg list insetad
 			Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], 
 					successCallback, Arbiter.error);
     },
@@ -1850,6 +1815,7 @@ var Arbiter = {
 								console.log(servername + " deleted!");
 								Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM server_usage WHERE project_id=?;", [Arbiter.currentProject.projectId], function(tx, res){
 									console.log(servername + " usage deleted!");
+									delete Arbiter.currentProject.serverList[servername];
 								}, function(tx, err){
 									console.log(servername + " usage deletion fail!", err);
 								});
@@ -2585,7 +2551,7 @@ var Arbiter = {
 	},
 	
 	error: function(arg1){
-		console.log('==== Arbiter.Error');
+		console.log('==== Arbiter.error');
 		
 		var argsStr = "";
 		
@@ -2605,7 +2571,32 @@ var Arbiter = {
 		console.log("StackTrace: \n" + trace);
 		
 		if (Arbiter.debugAlertOnError) {
-			alert("error: " + argsStr + "\n" + trace);
+			alert("ERORR: " + argsStr + "\n" + trace);
+		}		
+	},
+	
+	warning: function(arg1){
+		console.log('==^^ Arbiter.warning');
+		
+		var argsStr = "";
+		
+		for(var i = 0; i < arguments.length; i++) {
+			console.log("arg" + i + ": ", arguments[i]);
+			
+			if (argsStr !== "") {
+				argsStr += ", ";
+			}
+			
+			argsStr += "arg" + i + ": " + arguments[i];
+		}
+		
+		console.log("args as string: " + argsStr);
+		var trace = Arbiter.getStackTrace();
+		
+		console.log("StackTrace: \n" + trace);
+		
+		if (Arbiter.debugAlertOnWarning) {
+			alert("Just WARNING: " + argsStr + "\n" + trace);
 		}		
 	},
 	
