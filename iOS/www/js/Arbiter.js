@@ -817,6 +817,9 @@ var Arbiter = {
 		    			Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
 		    		}
 		    		
+					Console.log("~~ CORDOVA TRANSACTION ERROR LINE 822 ~~");
+					console.log("ProjectID: " + projectId);
+					console.log("ServerID: " + serverId);
 		    		Arbiter.insertServerUsage(projectId, serverId, function(tx, res){
 						console.log("insert server usage success");
 					});
@@ -948,8 +951,10 @@ var Arbiter = {
 		Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 		Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
 		
+		console.log("~~ CORDOVA ERROR LINE 955 ~~");
+		console.log("Project Name: " + Arbiter.currentProject.name);
 		//get the project id
-		Cordova.transaction(Arbiter.globalDatabase, "select * from projects where name=?;", [Arbiter.currentProject.name], function(tx, res){
+		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects WHERE name=?;", [Arbiter.currentProject.name], function(tx, res){
 			if(res.rows.length){
 				Arbiter.currentProject.projectId = res.rows.item(0).id;
 			}else{
@@ -1988,8 +1993,8 @@ var Arbiter = {
 			Cordova.transaction(Arbiter.globalDatabase, insertServerSql, [name, url, username, password], function(tx, res){
 				var serverId = res.insertId;
 				if(map && Arbiter.currentProject.variablesDatabase){
-					Arbiter.insertProjectsServer(res.insertId, name, function(tx, res){
-						Arbiter.insertServerUsage(projectId, Arbiter.currentProject.projectId, function(tx, res){
+					Arbiter.insertProjectsServer(serverId, name, function(tx, res){
+						Arbiter.insertServerUsage(Arbiter.currentProject.projectId, serverId, function(tx, res){
 							
 							success(serverId);
 						});
