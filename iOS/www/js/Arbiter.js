@@ -110,7 +110,7 @@ var editorTabOpen = false;
 
 var Arbiter = { 
 	
-	debugAlertOnError: true,
+	debugAlertOnError: false,
 	
 	debugAlertOnWarning: true,
 	
@@ -2996,7 +2996,7 @@ var Arbiter = {
 						$(this).val('');
 					}
 				}else if(type == "boolean"){
-					value = value.toLowerCase();
+					//value = value.toLowerCase();
 					if((value != 0) && (value != 1) && (value != "true") && (value != "false")){
 						valid = false;
 						attrValid = false;
