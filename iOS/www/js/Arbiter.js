@@ -110,7 +110,7 @@ var editorTabOpen = false;
 
 var Arbiter = { 
 	
-	debugAlertOnError: true,
+	debugAlertOnError: false,
 	
 	debugAlertOnWarning: false,
 	
