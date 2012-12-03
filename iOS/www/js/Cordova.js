@@ -150,7 +150,17 @@ var Cordova = {
 			tx.executeSql(_sql, _variables, function(tx, res){
 				if(_success)
 					_success(tx, res);
-			}, _error);
+			}, function(tx, err){
+					if(_error){
+						_error(tx, err);
+					}else{
+						Arbiter.error("sql execution failed!!!", tx, err);
+					}
+			});
+		}, function(err){
+			Arbiter.error("Transaction failed!!!", err);
+		}, function(){
+			// do nothing				  
 		});
 	},
 	
