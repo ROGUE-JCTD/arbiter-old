@@ -818,7 +818,7 @@ var Arbiter = {
 		    			Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
 		    		}
 		    		
-					Console.log("~~ CORDOVA TRANSACTION ERROR LINE 822 ~~");
+					console.log("~~ CORDOVA TRANSACTION ERROR LINE 822 ~~");
 					console.log("ProjectID: " + projectId);
 					console.log("ServerID: " + serverId);
 		    		Arbiter.insertServerUsage(projectId, serverId, function(tx, res){
