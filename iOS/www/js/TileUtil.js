@@ -772,7 +772,10 @@ deleteAllTileTableEntriesAndTheirPngFiles: function(){
 			
 			for(var i = 0; i < res.rows.length; i++){
 				var row = res.rows.item(i);
-				TileUtil.removeTileFromDevice(row.path, row.id, null, function(){//alert("chk100");});
+				TileUtil.removeTileFromDevice(row.path, row.id, null, function(){
+					//alert("chk100");
+					});
+				}
 				
 				TileUtil.deleteTilesEntries();
 			}	
