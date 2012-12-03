@@ -458,11 +458,11 @@ getURL: function(bounds) {
 						Arbiter.error("TileUtil.getURL: Multiple Entries for tile! see console for details. count: " + res.rows.length);
 					}					
 				}, function(e1, e2) {
-					alert("chk27");
+					//alert("chk27");
 					Arbiter.error(e1, e2);
 				});	
 			}, function(e1, e2) {
-				alert("chk28");
+				////alert("chk28");
 				Arbiter.error(e1, e2);
 			});
  		} else {
@@ -526,17 +526,17 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 								}
 							);
 						}, function(e1, e2) {
-							alert("chk29");
+							//alert("chk29");
 							Arbiter.error(e1, e2);
 						}
 					);
 				}, function(e1, e2) {
-					alert("chk30");
+					//alert("chk30");
 					Arbiter.error(e1, e2);
 				}
 			);
 		}, function(e1, e2) {
-			alert("chk31");
+			//alert("chk31");
 			Arbiter.error(e1, e2);
 		}
 	);
@@ -587,11 +587,11 @@ addTile : function(url, path, tileset, z, x, y) {
 								console.log("inserted new url in tiles. res.insertId: " + res.insertId);
 							}
 						}, function(e1, e2) {
-							alert("chk1");
+							//alert("chk1");
 							Arbiter.error(e1, e2);
 						});
 					}, function(e1, e2) {
-						alert("chk2");
+						//alert("chk2");
 						Arbiter.error(e1, e2);
 					});
 
@@ -615,11 +615,11 @@ addTile : function(url, path, tileset, z, x, y) {
 							console.log("updated tiles. for url : " + url);
 						}
 					}, function(e1, e2) {
-						alert("chk3");
+						//alert("chk3");
 						Arbiter.error(e1, e2);
 					});
 				}, function(e1, e2) {
-					alert("chk4");
+					//alert("chk4");
 					Arbiter.error(e1, e2);
 				});
 
@@ -628,11 +628,11 @@ addTile : function(url, path, tileset, z, x, y) {
 				Arbiter.error("tiles has duplicate entry for a given url. see console");
 			}
 		}, function(e1, e2) {
-			alert("chk5");
+			//alert("chk5");
 			Arbiter.error(e1, e2);
 		});
 	}, function(e1, e2) {
-		alert("chk6");
+		//alert("chk6");
 		Arbiter.error(e1, e2);
 	});
 
@@ -704,7 +704,7 @@ clearCache : function(tileset, successCallback, vDb) {
 			}
 
 		}, function(e1, e2) {
-			alert("chk7");
+			//alert("chk7");
 			Arbiter.error(e1, e2);
 		});
 	};
@@ -715,7 +715,7 @@ clearCache : function(tileset, successCallback, vDb) {
 		
 	//alert("inserted tile. id: " + res.insertId);
 	vDb.transaction(op, function(e1, e2) {
-		alert("chk8");
+		//alert("chk8");
 		Arbiter.error(e1, e2);
 	});		
 }, 
@@ -731,11 +731,11 @@ deleteTileIdsEntries: function(){
 				console.log("---- TileUtil.deleteTileIdsEntries done");
 			}
 		}, function(e1, e2) {
-			alert("chk9");
+			//alert("chk9");
 			Arbiter.error(e1, e2);
 		});					
 	}, function(e1, e2) {
-		alert("chk10");
+		//alert("chk10");
 		Arbiter.error(e1, e2);
 	});	
 },
@@ -754,7 +754,7 @@ deleteTilesEntries: function(){
 			}
 		}, 
 		function(e1, e2) {
-			alert("chk101");
+			//alert("chk101");
 			Arbiter.error(e1, e2);
 		}					
 	);
@@ -772,7 +772,7 @@ deleteAllTileTableEntriesAndTheirPngFiles: function(){
 			
 			for(var i = 0; i < res.rows.length; i++){
 				var row = res.rows.item(i);
-				TileUtil.removeTileFromDevice(row.path, row.id, null, function(){alert("chk100");});
+				TileUtil.removeTileFromDevice(row.path, row.id, null, function(){//alert("chk100");});
 				
 				TileUtil.deleteTilesEntries();
 			}	
@@ -806,11 +806,11 @@ insertIntoTileIds: function(id) {
 			console.log("dumping after error for id: " + id);
 			//TileUtil.dumpTileIds();
 			console.log("CHK: " + statement + ": " + id);
-			alert("chk11");
+			//alert("chk11");
 			Arbiter.error(e1, e2);
 		});
 	}, function(e1, e2) {
-		alert("chk12");
+		//alert("chk12");
 		Arbiter.error(e1, e2);
 	});
 },
@@ -884,11 +884,11 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 							TileUtil.removeTileFromDevice(tileEntry.path, id, successCallback, errorCallback);
 							
 						}, function(e1, e2) {
-							alert("chk13");
+							//alert("chk13");
 							Arbiter.error(e1, e2);
 						});
 					}, function(e1, e2) {
-						alert("chk14");
+						//alert("chk14");
 						Arbiter.error(e1, e2);
 					});							
 					
@@ -906,11 +906,11 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 								successCallback();
 							}
 						}, function(e1, e2) {
-							alert("chk15");
+							//alert("chk15");
 							Arbiter.error(e1, e2);
 						});
 					}, function(e1, e2) {
-						alert("chk16");
+						//alert("chk16");
 						Arbiter.error(e1, e2);
 					});	
 					
@@ -929,11 +929,11 @@ removeTileById: function(id, successCallback, errorCallback, txProject, txGlobal
 				Arbiter.error("tiles table has multiple entries for id: " + id);
 			}
 		}, function(e1, e2) {
-			alert("chk17");
+			//alert("chk17");
 			Arbiter.error(e1, e2);
 		});
 	}, function(e1, e2) {
-		alert("chk18");
+		//alert("chk18");
 		Arbiter.error(e1, e2);
 	});	
 	
@@ -946,11 +946,11 @@ dumpTableNames: function(database){
 		tx.executeSql("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;", [], function(tx, res){
 			console.log(TileUtil.rowsToString(res.rows));
 		}, function(e1, e2) {
-			alert("chk19");
+			//alert("chk19");
 			Arbiter.error(e1, e2);
 		});	
 	}, function(e1, e2) {
-		alert("chk20");
+		//alert("chk20");
 		Arbiter.error(e1, e2);
 	});
 },
@@ -962,11 +962,11 @@ dumpTableNames: function(database){
 //		tx.executeSql("SELECT * FROM " + tableName + ";", [], function(tx, res){
 //			str = TileUtil.rowsToString(res.rows);
 //		}, function(e1, e2) {
-//			alert("chk21");
+//			//alert("chk21");
 //			Arbiter.error(e1, e2);
 //		});	
 //	}, function(e1, e2) {
-//		alert("chk22");
+//		//alert("chk22");
 //		Arbiter.error(e1, e2);
 //	});
 //	
@@ -979,11 +979,11 @@ dumpTableRows: function(database, tableName){
 		tx.executeSql("SELECT * FROM " + tableName + ";", [], function(tx, res){
 			console.log(TileUtil.rowsToString(res.rows));
 		}, function(e1, e2) {
-			alert("chk21");
+			//alert("chk21");
 			Arbiter.error(e1, e2);
 		});	
 	}, function(e1, e2) {
-		alert("chk22");
+		//alert("chk22");
 		Arbiter.error(e1, e2);
 	});
 },
@@ -1023,13 +1023,13 @@ dumpTilesWithRefCount: function(count){
 					console.log(TileUtil.rowsToString(res.rows));
 				}, 
 				function(e1, e2) {
-					alert("chk23");
+					//alert("chk23");
 					Arbiter.error(e1, e2);
 				}
 			);	
 		}, 
 		function(e1, e2) {
-			alert("chk24");
+			//alert("chk24");
 			Arbiter.error(e1, e2);
 		}
 	);
@@ -1046,13 +1046,13 @@ dumpTileIds: function(){
 					console.log(TileUtil.rowsToString(res.rows));
 				}, 
 				function(e1, e2) {
-					alert("chk25");
+					//alert("chk25");
 					Arbiter.error(e1, e2);
 				}
 			);	
 		}, 
 		function(e1, e2) {
-			alert("chk26");
+			//alert("chk26");
 			Arbiter.error(e1, e2);
 		}
 	);
