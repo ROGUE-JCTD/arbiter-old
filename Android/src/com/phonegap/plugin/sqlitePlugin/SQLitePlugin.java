@@ -21,17 +21,21 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.*;
 
+import java.util.HashMap;
+
 import android.util.Log;
 
 public class SQLitePlugin extends Plugin {
-
-	// Data Definition Language
-	SQLiteDatabase myDb = null; // Database object
+	/**
+	 * Multiple database map.
+	 */
+	HashMap<String, SQLiteDatabase> myDbMap;
 
 	/**
 	 * Constructor.
 	 */
 	public SQLitePlugin() {
+		myDbMap = new HashMap<String, SQLiteDatabase>();
 	}
 
 	/**
@@ -55,8 +59,20 @@ public class SQLitePlugin extends Plugin {
 						"database", 5000000);
 				//this.openDatabase(args.getString(0), args.getString(1),
 				//		args.getString(2), args.getLong(3));
-			} 
-			else if (action.equals("executeSqlBatch")) 
+			}
+			// XXX TODO:
+			else if (action.equals("close")) {
+				Log.v("error", "NOT IMPLEMENTED"); // XXX TODO
+			}
+			else if (action.equals("executePragmaStatement"))
+			{
+				String dbName = args.getString(0);
+				String query = args.getString(1);
+
+				Cursor myCursor = this.getDatabase(dbName).rawQuery(query, null);
+				this.processPragmaResults(myCursor, id);
+			}
+			else if (action.equals("executeSqlBatch"))
 			{
 				String[] 	queries 	= null;
 				String[] 	queryIDs 	= null;
@@ -65,18 +81,21 @@ public class SQLitePlugin extends Plugin {
 				JSONArray 	jsonArr 	= null;
 				int 		paramLen	= 0;
 				JSONArray[] 	jsonparams 	= null;
-				
-				if (args.isNull(0)) {
+
+				String dbName = args.getString(0);
+				JSONArray txargs = args.getJSONArray(1);
+
+				if (txargs.isNull(0)) {
 					queries = new String[0];
 				} else {
-					int len = args.length();
+					int len = txargs.length();
 					queries = new String[len];
 					queryIDs = new String[len];
 					jsonparams = new JSONArray[len];
 
 					for (int i = 0; i < len; i++) 
 					{
-						a 			= args.getJSONObject(i);
+						a 			= txargs.getJSONObject(i);
 						queries[i] 	= a.getString("query");
 						queryIDs[i] = a.getString("query_id");
 						trans_id 	= a.getString("trans_id");
@@ -86,7 +105,7 @@ public class SQLitePlugin extends Plugin {
 					}
 				}
 				if(trans_id != null)
-					this.executeSqlBatch(queries, jsonparams, queryIDs, trans_id);
+					this.executeSqlBatch(dbName, queries, jsonparams, queryIDs, trans_id);
 				else
 					Log.v("error", "null trans_id");
 			}
@@ -113,10 +132,12 @@ public class SQLitePlugin extends Plugin {
 	 */
 	@Override
 	public void onDestroy() {
+		/** XXX TODO :
 		if (this.myDb != null) {
 			this.myDb.close();
 			this.myDb = null;
 		}
+		**/
 	}
 
 	// --------------------------------------------------------------------------
@@ -135,36 +156,42 @@ public class SQLitePlugin extends Plugin {
 	 * @param size
 	 *            The size in bytes
 	 */
-	public void openDatabase(String db, String version, String display_name,
+	private void openDatabase(String db, String version, String display_name,
 			long size) {
-
-		// If database is open, then close it
-		if (this.myDb != null) {
-			this.myDb.close();
-		}
 		
+		SQLiteDatabase myDb;
 		String filesDir = this.cordova.getActivity().getApplicationContext().getFilesDir().toString();
 		String homeDir = filesDir.substring(0, filesDir.length() - 5);
 
 		if(homeDir != null) {
 			File databaseFile = new File(homeDir + db + ".db");
-			this.myDb = SQLiteDatabase.openOrCreateDatabase(databaseFile, null);
+			myDb = SQLiteDatabase.openOrCreateDatabase(databaseFile, null);
 		} else {
-			this.myDb = this.cordova.getActivity().getApplicationContext().openOrCreateDatabase(db + ".db", Context.MODE_PRIVATE, null);
+			myDb = this.cordova.getActivity().getApplicationContext().openOrCreateDatabase(db + ".db", Context.MODE_PRIVATE, null);
 		}
+
+		myDbMap.put(db, myDb);
 	}
 
-	public void executeSqlBatch(String[] queryarr, JSONArray[] jsonparams, String[] queryIDs, String tx_id) {
+	private SQLiteDatabase getDatabase(String dbName) {
+		return myDbMap.get(dbName);
+	}
+
+	private void executeSqlBatch(String dbName, String[] queryarr, JSONArray[] jsonparams, String[] queryIDs, String tx_id) {
+		SQLiteDatabase myDb = this.getDatabase(dbName); // XXX TODO check for null
+
 		try {
-			this.myDb.beginTransaction();
+			myDb.beginTransaction();
+
 			String query = "";
 			String query_id = "";
 			int len = queryarr.length;
+
 			for (int i = 0; i < len; i++) {
 				query = queryarr[i];
 				query_id = queryIDs[i];
 				if (query.toLowerCase().startsWith("insert") && jsonparams != null) {
-					SQLiteStatement myStatement = this.myDb.compileStatement(query);
+					SQLiteStatement myStatement = myDb.compileStatement(query);
 					for (int j = 0; j < jsonparams[i].length(); j++) {
 						if (jsonparams[i].get(j) instanceof Float || jsonparams[i].get(j) instanceof Double ) {
 							myStatement.bindDouble(j + 1, jsonparams[i].getDouble(j));
@@ -191,13 +218,13 @@ public class SQLitePlugin extends Plugin {
 						}
 					}
 
-					Cursor myCursor = this.myDb.rawQuery(query, params);
+					Cursor myCursor = myDb.rawQuery(query, params);
 
 					this.processResults(myCursor, query_id, tx_id);
 					myCursor.close();
 				}
 			}
-			this.myDb.setTransactionSuccessful();
+			myDb.setTransactionSuccessful();
 		}
 		catch (SQLiteException ex) {
 			ex.printStackTrace();
@@ -209,7 +236,7 @@ public class SQLitePlugin extends Plugin {
 			this.sendJavascript("SQLitePluginTransaction.txErrorCallback('" + tx_id + "', '"+ex.getMessage()+"');");
 		}
 		finally {
-			this.myDb.endTransaction();
+			myDb.endTransaction();
 			Log.v("executeSqlBatch", tx_id);
 			this.sendJavascript("SQLitePluginTransaction.txCompleteCallback('" + tx_id + "');");
 		}
@@ -223,11 +250,12 @@ public class SQLitePlugin extends Plugin {
 	 * @param tx_id
 	 *            Transaction id
 	 */
-	public void processResults(Cursor cur, String query_id, String tx_id) {
-
+	private void processResults(Cursor cur, String query_id, String tx_id)
+	{
 		String result = "[]";
 		// If query result has rows
 
+		// XXX TODO use results2string() and do test:
 		if (cur.moveToFirst()) {
 			JSONArray fullresult = new JSONArray();
 			String key = "";
@@ -239,6 +267,7 @@ public class SQLitePlugin extends Plugin {
 				try {
 					for (int i = 0; i < colCount; ++i) {
 						key = cur.getColumnName(i);
+
 						// for old Android SDK remove lines from HERE:
 						if(android.os.Build.VERSION.SDK_INT >= 11)
 						{
@@ -279,5 +308,71 @@ public class SQLitePlugin extends Plugin {
 		if(query_id.length() > 0)
 			this.sendJavascript(" SQLitePluginTransaction.queryCompleteCallback('" + tx_id + "','" + query_id + "', " + result + ");");
 
+	}
+
+	private void processPragmaResults(Cursor cur, String id)
+	{
+		String result = this.results2string(cur);
+
+		this.sendJavascript(" SQLitePluginCallback.p1('" + id + "', " + result + ");");
+	}
+
+	private String results2string(Cursor cur)
+	{
+		String result = "[]";
+
+		// If query result has rows
+		if (cur.moveToFirst()) {
+			JSONArray fullresult = new JSONArray();
+			String key = "";
+			int colCount = cur.getColumnCount();
+
+			// Build up JSON result object for each row
+			do {
+				JSONObject row = new JSONObject();
+				try {
+					for (int i = 0; i < colCount; ++i) {
+						key = cur.getColumnName(i);
+
+						// for old Android SDK remove lines from HERE:
+						if(android.os.Build.VERSION.SDK_INT >= 11)
+						{
+							switch(cur.getType (i))
+							{
+								case Cursor.FIELD_TYPE_NULL:
+									row.put(key, null);
+									break;
+								case Cursor.FIELD_TYPE_INTEGER:
+									row.put(key, cur.getInt(i));
+									break;
+								case Cursor.FIELD_TYPE_FLOAT:
+									row.put(key, cur.getFloat(i));
+									break;
+								case Cursor.FIELD_TYPE_STRING:
+									row.put(key, cur.getString(i));
+									break;
+								case Cursor.FIELD_TYPE_BLOB:
+									row.put(key, cur.getBlob(i));
+									break;
+							}
+						}
+						else // to HERE.
+						{
+							row.put(key, cur.getString(i));
+						}
+					}
+
+					fullresult.put(row);
+
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
+
+			} while (cur.moveToNext());
+
+			result = fullresult.toString();
+		}
+
+		return result;
 	}
 }
