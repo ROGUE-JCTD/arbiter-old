@@ -230,13 +230,13 @@ var Arbiter = {
 							//Create server_usage table
 							Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS projects (id integer primary key, name text not null);",
 								[], function(tx, res){
-								console.log("global.db: 'server_usage' table created.");	
+								console.log("global.db: 'projects' table created.");	
 								
 								//Create projects table
 								Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, project_id integer, " +
 									"FOREIGN KEY(server_id) REFERENCES servers(id), FOREIGN KEY(project_id) REFERENCES projects(id));",
 									[], function(tx, res){
-									console.log("global.db: 'projects' table created.");
+									console.log("global.db: 'server_usage' table created.");
 									
 									//Create tiles table
 									var createTilesSql = "CREATE TABLE IF NOT EXISTS tiles (" +
@@ -878,7 +878,7 @@ var Arbiter = {
 				}, function(e){
 					console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " NOT added to projects table - " + e);
 				});
-			
+				
 			Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 			Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
 			
