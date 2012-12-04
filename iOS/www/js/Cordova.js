@@ -156,8 +156,8 @@ var Cordova = {
 					_error(tx, err);
 				}
 			});
-		}, function(err){
-			Arbiter.error("Transaction failed!!!", err);
+		}, function(err, err2){
+			Arbiter.error("Transaction failed!!!", err, err2);
 		}, function(){
 			// do nothing				  
 		});

@@ -142,32 +142,16 @@ public class SQLitePlugin extends Plugin {
 		if (this.myDb != null) {
 			this.myDb.close();
 		}
-
-		SQLiteDatabase privateDB = this.cordova.getActivity().getApplicationContext().openOrCreateDatabase("private.db", Context.MODE_PRIVATE, null);
-			File arbiter = this.cordova.getActivity().getDatabasePath("private.db");
-		privateDB.close();
-		String[] paths = arbiter.getAbsolutePath().split("databases");
-		File databaseFile = new File(paths[0] + db + ".db");
 		
-		if (Log.isLoggable("SQLitePlugin", Log.WARN))
-	    {
-	        Log.w("SQLitePlugin",
-	                "openOrCreateDatabase = " + databaseFile.getAbsolutePath());
-	    }
+		String filesDir = this.cordova.getActivity().getApplicationContext().getFilesDir().toString();
+		String homeDir = filesDir.substring(0, filesDir.length() - 5);
 
-		//if (!databaseFile.getParentFile().exists()) {
-		//	databaseFile.getParentFile().mkdirs();
-		//}
-
-		this.myDb = SQLiteDatabase.openOrCreateDatabase(databaseFile, null);
-		
-		if (Log.isLoggable("SQLitePlugin", Log.WARN))
-	    {
-	        Log.w("SQLitePlugin",
-	                "myDB = " + this.myDb);
-	    }
-
-		//this.myDb = this.cordova.getActivity().getApplicationContext().openOrCreateDatabase(private + ".db", Context.MODE_PRIVATE, null);
+		if(homeDir != null) {
+			File databaseFile = new File(homeDir + db + ".db");
+			this.myDb = SQLiteDatabase.openOrCreateDatabase(databaseFile, null);
+		} else {
+			this.myDb = this.cordova.getActivity().getApplicationContext().openOrCreateDatabase(db + ".db", Context.MODE_PRIVATE, null);
+		}
 	}
 
 	public void executeSqlBatch(String[] queryarr, JSONArray[] jsonparams, String[] queryIDs, String tx_id) {
