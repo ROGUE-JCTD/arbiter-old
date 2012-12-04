@@ -376,18 +376,26 @@ var Arbiter = {
 		capabilitiesFormatter = new OpenLayers.Format.WMSCapabilities();
 		describeFeatureTypeReader = new OpenLayers.Format.WFSDescribeFeatureType();
 		
+		
+		//Create styles
+		aoiStyleMap = new OpenLayers.StyleMap({
+			'default': new OpenLayers.Style({
+		    		fill: false,
+		    		strokeColor: 'red',
+		    		strokeWidth: 5
+		    	}) 
+		});
+		
+		// make point radius larger so it is easier to select point features
+		OpenLayers.Feature.Vector.style.default.pointRadius = 12;
+		OpenLayers.Feature.Vector.style.select.pointRadius = 12;
+		OpenLayers.Feature.Vector.style.temporary.pointRadius = 12;		
+		
+		
+		
 		div_MapPage.live('pageshow', Arbiter.onShowMap);
 
 		div_MapPage.live('pagebeforeshow', Arbiter.onBeforeShowMap);
-		
-		aoiStyleMap = new OpenLayers.StyleMap({
-			'default': new OpenLayers.Style(
-					{
-			    		fill: false,
-			    		strokeColor: 'red',
-			    		strokeWidth: 5
-			    	}) 
-		});
 		
 		div_AreaOfInterestPage.live('pageshow', Arbiter.onShowAOIMap);
 		div_AreaOfInterestPage.live('pagehide', Arbiter.onHideAOIMap);
