@@ -23,6 +23,8 @@ var postgisSymbolizer;
 var postgisStyle;
 var aoiStyleMap;
 
+var layerColors = ['aqua', 'yellow', 'teal', 'purple', 'fuchsia', 'lime', 'maroon', 'black', 'navy', 'olive', 'grey', 'red', 'green', 'silver', 'white' ];
+
 /* ============================ *
  * 			  Layer
  * ============================ */
@@ -3302,12 +3304,22 @@ var Arbiter = {
 			});
 		}
 		
+		//TODO: not used?
 		var tableName = meta.featureType;
+		
+		var styleMap = new OpenLayers.StyleMap(
+			OpenLayers.Util.applyDefaults({
+				fillColor: layerColors[map.getNumLayers() % layerColors.length],
+				strokeColor: layerColors[map.getNumLayers() % layerColors.length]
+				},
+				OpenLayers.Feature.Vector.style["default"])
+		);
 
 		var newWFSLayer = new OpenLayers.Layer.Vector(meta.nickname + "-wfs", {
 			strategies : strategies,
 			projection : new OpenLayers.Projection(meta.srsName),
-			protocol : protocol
+			protocol : protocol,
+			styleMap: styleMap
 		});		
 
 		newWFSLayer.attributeTypes = {};
