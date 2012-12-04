@@ -728,6 +728,7 @@ var Arbiter = {
     },
     
     createFeatureTable: function(serverName, layer, layerName, projectIsOpen){
+    	/*BEING USED IN TRANSACTION CALLBACK*/
     	var server = Arbiter.currentProject.serverList[serverName];
     	
     	var attributeSql = "id integer primary key, fid text, " + layer.geomName + " text not null";
@@ -817,6 +818,9 @@ var Arbiter = {
 		    			Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
 		    		}
 		    		
+					console.log("~~ CORDOVA TRANSACTION ERROR LINE 822 ~~");
+					console.log("ProjectID: " + projectId);
+					console.log("ServerID: " + serverId);
 		    		Arbiter.insertServerUsage(projectId, serverId, function(tx, res){
 						console.log("insert server usage success");
 					});
@@ -925,6 +929,40 @@ var Arbiter = {
 		}
 	},
     
+	addServersToProject: function(serverObj){
+		console.log("addServersToProject: ", serverObj);
+		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers WHERE id=?;", [serverObj.server_id], function(tx, res){
+			console.log("Android debug");
+			console.log(" - res.rows.length: " + res.rows.length);
+			if(res.rows.length && res.rows.length > 0){ //There should be one row that matches
+				console.log("Select layers and add to server.");
+				var server = res.rows.item(0);
+				Arbiter.currentProject.serverList[server.name] = {
+					layers: {},
+					password: server.password,
+					url: server.url,
+					username: server.username,
+					serverId: server.id
+				};
+			  
+			  	//select layers and add to the appropriate server
+				//var _serverId = serverObj.id;
+				console.log(server);
+				console.log("Name: " + server.name);
+				console.log("ID:  " + server.id);
+				Arbiter.setServerLayers(server.id, server.name);
+			}else{
+				//server was deleted - so add the layers to the deletedServers list
+				console.log("Server was deleted.");
+				Arbiter.currentProject.deletedServers.length++;
+				Arbiter.currentProject.deletedServers[serverObj.server_id] = {
+					layers: {}  
+				};
+				Arbiter.setServerLayers(serverObj.server_id);
+			}
+		});
+	},
+	
     onOpenProject: function(projectName){
 		console.log("---- onOpenProject: " + projectName + ".");
 
@@ -948,8 +986,10 @@ var Arbiter = {
 		Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 		Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
 		
+		console.log("~~ CORDOVA ERROR LINE 955 ~~");
+		console.log("Project Name: " + Arbiter.currentProject.name);
 		//get the project id
-		Cordova.transaction(Arbiter.globalDatabase, "select * from projects where name=?;", [Arbiter.currentProject.name], function(tx, res){
+		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects WHERE name=?;", [Arbiter.currentProject.name], function(tx, res){
 			if(res.rows.length){
 				Arbiter.currentProject.projectId = res.rows.item(0).id;
 			}else{
@@ -966,37 +1006,7 @@ var Arbiter = {
 				console.log("before setting serverList");
 				
 				//query the global server table to get the server info
-					var serverId = serverObj.server_id;
-					Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers WHERE id=?;", [serverId], function(tx, res){
-						console.log("Android debug");
-						console.log(" - res.rows.length: " + res.rows.length);
-						if(res.rows.length && res.rows.length > 0){ //There should be one row that matches
-							console.log("Select layers and add to server.");
-							var serverObj = res.rows.item(0);
-							Arbiter.currentProject.serverList[serverObj.name] = {
-								layers: {},
-								password: serverObj.password,
-								url: serverObj.url,
-								username: serverObj.username,
-								serverId: serverObj.id
-							};
-						  
-						  	//select layers and add to the appropriate server
-							//var _serverId = serverObj.id;
-							console.log(serverObj);
-							console.log("Name: " + serverObj.name);
-							console.log("ID:  " + serverObj.id);
-							Arbiter.setServerLayers(serverObj.id, serverObj.name);
-						}else{
-							//server was deleted - so add the layers to the deletedServers list
-							console.log("Server was deleted.");
-							Arbiter.currentProject.deletedServers.length++;
-							Arbiter.currentProject.deletedServers[serverId] = {
-								layers: {}  
-							};
-							Arbiter.setServerLayers(serverId);
-						}
-					});
+				Arbiter.addServersToProject(serverObj);
 			}
 		});
 														 
@@ -1988,8 +1998,8 @@ var Arbiter = {
 			Cordova.transaction(Arbiter.globalDatabase, insertServerSql, [name, url, username, password], function(tx, res){
 				var serverId = res.insertId;
 				if(map && Arbiter.currentProject.variablesDatabase){
-					Arbiter.insertProjectsServer(res.insertId, name, function(tx, res){
-						Arbiter.insertServerUsage(projectId, Arbiter.currentProject.projectId, function(tx, res){
+					Arbiter.insertProjectsServer(serverId, name, function(tx, res){
+						Arbiter.insertServerUsage(Arbiter.currentProject.projectId, serverId, function(tx, res){
 							
 							success(serverId);
 						});
