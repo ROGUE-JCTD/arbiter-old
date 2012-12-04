@@ -21,6 +21,7 @@ var postgisSymbolizer;
  * 		   	  Styles
  * ============================ */
 var postgisStyle;
+var aoiStyleMap;
 
 /* ============================ *
  * 			  Layer
@@ -379,6 +380,15 @@ var Arbiter = {
 
 		div_MapPage.live('pagebeforeshow', Arbiter.onBeforeShowMap);
 		
+		aoiStyleMap = new OpenLayers.StyleMap({
+			'default': new OpenLayers.Style(
+					{
+			    		fill: false,
+			    		strokeColor: 'red',
+			    		strokeWidth: 5
+			    	}) 
+		});
+		
 		div_AreaOfInterestPage.live('pageshow', Arbiter.onShowAOIMap);
 		div_AreaOfInterestPage.live('pagehide', Arbiter.onHideAOIMap);
 
@@ -600,8 +610,8 @@ var Arbiter = {
 				var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
 				console.log("center: ", center);
 				
-				if(map.getZoom() < 12)
-					aoiMap.setCenter(center, 12);
+				if(map.getZoom() < 13)
+					map.setCenter(center, 13);
 				else
 					map.setCenter(center);
 			}, function(error){
@@ -614,8 +624,8 @@ var Arbiter = {
 				var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
 				console.log("aoi center: ", center);
 				
-				if(aoiMap.getZoom() < 12)
-					aoiMap.setCenter(center, 12);
+				if(aoiMap.getZoom() < 13)
+					aoiMap.setCenter(center, 13);
 				else
 					aoiMap.setCenter(center);
 			}, function(error){
@@ -1115,6 +1125,9 @@ var Arbiter = {
 			
 			// we have a map, lets zoom and center based on the aoi
 			if (map && Arbiter.currentProject.aoi) {
+				//---- add the aoi layer so that users can see the aoi				
+				Arbiter.addAOIToMap();
+				
 				map.zoomToExtent(Arbiter.currentProject.aoi, true);
 	    	}else{
 	    		Arbiter.error("cannot zoom to extent. see console. map is " + (map?"not null": "NULL"));
@@ -1143,11 +1156,10 @@ var Arbiter = {
 			});
 			
 				
-			Arbiter.setSyncColor();			
-	
+			Arbiter.setSyncColor();
 			
-			 var statement = "SELECT * FROM tileIds;";
-			 // if the TileIds table is empty, cache tiles.
+			var statement = "SELECT * FROM tileIds;";
+			// if the TileIds table is empty, cache tiles.
 			Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [], function(tx, res) {
 				if (res.rows.length === 0){
 					TileUtil.cacheTiles();
@@ -1204,7 +1216,9 @@ var Arbiter = {
     
     onHideAOIMap: function(){
     	console.log("---- onHideAOIMap");
-
+    	
+    	Arbiter.addAOIToMap();
+    	
     	if (aoiMap){
     		aoiMap.destroy();
     		aoiMap = null;
@@ -1408,6 +1422,25 @@ var Arbiter = {
 			projectDeleteButtons.css('display', 'none');
 			editButton.text('Edit');
 		}
+	},
+	
+	addAOIToMap: function() {
+		
+		if (Arbiter.currentProject && Arbiter.currentProject.aoi && map) {
+	    	var geometry = Arbiter.currentProject.aoi.toGeometry();
+	    	var attributes = {name: "Area of Interest"};
+	    	var feature = new OpenLayers.Feature.Vector(geometry, attributes);
+	    	var layer = new OpenLayers.Layer.Vector("AreaOfInterest", { styleMap: aoiStyleMap });
+			layer.addFeatures([feature]);
+			
+			var oldLayers = map.getLayersByName("AreaOfInterest");
+			
+			if (oldLayers.length) {
+				map.removeLayer(oldLayers[0]);
+			}
+			
+			map.addLayer(layer);
+		} 
 	},
 	
 	setProjectRoundedCorners: function(){
