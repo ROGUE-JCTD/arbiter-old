@@ -24,6 +24,7 @@
      -->
 
     <access origin="http://127.0.0.1*"/> <!-- allow local pages -->
+    <access origin=".*"/>
 
     <!-- <access origin="https://example.com" /> allow any secure requests to example.com -->
     <!-- <access origin="https://example.com" subdomains="true" /> such as above, but including subdomains, such as www -->
