@@ -331,11 +331,18 @@ cacheTiles: function(successCallback, errorCallback){
 */
 },
 
-testCacheTilesRepeatStart: function(millisec){
+testCacheTilesRepeatStart: function(millisec, maxRepeat){
 	
 	var onTimeout = function(){
 		TileUtil.cacheTilesTest1Couter += 1;
 		console.log("---[ cacheTilesTest1Couter: " + TileUtil.cacheTilesTest1Couter );
+		
+		if (typeof maxRepeat !== 'undefined') { 
+			if (TileUtil.cacheTilesTest1Couter > maxRepeat) {
+				testCacheTilesRepeatStop();
+				alert("testCacheTilesRepeat completed");
+			}
+		}
 
 		TileUtil.cacheTiles(null, function(){ 
 			console.log("stoping test, testCacheTilesRepeatStop");
@@ -649,8 +656,8 @@ addTile : function(url, path, tileset, z, x, y, successCallback) {
 					});
 
 			} else if (res.rows.length === 1) {
-				//TODO: remove. only for testing single project
-				alert("about to increment existing tiles refcounter for id: " + resTiles.rows.item(0).id);
+				//TEST NOTE only for testing single project
+				//Arbiter.warning("only a warning if arbiter only has a single project cached. about to increment existing tiles refcounter for id: " + resTiles.rows.item(0).id);
 				
 				if (TileUtil.debug) {
 					console.log("found tile in global.tiles. TileUtil.rowsToString(resTiles.rows): " + TileUtil.rowsToString(resTiles.rows));
@@ -661,8 +668,11 @@ addTile : function(url, path, tileset, z, x, y, successCallback) {
 
 					var statement = "UPDATE tiles SET ref_counter=? WHERE url=?;";
 					tx.executeSql(statement, [ (resTiles.rows.item(0).ref_counter + 1), url ], function(tx, res) {
-						console.log("!!!!!!!!!!!!!!! calling insertIntoTileIds for Existing tile: " + resTiles.rows.item(0).id);
-					    TileUtil.insertIntoTileIds(resTiles.rows.item(0).id, successCallback);
+						
+						//TEST NOTE message important when debugging single projects
+						//console.log("!!!!!!!!!!!!!!! only a warning if arbiter only has a single project cached. calling insertIntoTileIds for an Existing tile in tileId: " + resTiles.rows.item(0).id);
+					    
+						TileUtil.insertIntoTileIds(resTiles.rows.item(0).id, successCallback);
 
 						if (TileUtil.debug) {
 							console.log("updated tiles. for url : " + url);
@@ -728,7 +738,7 @@ clearCache : function(tileset, successCallback, vDb) {
 				var removeCounterCallback = function() {
 					removeCounter += 1;
 					var percent = Math.round(removeCounter/res.rows.length * 100);
-					$("#cachingPercentComplete").html("<center>Cleared " + percent + "%</center>");
+					$("#cachingPercentComplete").html("<center>Removed " + percent + "%</center>");
 
 					if (TileUtil.debug) {
 						console.log("removeCounter: " + removeCounter + ", percent cleared: " + percent);
