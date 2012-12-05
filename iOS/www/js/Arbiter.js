@@ -908,10 +908,7 @@ var Arbiter = {
     		Arbiter.onCloseCurrentProject();
     	}
 
-		var variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + projectName + "/variables", "1.0", "Variable Database", 1000000);
-		
-		// clear tiles related to this db, then perform otehr operations
-		TileUtil.clearCache("osm", op, variablesDatabase);
+		var vDb = Cordova.openDatabase("Arbiter/Projects/" + projectName + "/variables", "1.0", "Variable Database", 1000000);
 		
 		var op = function(){
 			//get the projects directory
@@ -919,31 +916,34 @@ var Arbiter = {
 				dir.removeRecursively(function(){
 					console.log(projectName + " project deleted");
 
-						Cordova.transaction(Arbiter.globalDatabase, "SELECT id FROM projects WHERE name=?;", [projectName], function(tx, res){
-							if(res.rows.length){
-								var projectId = res.rows.item(0).id;
-								
-								Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM server_usage WHERE project_id=?", [projectId],
-								function(tx, res){
-									console.log("deletion success: " + projectId);
-								}, function(e){
-									console.log("deletion failure: " + projectId);
-								});
-																   
-								Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM projects WHERE id=?", [projectId],
-								function(tx, res){
-									console.log("deletion success: " + projectId);
-								}, function(e){
-									console.log("deletion failure: " + projectId);
-								});
-							}
-						});
+					Cordova.transaction(Arbiter.globalDatabase, "SELECT id FROM projects WHERE name=?;", [projectName], function(tx, res){
+						if(res.rows.length){
+							var projectId = res.rows.item(0).id;
+							
+							Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM server_usage WHERE project_id=?", [projectId],
+							function(tx, res){
+								console.log("deletion success: " + projectId);
+							}, function(e){
+								console.log("deletion failure: " + projectId);
+							});
+															   
+							Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM projects WHERE id=?", [projectId],
+							function(tx, res){
+								console.log("deletion success: " + projectId);
+							}, function(e){
+								console.log("deletion failure: " + projectId);
+							});
+						}
+					});
 
 				}, function(){
 					console.log(projectName + " project deletion failed");					  
 				});									 
 			});
-		}
+		};
+				
+		// clear tiles related to this db, then perform otehr operations
+		TileUtil.clearCache("osm", op, vDb);
 	},
     
 	addServersToProject: function(serverObj){
