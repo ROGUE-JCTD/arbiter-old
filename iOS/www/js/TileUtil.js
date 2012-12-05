@@ -159,7 +159,8 @@ startCachingTiles: function(successCallback) {
 		extent: Arbiter.currentProject.aoi,
 		buffer: layer.buffer,
 		layer: layer,
-		counterCached: 0,
+		counterDownloaded: 0,
+		counterReused: 0,
 		counterCacheInProgress: 0,
 		counterCacheInProgressWaitAttempt: 0,
 		counterEstimatedMax: TileUtil.countTilesInBounds(Arbiter.currentProject.aoi),
@@ -193,7 +194,7 @@ cacheTilesForCurrentZoom: function() {
 
     if (nextZoom === layer.numZoomLevels) {
     	console.log("caching.startZoom: " + caching.startZoom + ", nextZoom: " + nextZoom + ", layer.numZoomLevels: " + layer.numZoomLevels);
-    	console.log("caching tiles completed: additional " + caching.counterCached + " cached. estimated max: " + caching.counterEstimatedMax);
+    	console.log("caching tiles completed: additional " + caching.counterDownloaded + " cached. estimated max: " + caching.counterEstimatedMax);
         TileUtil.stopCachingTiles();
     } else {
         var extentWidth = caching.extent.getWidth() / map.getResolutionForZoom(nextZoom);
@@ -398,7 +399,20 @@ testTilesTableIsEmpty: function(_success, _error){
 testPngTileCount: function(){
 },
 
+onUpdateProgress: function(){
+	var percent = Math.round(((caching.counterDownloaded)/caching.counterEstimatedMax * 100));
+	
+	if (percent > 100) {
+		percent = 100;
+	}
 
+	$("#cachingPercentComplete").html("<center>Downloaded " + percent + "%</center>");
+	
+	if (TileUtil.debugProgress) {
+		console.log("caching estimated percent complete: " + percent + ". counterDownloaded: " + caching.counterDownloaded + ", counterEstimatedMax: " + caching.counterEstimatedMax);
+	}
+	
+},
 
 getURL: function(bounds) {
 	
@@ -458,69 +472,52 @@ getURL: function(bounds) {
 						console.log(TileUtil.rowsToString(res.rows));
 					}
 					
-					// we have never cached the tile 
-					if (res.rows.length === 0){
-						
-						var addTileCallback = function(){
-				    		//TODO: save tile should rely on add tile!!! and if add tile fails, the whole thing fail?
-				    		
-							var saveTileSuccess = function(url, path){
-								caching.counterCacheInProgress -= 1;
-								
-								if (typeof caching !== 'undefined') {
-									caching.counterCached += 1;
-									var percent = Math.round((caching.counterCached/caching.counterEstimatedMax * 100));
-									
-									if (percent > 100) {
-										percent = 100;
-									}
-									
-									$("#cachingPercentComplete").html("<center>Cached " + percent + "%</center>");
-									
-									if (TileUtil.debugProgress) {
-										console.log("caching estimated percent complete: " + percent + ". counterCached: " + caching.counterCached + ", counterEstimatedMax: " + caching.counterEstimatedMax);
-									}
-								} else {
-									alert("ya yo ma!");
-								}
-							};
-							
-							var saveTileError = function(url, path, err){
-								caching.counterCacheInProgress -= 1;
-								Arbiter.error("saveTileError filename: " + url + ", path: " + path, err);
-								//TODO: failed to download file and save to disk so just remove it from global.tiles and project.tileIds tables
-								//TileUtil.removeTile(url, path);
-							};
-							
-							// write the tile to device
-							tilePath = TileUtil.saveTile(finalUrl, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, saveTileError);
-						};
-							
-						// add the tile to databases immediately so that if multiple getURL calls come in for a given tile, 
-						// we do not download the tile multiple times
-			    		TileUtil.addTile(finalUrl, tilePath, "osm", xyz.z, xyz.x, xyz.y, addTileCallback);
-		
+					var tileNewRefCounter = -1;
+					var tileId = -1;
+					
+					// if we do not have this tile already, it'll have ref_count of 1 and
+					// if we already have this tile, we'll increment its ref_counter by one also retrieve the tileId
+					if (res.rows.length === 0) {
+						tileNewRefCounter = 1;
 					} else if (res.rows.length === 1) {
-						// we have cached the file! great... 
-						
-						var addTileCallback = function(){
-							caching.counterCacheInProgress -= 1;
-						};
-	
-						//TODO: if tile is already in tileIds, then dont add it. 
-						
-						//NOTE: get rid of tile ids in general and just store it as a json array in projectKeyValueDatabase?
-						// we have the file in the global.tiles table but we need to increment ref counter and also add it to this project.tileIds
-			    		TileUtil.addTile(finalUrl, tilePath, "osm", xyz.z, xyz.x, xyz.y, addTileCallback);
-						
-						// This would be path to tile retrieved from the database but since we are pre stitching the tilePath anyway
-			    		// no real need to return this. 
-						// tilePath =  res.rows.item(0).path;
+						tileNewRefCounter = res.rows.item(0).ref_counter + 1;
+						tileId = res.rows.item(0).id;
 					} else {
 						// for some reason the tile have been cached under two separate entries!!
 						console.log("====>> ERROR: TileUtil.getURL: Multiple Entries for tile " + TileUtil.rowsToString(res.rows));
 						Arbiter.error("TileUtil.getURL: Multiple Entries for tile! see console for details. count: " + res.rows.length);
-					}					
+					}
+					
+					var addTileCallback = function(){
+			    		//TODO: save tile should rely on add tile!!! and if add tile fails, the whole thing fail?
+			    		
+						var saveTileSuccess = function(url, path){
+							caching.counterCacheInProgress -= 1;
+							
+							if (typeof caching !== 'undefined') {
+								caching.counterDownloaded += 1;
+								TileUtil.onUpdateProgress();
+							} else {
+								Arbiter.error("** caching** object is null during caching!");
+							}
+						};
+						
+						var saveTileError = function(url, path, err){
+							caching.counterCacheInProgress -= 1;
+							Arbiter.warning("saveTileError filename: " + url + ", path: " + path, err);
+							//TODO: failed to download file and save to disk so just remove it from global.tiles and project.tileIds tables
+							//TileUtil.removeTile(url, path);
+						};
+						
+						// write the tile to device
+						tilePath = TileUtil.saveTile(finalUrl, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, saveTileError);
+					};
+
+					//TODO: get rid of tile ids in general and just store it as a json array in projectKeyValueDatabase?
+					
+					// add the tile to databases immediately so that if multiple getURL calls come in for a given tile, 
+					// we do not download the tile multiple times
+		    		TileUtil.addTile(finalUrl, tilePath, "osm", xyz.z, xyz.x, xyz.y, addTileCallback, tileNewRefCounter, tileId);				
 				}, function(e1, e2) {
 					Arbiter.error("chk27", e1, e2);
 				});	
@@ -576,11 +573,10 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 									}
 								},
 								function(err) {
-									console.log("download error source " + err.source);
-									console.log("download error target " + err.target);
-									console.log("upload error code" + err.code);
+									console.log("fileTransfer.download error: ");
+									console.log(err);
 									
-									Arbiter.error("Failed download or save file to: " + filePath, err);
+									Arbiter.warning("Failed download or save file to: " + filePath, err);
 									
 									if (errorCallback){
 										errorCallback(fileUrl, filePath, err);
@@ -615,92 +611,70 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 	return filePath2;
 },
 
-addTile : function(url, path, tileset, z, x, y, successCallback) {
+addTile : function(url, path, tileset, z, x, y, successCallback, tileNewRefCounter, tileId) {
 	
     if (TileUtil.debug) {
     	console.log("---- TileUtil.addTile");
     }
 
-    //TODO: the caller of this method already has the ref count. support passing it in as an optimization to reduce one extra request
-	Arbiter.globalDatabase.transaction(function(tx) {
+	if (tileNewRefCounter === 1) {
+		// alert("inserted tile. id: " + res.insertId);
+		Arbiter.globalDatabase.transaction(
+			function(tx) {
+				var statement = "INSERT INTO tiles (tileset, z, x, y, path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?, ?);";
+				tx.executeSql(statement, [ tileset, z, x, y, path, url, 1 ], function(tx, res) {
+					
+					//HACK WORKAROUND: 	the first time something is inserted into a table
+					// 					the inserterId comes back null for some reason. 
+					//					catch it and assume it was id of 1
+					if (res.insertId == null){
+						res.insertId = 1;
+						//Arbiter.warning("@@@@@@ caught res.insertId == null inserintg into tiles. using 1 as workaround");
+					}
+					
+				    TileUtil.insertIntoTileIds(res.insertId, successCallback);
 
-		var insertTilesSql = "SELECT id, ref_counter FROM tiles WHERE url=?;";
-
-		tx.executeSql(insertTilesSql, [ url ], function(tx, res) {
-
-			if (TileUtil.debug) {
-				console.log("tiles items with url: " + url + " items: " + TileUtil.rowsToString(res.rows));
-			}
-
-			var resTiles = res;
-
-			if (res.rows.length === 0) {
-				// alert("inserted tile. id: " + res.insertId);
-				Arbiter.globalDatabase.transaction(
-					function(tx) {
-						var statement = "INSERT INTO tiles (tileset, z, x, y, path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?, ?);";
-						tx.executeSql(statement, [ tileset, z, x, y, path, url, 1 ], function(tx, res) {
-							
-							//HACK WORKAROUND: 	the first time something is inserted into a table
-							// 					the inserterId comes back null for some reason. 
-							//					catch it and assume it was id of 1
-							if (res.insertId == null){
-								res.insertId = 1;
-								//Arbiter.warning("@@@@@@ caught res.insertId == null inserintg into tiles. using 1 as workaround");
-							}
-							
-						    TileUtil.insertIntoTileIds(res.insertId, successCallback);
-
-						    if (TileUtil.debug) {
-								console.log("inserted new url in tiles. res.insertId: " + res.insertId);
-							}
-						}, function(e1, e2) {
-							Arbiter.error("chk1", e1, e2);
-						});
-					}, function(e1, e2) {
-						Arbiter.error("chk2", e1, e2);
-					});
-
-			} else if (res.rows.length === 1) {
-				//TEST NOTE only for testing single project
-				//Arbiter.warning("only a warning if arbiter only has a single project cached. about to increment existing tiles refcounter for id: " + resTiles.rows.item(0).id);
-				
-				if (TileUtil.debug) {
-					console.log("found tile in global.tiles. TileUtil.rowsToString(resTiles.rows): " + TileUtil.rowsToString(resTiles.rows));
-					console.log("found tile in global.tiles. (resTiles.rows[0].ref_counter + 1 ): " + (resTiles.rows.item(0).ref_counter + 1));
-				}
-
-				Arbiter.globalDatabase.transaction(function(tx) {
-
-					var statement = "UPDATE tiles SET ref_counter=? WHERE url=?;";
-					tx.executeSql(statement, [ (resTiles.rows.item(0).ref_counter + 1), url ], function(tx, res) {
-						
-						//TEST NOTE message important when debugging single projects
-						//console.log("!!!!!!!!!!!!!!! only a warning if arbiter only has a single project cached. calling insertIntoTileIds for an Existing tile in tileId: " + resTiles.rows.item(0).id);
-					    
-						TileUtil.insertIntoTileIds(resTiles.rows.item(0).id, successCallback);
-
-						if (TileUtil.debug) {
-							console.log("updated tiles. for url : " + url);
-						}
-					}, function(e1, e2) {
-						Arbiter.error("chk3", e1, e2);
-					});
+				    if (TileUtil.debug) {
+						console.log("inserted new url in tiles. res.insertId: " + res.insertId);
+					}
 				}, function(e1, e2) {
-					Arbiter.error("chk4", e1, e2);
+					Arbiter.error("chk1", e1, e2);
 				});
+			}, function(e1, e2) {
+				Arbiter.error("chk2", e1, e2);
+			});
 
-			} else {
-				console.log("TileUtil.addTile rows length not 0 not 1: " + TileUtil.rowsToString(res.rows))
-				Arbiter.error("tiles has duplicate entry for a given url. see console");
-			}
+	} else if (tileNewRefCounter > 1) {
+		//TEST NOTE only for testing single project
+		//Arbiter.warning("only a warning if arbiter only has a single project cached. about to increment existing tiles refcounter for id: " + tileId);
+		
+		Arbiter.globalDatabase.transaction(function(tx) {
+
+			var statement = "UPDATE tiles SET ref_counter=? WHERE url=?;";
+			tx.executeSql(statement, [ tileNewRefCounter, url ], function(tx, res) {
+				
+				//TEST NOTE message important when debugging single projects
+				//console.log("!!!!!!!!!!!!!!! only a warning if arbiter only has a single project cached. calling insertIntoTileIds for an Existing tile in tileId: " + tileId);
+			    
+				if ((typeof tileId === 'undefined') || tileId === null) {
+					Arbiter.error("addTile must be provided tileId when tileNewRefCounter > 1");
+				}
+				
+				TileUtil.insertIntoTileIds(tileId, successCallback);
+
+				if (TileUtil.debug) {
+					console.log("updated tiles. for url : " + url);
+				}
+			}, function(e1, e2) {
+				Arbiter.error("chk3", e1, e2);
+			});
 		}, function(e1, e2) {
-			Arbiter.error("chk5", e1, e2);
+			Arbiter.error("chk4", e1, e2);
 		});
-	}, function(e1, e2) {
-		Arbiter.error("chk6", e1, e2);
-	});
 
+	} else {
+		Arbiter.error("TileUtil.addTile tileNewRefCounter not >= 1: " + tileNewRefCounter);
+	}
 }, 
 
 //BUG: it always inserts! either not supported in sqlite or plugin bug
