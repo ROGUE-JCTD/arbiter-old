@@ -644,7 +644,7 @@ var Arbiter = {
 		});
 		
 		jqSyncUpdates.mouseup(function(event){
-			console.log("Sync Updates");
+			console.log("---- jqSyncUpdates.mouseup");
 			var layers = map.getLayersByClass('OpenLayers.Layer.Vector');
 			
 			var ans = true;
@@ -661,8 +661,13 @@ var Arbiter = {
 			
 			if(ans){
 				for ( var i = 0; i < layers.length; i++) {
-					if(layers[i].strategies.length)
+					if( layers[i].strategies && 
+					    layers[i].strategies.length &&
+					    layers[i].strategies[0] &&
+					    layers[i].strategies[0].save){
+						
 						layers[i].strategies[0].save();
+					}
 				}
 			}
 		});

@@ -218,13 +218,19 @@ stopCachingTiles: function() {
         console.log("---- caching complete!");
         console.log(caching);
 
-        if (caching.successCallback){
-			caching.successCallback();
-		}
-    	
+        var callback = caching.successCallback;
+        
         // keep for debugging
         cachingLast = caching;
     	caching = undefined;
+
+    	// Note: caching var is removed before servicing call back as a issue in callback will
+    	// leave caching hanging around which will have serious implications 
+		if (callback){
+			callback();
+		}
+    	
+		console.log("---- finalized last line of TileUtil.cacheTiles!");
     };
 
 	if (caching.counterCacheInProgress === 0){
@@ -237,7 +243,7 @@ stopCachingTiles: function() {
     		console.log("---[ waiting for caching.counterCacheInProgress to get 0:  " + caching.counterCacheInProgress + ", waiting attempts: " + caching.counterCacheInProgressWaitAttempt );
     		
     		if (caching.counterCacheInProgress === 0){
-    			console.log("************************* DONE **********************. not setting timeout!");
+    			console.log("************************* counterCacheInProgress === 0 **********************. not setting timeout!");
     			//clearTimeout(caching.counterCacheInProgressWaitTimer);
     			cachingComplete();
     			//alert("BINGO!");
@@ -522,7 +528,7 @@ getURL: function(bounds) {
 				Arbiter.error("chk28", e1, e2);
 			});
  		} else {
- 			Arbiter.warning("saved trying to cache a url more than once this session: " + finalUrl);
+ 			// Arbiter.warning("saved trying to cache a url more than once this session: " + finalUrl);
  		}
 		
 	} else {
