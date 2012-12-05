@@ -668,11 +668,8 @@ var Arbiter = {
 		});
 		
 		jqSyncUpdates.taphold(function(){
-			// do the same things as mouseup event
-			jqSyncUpdates.mouseup();
-			
-			// but also re-cache tiles
-			TileUtil.cacheTiles();
+			// re-cache tiles and when done, perform normal sync to take care of vector data
+			TileUtil.cacheTiles(function(){ jqSyncUpdates.mouseup(); });
 		});
 				
 		jqEditorTab.mouseup(function(event){

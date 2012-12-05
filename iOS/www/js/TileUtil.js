@@ -745,7 +745,7 @@ clearCache : function(tileset, successCallback, vDb) {
 					}
 					
 					if (removeCounter === res.rows.length) {
-						TileUtil.deleteTileIdsEntries();
+						TileUtil.deleteTileIdsEntries(vDb);
 						if (successCallback){
 							successCallback();
 						}
@@ -767,7 +767,7 @@ clearCache : function(tileset, successCallback, vDb) {
 		});
 	};
 	
-	if (vDb == null){
+	if (!vDb){
 		vDb = Arbiter.currentProject.variablesDatabase;
 	}
 		
@@ -777,11 +777,15 @@ clearCache : function(tileset, successCallback, vDb) {
 	});		
 }, 
 
-deleteTileIdsEntries: function(){
+deleteTileIdsEntries: function(vDb){
 	console.log("---- TileUtil.deleteTileIdsEntries");
-
+	
+	if (!vDb){
+		vDb = Arbiter.currentProject.variablesDatabase;
+	}
+		
 	// Remove everything from tileIds table
-	Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+	vDb.transaction(function(tx){
 		var statement = "DELETE FROM tileIds;";
 		tx.executeSql(statement, [], function(tx, res){
 			if (TileUtil.debug) {
