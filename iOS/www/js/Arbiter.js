@@ -117,7 +117,7 @@ var Arbiter = {
 	
 	debugAlertOnWarning: false,
 	
-	debugCallstack: false,	
+	debugCallstack: true,	
 	
 	fileSystem: null,
 	
@@ -2888,8 +2888,6 @@ var Arbiter = {
 		
 	},
 	
-	// quick hack to get the proper scope for insertFeaturesIntoTable when syncing...
-	
 	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback, layername){
 		console.log("insertFeaturesIntoTable: ", features);
 		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
@@ -2918,7 +2916,6 @@ var Arbiter = {
 		}
 	},
 	
-	// quick hack to get the proper scope for insertFeaturesIntoTable when syncing...
 	tableInsertion: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, featuresLength){
 		var selectSql;
 		var selectParams;
@@ -2990,6 +2987,22 @@ var Arbiter = {
 									console.log("insert sync:", feature);
 									feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
 									vectorLayer[0].addFeatures([feature]);
+									console.log("DEBUGGING: " + Arbiter.currentProject.activeLayer + ", " + layername, selectedFeature, feature, Arbiter.currentProject);
+									if(selectedFeature && selectedFeature.fid && feature && feature.fid){
+										console.log("selectedFeature: ", selectedFeature);
+										console.log("feature: ", feature);
+										if(selectedFeature.fid == feature.fid){ //means layer == activeLayer
+											console.log("the fids are equal");
+											selectedFeature = feature;
+											if(layername == Arbiter.currentProject.activeLayer){ // it should be the activeLayer
+												console.log("the layer is the activeLayer", Arbiter.currentProject.modifyControls);
+												if(Arbiter.currentProject.modifyControls[layername]){
+													console.log("the modify control exists:", Arbiter.currentProject.modifyControls[layername]);
+													Arbiter.currentProject.modifyControls[layername].modifyControl.selectFeature(feature);
+												}
+											}
+										}
+									}	
 									console.log("insert sync end:", feature);
 								}
 							}
@@ -3366,6 +3379,7 @@ var Arbiter = {
 			}
 			event.feature.fid = '';
 			console.log("new feature", event.feature);
+			
 			Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
 		});
 
