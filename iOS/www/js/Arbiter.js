@@ -3309,13 +3309,17 @@ var Arbiter = {
 		//TODO: not used?
 		var tableName = meta.featureType;
 		
-		var styleMap = new OpenLayers.StyleMap(
-			OpenLayers.Util.applyDefaults({
+		var defaultStyleTable = OpenLayers.Util.applyDefaults(
+			{
 				fillColor: layerColors[map.getNumLayers() % layerColors.length],
 				strokeColor: layerColors[map.getNumLayers() % layerColors.length]
-				},
-				OpenLayers.Feature.Vector.style["default"])
-		);
+			},
+			OpenLayers.Feature.Vector.style["default"]);
+		
+		var styleMap = new OpenLayers.StyleMap({
+			'default': new OpenLayers.Style(defaultStyleTable),
+			'selected': new OpenLayers.Style(OpenLayers.Feature.Vector.style["selected"])
+		});
 
 		var newWFSLayer = new OpenLayers.Layer.Vector(meta.nickname + "-wfs", {
 			strategies : strategies,
