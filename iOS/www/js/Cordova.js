@@ -142,7 +142,9 @@ var Cordova = {
 	// Storage
 	//=========
 	openDatabase: function(_name, _version, _displayName, _size) {
-		return window.sqlitePlugin.openDatabase(_name, _version, _displayName, _size);
+		return window.sqlitePlugin.openDatabase(_name, _version, _displayName, _size, null, function(e1, e2){
+			Arbiter.error("Error opening database", e1, e2); 
+		});
 	},
 	
 	transaction: function(_database, _sql, _variables, _success, _error) {
