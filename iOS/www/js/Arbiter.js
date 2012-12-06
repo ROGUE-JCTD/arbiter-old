@@ -40,6 +40,7 @@ var modifiedTable = "dirtytable";
 
 var selectControl;
 var selectedFeature;
+var oldSelectedFID;
 
 /*
  *	jQuery Elements
@@ -92,6 +93,7 @@ var jqProjectPageContent;
 var jqGoToAOI;
 var jqFindMeButton;
 var jqAOIFindMeButton;
+var jqDeleteFeatureButton;
 
 var tempLayerToEdit = null;
 var fileSystem = null;
@@ -117,7 +119,7 @@ var Arbiter = {
 	
 	debugAlertOnWarning: false,
 	
-	debugCallstack: true,	
+	debugCallstack: false,	
 	
 	fileSystem: null,
 	
@@ -202,6 +204,7 @@ var Arbiter = {
 		jqEditorTab = $('#editorTab');
 		jqAttributeTab = $('#attributeTab');
 		jqAddFeature	 = $('#addPointFeature');
+		jqDeleteFeatureButton = $('#deleteFeatureButton');
 		jqGoToAOI = $('#goToAreaOfInterest');
 		jqFindMeButton = $('#map #findMeButton');
 		jqAOIFindMeButton = $('#aoiMap #findMeButton');
@@ -603,10 +606,30 @@ var Arbiter = {
 				var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
 				if(addFeatureControl.active){
 					addFeatureControl.deactivate();
-					$(this).removeClass("ui-btn-active");
+					$(this).removeClass("active-color");
 				}else{
 					addFeatureControl.activate();
-					$(this).addClass("ui-btn-active");
+					$(this).addClass("active-color");
+				}
+			}
+		});
+		
+		jqDeleteFeatureButton.mouseup(function(){
+			console.log("Delete Feature Button Mouseup");
+			
+			if(Arbiter.currentProject.activeLayer){
+				var controls = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer];
+				var deleteControl = controls.deleteControl;
+				var modifyControl = controls.modifyControl;
+				
+				if($(this).hasClass('active-color')){
+					$(this).removeClass('active-color');
+					deleteControl.deactivate();
+					modifyControl.activate();
+				}else{
+					$(this).addClass("active-color");
+					modifyControl.deactivate();
+					deleteControl.activate();
 				}
 			}
 		});
@@ -2988,10 +3011,10 @@ var Arbiter = {
 									feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
 									vectorLayer[0].addFeatures([feature]);
 									console.log("DEBUGGING: " + Arbiter.currentProject.activeLayer + ", " + layername, selectedFeature, feature, Arbiter.currentProject);
-									if(selectedFeature && selectedFeature.fid && feature && feature.fid){
-										console.log("selectedFeature: ", selectedFeature);
+									if(oldSelectedFID && feature && feature.fid){
+										console.log("selectedFeature: " + oldSelectedFID);
 										console.log("feature: ", feature);
-										if(selectedFeature.fid == feature.fid){ //means layer == activeLayer
+										if(oldSelectedFID == feature.fid){ //means layer == activeLayer
 											console.log("the fids are equal");
 											selectedFeature = feature;
 											if(layername == Arbiter.currentProject.activeLayer){ // it should be the activeLayer
@@ -3017,7 +3040,7 @@ var Arbiter = {
 						}
 
 						if(addProjectCallback)
-							addProjectCallback.call(Arbiter, featuresLength);
+							addProjectCallback(featuresLength);
 					}, function(e){
 						console.log("insert err: ", e);
 					});
@@ -3350,28 +3373,41 @@ var Arbiter = {
 		
 		map.addLayers(newLayers);
 
+		var modifyControl = new OpenLayers.Control.ModifyFeature(newWFSLayer);
+		
 		newWFSLayer.events.register("featuremodified", null, function(event) {
-			Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
+			console.log("feature modified", event);
+			console.log("featuremodified modify Control feature", modifyControl.feature);
+			if(!jqDeleteFeatureButton.hasClass('active-color')){
+				Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
+			}
 		});
 
 		newWFSLayer.events.register("featureselected", null, function(event) {
 			console.log("Feature selected: ", event.feature);
-			selectedFeature = event.feature;
-
-			if (!jqAttributeTab.is(':visible'))
-				jqAttributeTab.toggle();
+			
+			if(!jqDeleteFeatureButton.hasClass('active-color')){
+				selectedFeature = event.feature;
+				oldSelectedFID = event.feature.fid;
+				
+				if (!jqAttributeTab.is(':visible'))
+					jqAttributeTab.toggle();
+			}
 		});
 
 		newWFSLayer.events.register("featureunselected", null, function(event) {
-			console.log("Feature unselected: " + event);
+			console.log("Feature unselected: ", event);
 			selectedFeature = null;
+			oldSelectedFID = null;
+			
+			if(jqDeleteFeatureButton.hasClass('active-color')){
+				
+			}
 			Arbiter.CloseAttributesMenu();
 
 			if (jqAttributeTab.is(':visible'))
 				jqAttributeTab.toggle();
 		});
-		
-		var modifyControl = new OpenLayers.Control.ModifyFeature(newWFSLayer);
 
 		var addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer, OpenLayers.Handler.Point);
 		addFeatureControl.events.register("featureadded", null, function(event) {
@@ -3387,15 +3423,45 @@ var Arbiter = {
 			Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
 		});
 
+		var deleteFeatureControl = new OpenLayers.Control.SelectFeature(newWFSLayer, {
+			onSelect: function(feature){
+				deleteFeatureControl.unselect(feature);
+				//if fid is null, the feature was never saved so you can just delete it
+				if (feature.fid == undefined || feature.rowid) {
+					var rowid = feature.rowid;
+					newWFSLayer.destroyFeatures([ feature ]);
+					Arbiter.deleteFeature(meta.featureType, rowid, false); // just delete from local storage
+					//event.feature.destroy();
+				} else {
+					//set the feature state so it get's saved appropriately
+					feature.state = OpenLayers.State.DELETE;
+					newWFSLayer.events.triggerEvent("afterfeaturemodified", {
+						feature : feature
+					});
+					feature.renderIntent = "select";
+					newWFSLayer.drawFeature(feature);
+					Arbiter.deleteFeature(meta.featureType, feature.fid, true); // don't delete the feature, but mark for deletion
+				}
+				selectedFeature = null;
+				oldSelectedFID = null;
+				deleteFeatureControl.deactivate();
+				modifyControl.activate();
+				jqDeleteFeatureButton.removeClass('active-color');
+			} 
+		});
+		
 		map.addControl(addFeatureControl);
 
 		// TODO: Change the active modify control
 		map.addControl(modifyControl);
 		// modifyControl.activate();
 
+		map.addControl(deleteFeatureControl);
+		
 		Arbiter.currentProject.modifyControls[meta.nickname] = {
 			modifyControl : modifyControl,
-			insertControl : addFeatureControl
+			insertControl : addFeatureControl,
+			deleteControl : deleteFeatureControl
 		};
 
 		var li = "<li><a href='#' class='layer-list-item'>" + meta.nickname + "</a></li>";
