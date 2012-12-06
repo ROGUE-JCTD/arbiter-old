@@ -1702,6 +1702,8 @@ var Arbiter = {
 	
 	readLayer: function(server, layer, serverName, layerName, addedInProject){
 		console.log("read layer: layerName - " + layerName + ", serverName - " + serverName, server, layer);
+		var color = layerColors[map.getNumLayers() % layerColors.length];
+		
 		Arbiter.AddLayer({
 			featureNS: layer.featureNS,
 			url: server.url,
@@ -1712,11 +1714,14 @@ var Arbiter = {
 			nickname: layerName,
 			username: server.username,
 			password: server.password,
-			serverName: serverName
+			serverName: serverName, 
+			color: color
 		});
 		console.log("added layer");
+		
+		
 		var li = "";
-		li += "<li style='padding:5px; border-radius: 4px;'>";
+		li += "<li style='padding:5px; border-radius: 4px; color: " + color + ";'>";
 		li += "<input type='radio' name='radio-choice' id='" + layerName;
 		li += "' value='choice-";
 		li += Arbiter.radioNumber + "'";
@@ -3346,11 +3351,10 @@ var Arbiter = {
 		
 		//TODO: not used?
 		var tableName = meta.featureType;
-		
-		var defaultStyleTable = OpenLayers.Util.applyDefaults(
-			{
-				fillColor: layerColors[map.getNumLayers() % layerColors.length],
-				strokeColor: layerColors[map.getNumLayers() % layerColors.length]
+				
+		var defaultStyleTable = OpenLayers.Util.applyDefaults({
+				fillColor: meta.color,
+				strokeColor: meta.color
 			},
 			OpenLayers.Feature.Vector.style["default"]);
 		
