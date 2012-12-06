@@ -593,11 +593,11 @@ var Arbiter = {
 		});
 
 		jqLayerSelect.change(function(event){
-			//jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
+			jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
 		});
 		
 		jqEditLayerSelect.change(function(event){
-			//jqEditLayerNickname.val(jqEditLayerSelect.find('option:selected').text());
+			jqEditLayerNickname.val(jqEditLayerSelect.find('option:selected').text());
 		});
 		
 		jqAddFeature.mouseup(function(event){
