@@ -644,29 +644,31 @@ var Arbiter = {
 		});
 		
 		jqSyncUpdates.mouseup(function(event){
-			console.log("---- jqSyncUpdates.mouseup");
-			var layers = map.getLayersByClass('OpenLayers.Layer.Vector');
+			if(Arbiter.isOnline) {
+				console.log("---- jqSyncUpdates.mouseup");
+				var layers = map.getLayersByClass('OpenLayers.Layer.Vector');
 			
-			var ans = true;
-			if(Arbiter.currentProject.deletedServers.length){
-				var layersWithoutServer = "";
-				for(var x in Arbiter.currentProject.deletedServers){
-					for(y in Arbiter.currentProject.deletedServers[x].layers){
-						layersWithoutServer += y + ", ";
+				var ans = true;
+				if(Arbiter.currentProject.deletedServers.length){
+					var layersWithoutServer = "";
+					for(var x in Arbiter.currentProject.deletedServers){
+						for(y in Arbiter.currentProject.deletedServers[x].layers){
+							layersWithoutServer += y + ", ";
+						}
 					}
-				}
 				
-				ans = confirm("The following layers are not linked with a server: " + layersWithoutServer.substring(0, layersWithoutServer.length-2) + "\n Do you wish to continue?");
-			}
+					ans = confirm("The following layers are not linked with a server: " + layersWithoutServer.substring(0, layersWithoutServer.length-2) + "\n Do you wish to continue?");
+				}
 			
-			if(ans){
-				for ( var i = 0; i < layers.length; i++) {
-					if( layers[i].strategies && 
-					    layers[i].strategies.length &&
-					    layers[i].strategies[0] &&
-					    layers[i].strategies[0].save){
+				if(ans){
+					for ( var i = 0; i < layers.length; i++) {
+						if( layers[i].strategies && 
+					    	layers[i].strategies.length &&
+					    	layers[i].strategies[0] &&
+					    	layers[i].strategies[0].save){
 						
-						layers[i].strategies[0].save();
+							layers[i].strategies[0].save();
+						}
 					}
 				}
 			}
@@ -876,6 +878,12 @@ var Arbiter = {
 				//Add the project name to the projects table in globle.db
 				Cordova.transaction(Arbiter.globalDatabase, "INSERT INTO projects (name) VALUES (" + Arbiter.squote(Arbiter.currentProject.name) + ");", [], function(tx, res){
 				
+					Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
+					Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
+			
+					Arbiter.createMetaTables();
+					Arbiter.createDataTables();
+			
 					var projectId = res.insertId;
 					insertCurrentProject(projectId);
 					
@@ -890,12 +898,6 @@ var Arbiter = {
 				}, function(e){
 					console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " NOT added to projects table - " + e);
 				});
-				
-			Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
-			Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
-			
-			Arbiter.createMetaTables();
-			Arbiter.createDataTables();
 		};
 		
 		var error = function(error){
