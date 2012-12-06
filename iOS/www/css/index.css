@@ -215,6 +215,10 @@ html, body {
 	background-image:-webkit-linear-gradient(top, #5393C5, #6FACD5);
 }
 
+#deleteFeatureButton:active {
+	background-image:-webkit-linear-gradient(top, #5393C5, #6FACD5);
+}
+
 .ui-icon-glyphish-trash2  { 
 	border-radius: 0px !important;
 	background:  url(images/glyphish/218-trash2.png) 50% 50% no-repeat !important;

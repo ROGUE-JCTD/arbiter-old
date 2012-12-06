@@ -618,18 +618,17 @@ var Arbiter = {
 			console.log("Delete Feature Button Mouseup");
 			
 			if(Arbiter.currentProject.activeLayer){
-				var controls = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer];
-				var deleteControl = controls.deleteControl;
-				var modifyControl = controls.modifyControl;
+				var ans = confirm("Are you sure you want to delete this feature?");
 				
-				if($(this).hasClass('active-color')){
-					$(this).removeClass('active-color');
-					deleteControl.deactivate();
-					modifyControl.activate();
-				}else{
-					$(this).addClass("active-color");
+				if(ans){
+					var controls = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer];
+					var modifyControl = controls.modifyControl;
+					
+					var savedSelectedFeature = selectedFeature;
+					
 					modifyControl.deactivate();
-					deleteControl.activate();
+					Arbiter.deleteFeature(savedSelectedFeature);
+					modifyControl.activate();
 				}
 			}
 		});
@@ -1835,6 +1834,34 @@ var Arbiter = {
 			}, Arbiter.error);
 	},
 
+	deleteFeature: function(feature){
+		var f_table_name = feature.layer.protocol.featureType;
+		if(feature.fid == undefined || feature.fid == ''){
+			feature.layer.destroyFeatures([ feature ]);
+			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM " + f_table_name + " WHERE id=?;", [feature.rowid], function(tx, res){
+				console.log("local feature successfully deleted");
+				//Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
+			});
+		}else{
+			feature.state = OpenLayers.State.DELETE;
+			feature.layer.events.triggerEvent("afterfeaturemodified", {
+				feature : feature
+			});
+			feature.renderIntent = "select";
+			feature.layer.drawFeature(feature);
+			
+			var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid, state) VALUES (?,?,?);";
+			  
+			console.log(insertDirtySql);
+			Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertDirtySql, [f_table_name, feature.fid, 0], function(tx, res){
+				console.log("insert dirty success delete");
+				//Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
+			}, function(e){
+				console.log("insert dirty fail delete: ", e);
+			});
+		}
+	},
+	
 	deleteLayer: function(servername, layername){
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM layers WHERE layername=?;", [layername], function(tx, res){
 			var server = Arbiter.currentProject.serverList[servername];
@@ -2286,7 +2313,7 @@ var Arbiter = {
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createServersSql, [],
 			function(tx, res){ console.log("createServersSql win!"); }, function(e){ console.log("Error createServersSql - " + e); });
 		
-		var createDirtyTableSql = "CREATE TABLE IF NOT EXISTS dirty_table (id integer primary key, f_table_name text not null, fid text not null);";
+		var createDirtyTableSql = "CREATE TABLE IF NOT EXISTS dirty_table (id integer primary key, f_table_name text not null, fid text not null, state integer not null);";
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createDirtyTableSql, [],
 			function(tx, res){ console.log("createDirtyTableSql win!"); }, function(e){ console.log("Error createDirtyTableSql - " + e); });
 		
@@ -2823,7 +2850,19 @@ var Arbiter = {
 						for(var i = 0; i < res.rows.length;i++){
 							var feature = layer.getFeatureByFid(res.rows.item(i).fid);
 							feature.modified = true;
-							feature.state = OpenLayers.State.UPDATE;	  	
+							
+							if(res.rows.item(i).state == 0){
+								//set the feature state so it get's saved appropriately
+								feature.state = OpenLayers.State.DELETE;
+								
+								layer.events.triggerEvent("afterfeaturemodified", {
+									feature : feature
+								});
+								feature.renderIntent = "select";
+								layer.drawFeature(feature);
+							}else{
+								feature.state = OpenLayers.State.UPDATE;
+							}
 						}
 					}, function(e){
 						console.log("err: ", e);
@@ -2981,10 +3020,10 @@ var Arbiter = {
 																	  
 						if(feature.fid){
 							//Arbiter.currentProject.variablesDatabase.transaction(function(tx){
-							 var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid) VALUES (?,?);";
+							 var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid, state) VALUES (?,?,?);";
 																	  
 							console.log(insertDirtySql);
-							Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertDirtySql, [f_table_name, feature.fid], function(tx, res){
+							Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertDirtySql, [f_table_name, feature.fid, 1], function(tx, res){
 								console.log("insert dirty success");
 							}, function(e){
 								console.log("insert dirty fail: ", e);
@@ -3392,13 +3431,16 @@ var Arbiter = {
 		newWFSLayer.events.register("featureselected", null, function(event) {
 			console.log("Feature selected: ", event.feature);
 			
-			if(!jqDeleteFeatureButton.hasClass('active-color')){
-				selectedFeature = event.feature;
-				oldSelectedFID = event.feature.fid;
-				
-				if (!jqAttributeTab.is(':visible'))
-					jqAttributeTab.toggle();
-			}
+			selectedFeature = event.feature;
+			oldSelectedFID = event.feature.fid;
+			
+			if (!jqAttributeTab.is(':visible'))
+				jqAttributeTab.toggle();
+			
+			if(!jqDeleteFeatureButton.is(':visible')){
+				jqFindMeButton.removeClass('arbiter-map-tools-bottom');
+				jqDeleteFeatureButton.toggle();
+			}	
 		});
 
 		newWFSLayer.events.register("featureunselected", null, function(event) {
@@ -3406,13 +3448,15 @@ var Arbiter = {
 			selectedFeature = null;
 			oldSelectedFID = null;
 			
-			if(jqDeleteFeatureButton.hasClass('active-color')){
-				
-			}
 			Arbiter.CloseAttributesMenu();
 
 			if (jqAttributeTab.is(':visible'))
 				jqAttributeTab.toggle();
+			
+			if(jqDeleteFeatureButton.is(':visible')){
+				jqFindMeButton.addClass('arbiter-map-tools-bottom');
+				jqDeleteFeatureButton.toggle();
+			}
 		});
 
 		var addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer, OpenLayers.Handler.Point);
@@ -3428,46 +3472,16 @@ var Arbiter = {
 			
 			Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
 		});
-
-		var deleteFeatureControl = new OpenLayers.Control.SelectFeature(newWFSLayer, {
-			onSelect: function(feature){
-				deleteFeatureControl.unselect(feature);
-				//if fid is null, the feature was never saved so you can just delete it
-				if (feature.fid == undefined || feature.rowid) {
-					var rowid = feature.rowid;
-					newWFSLayer.destroyFeatures([ feature ]);
-					Arbiter.deleteFeature(meta.featureType, rowid, false); // just delete from local storage
-					//event.feature.destroy();
-				} else {
-					//set the feature state so it get's saved appropriately
-					feature.state = OpenLayers.State.DELETE;
-					newWFSLayer.events.triggerEvent("afterfeaturemodified", {
-						feature : feature
-					});
-					feature.renderIntent = "select";
-					newWFSLayer.drawFeature(feature);
-					Arbiter.deleteFeature(meta.featureType, feature.fid, true); // don't delete the feature, but mark for deletion
-				}
-				selectedFeature = null;
-				oldSelectedFID = null;
-				deleteFeatureControl.deactivate();
-				modifyControl.activate();
-				jqDeleteFeatureButton.removeClass('active-color');
-			} 
-		});
 		
 		map.addControl(addFeatureControl);
 
 		// TODO: Change the active modify control
 		map.addControl(modifyControl);
 		// modifyControl.activate();
-
-		map.addControl(deleteFeatureControl);
 		
 		Arbiter.currentProject.modifyControls[meta.nickname] = {
 			modifyControl : modifyControl,
-			insertControl : addFeatureControl,
-			deleteControl : deleteFeatureControl
+			insertControl : addFeatureControl
 		};
 
 		var li = "<li><a href='#' class='layer-list-item'>" + meta.nickname + "</a></li>";
