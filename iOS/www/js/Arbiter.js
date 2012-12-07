@@ -363,9 +363,6 @@ var Arbiter = {
 			console.log("window.requestFileSystem: Failed with error code: " + error.code);					 
 		});
 		
-		div_AddLayersPage.live('pagebeforeshow', Arbiter.resetAddLayersPage);
-		div_EditLayersPage.live('pagebeforeshow', Arbiter.resetEditLayersPage);
-		
 		//Start on the Language Select screen if this is the users first time.
 		//Otherwise move to the Projects page.
 		if(!isFirstTime) {
@@ -405,16 +402,8 @@ var Arbiter = {
 		div_AreaOfInterestPage.live('pageshow', Arbiter.onShowAOIMap);
 		div_AreaOfInterestPage.live('pagehide', Arbiter.onHideAOIMap);
 
-		div_AddLayersPage.live('pagebeforeshow', function(){
-			//populate the servers drop down from the currentProject.serverList
-			var html = '<option value="" data-localize="label.chooseAServer">Choose a Server...</option>';
-			
-			for(var x in Arbiter.currentProject.serverList){
-				html += '<option value="' + x + '">' + x + '</option>';
-			}
-			
-			jqServerSelect.html(html);
-		});
+		div_AddLayersPage.live('pagebeforeshow', Arbiter.resetAddLayersPage);
+		div_EditLayersPage.live('pagebeforeshow', Arbiter.resetEditLayersPage);
 		
 		Arbiter.layersSettingsList = new ListWidget({
 			div_id: "idLayerSettingsList", 
@@ -576,9 +565,9 @@ var Arbiter = {
 		
 		jqServerSelect.change(function(event){
 			var serverName = $(this).val();
-			if(serverName)
+			if(serverName){
 				Arbiter.getFeatureTypesOnServer(serverName);
-			else{
+			}else{
 				jqLayerSelect.html('<option value="" data-localize="label.chooseALayer">Choose a layer...</option>');
 				jqLayerSelect.selectmenu('refresh', true);
 				jqLayerNickname.val('');
@@ -2149,7 +2138,6 @@ var Arbiter = {
 	},
 	
 	addServersToLayerDropdown: function(_serverName) {
-		console.log("Testing stuff");
 		console.log(Arbiter.currentProject.serverList);
 		
 		//Clear the list
@@ -2158,18 +2146,26 @@ var Arbiter = {
 		
 		//Choose your server option
 		var option = '<option value="" data-localize="label.chooseAServer">Choose a server...</option>';
-			jqServerSelect.append(option);
-			jqEditServerSelect.append(option);
+		jqServerSelect.append(option);
+		jqEditServerSelect.append(option);
+
 
 		//Add all the servers to the list
-		for(var index in Arbiter.currentProject.serverList) {
-			option = '<option value="' + index + '">' + index + '</option>';
+		for(var key in Arbiter.currentProject.serverList) {
+			option = '<option value="' + key + '">' + key + '</option>';
 			jqServerSelect.append(option);
 			jqEditServerSelect.append(option);
 		}
 		
+		// if a server is not specified and we only have one server, choose the 1st one
+		if (!_serverName){
+			var severListKeys = Object.keys(Arbiter.currentProject.serverList);
+			if (severListKeys.length === 1){
+				_serverName = severListKeys[0];
+			}
+		}
+		
 		if(_serverName) {
-			console.log("Select server");
 			jqServerSelect.val(_serverName).change();
 			jqEditServerSelect.val(_serverName).change();
 		}
@@ -2603,7 +2599,7 @@ var Arbiter = {
 			callback: function(response){
 				console.log('getFeaturetypesOnServer success');
 				var capes = capabilitiesFormatter.read(response.responseText);
-				var options = "";
+				var options = '<option value="" data-localize="label.chooseALayer">Choose a Layer...</option>';
 				
 				if(capes && capes.capability && capes.capability.layers){
 					var layer;
