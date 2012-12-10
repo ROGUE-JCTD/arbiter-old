@@ -2,8 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIWebViewBounce</key>
+	<key>KeyboardDisplayRequiresUserAction</key>
+	<true/>
+	<key>SuppressesIncrementalRendering</key>
 	<false/>
+	<key>UIWebViewBounce</key>
+	<true/>
 	<key>TopActivityIndicator</key>
 	<string>gray</string>
 	<key>EnableLocation</key>
@@ -21,7 +25,7 @@
 	<key>OpenAllWhitelistURLsInWebView</key>
 	<false/>
 	<key>BackupWebStorage</key>
-	<true/>
+	<string>cloud</string>
 	<key>ExternalHosts</key>
 	<array>
 		<string>*</string>
@@ -46,6 +50,8 @@
 		<string>CDVContacts</string>
 		<key>Debug Console</key>
 		<string>CDVDebugConsole</string>
+		<key>Echo</key>
+		<string>CDVEcho</string>
 		<key>File</key>
 		<string>CDVFile</string>
 		<key>FileTransfer</key>
@@ -62,6 +68,8 @@
 		<string>CDVSplashScreen</string>
 		<key>Battery</key>
 		<string>CDVBattery</string>
+		<key>Globalization</key>
+		<string>CDVGlobalization</string>
 	</dict>
 </dict>
 </plist>
