@@ -1,5 +1,5 @@
 /** Automatically generated file. DO NOT MODIFY */
-package com.lmn.arbiter;
+package com.lmn.Arbiter;
 
 public final class BuildConfig {
     public final static boolean DEBUG = true;

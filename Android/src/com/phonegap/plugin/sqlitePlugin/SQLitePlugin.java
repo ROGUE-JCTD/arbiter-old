@@ -23,6 +23,7 @@ import android.database.sqlite.*;
 
 import java.util.HashMap;
 
+import android.os.Environment;
 import android.util.Log;
 
 public class SQLitePlugin extends Plugin {
@@ -158,15 +159,23 @@ public class SQLitePlugin extends Plugin {
 	 */
 	private void openDatabase(String db, String version, String display_name,
 			long size) {
-		
-		SQLiteDatabase myDb;
-		String filesDir = this.cordova.getActivity().getApplicationContext().getFilesDir().toString();
-		String homeDir = filesDir.substring(0, filesDir.length() - 5);
 
-		if(homeDir != null) {
-			File databaseFile = new File(homeDir + db + ".db");
+		SQLiteDatabase myDb;
+		File databaseFile;
+		File sd		= Environment.getExternalStorageDirectory();
+		
+		try {
+			//If a sd card exists, create the file on the sd card.
+			if (sd.canWrite()) {
+				databaseFile = new File(sd, db + ".db");
+			} else {
+				String filesDir = this.cordova.getActivity().getApplicationContext().getFilesDir().toString();
+				String homeDir = filesDir.substring(0, filesDir.length() - 5);
+				databaseFile = new File(homeDir + db + ".db");
+			}
+		
 			myDb = SQLiteDatabase.openOrCreateDatabase(databaseFile, null);
-		} else {
+		} catch(Exception e) {
 			myDb = this.cordova.getActivity().getApplicationContext().openOrCreateDatabase(db + ".db", Context.MODE_PRIVATE, null);
 		}
 
@@ -204,7 +213,7 @@ public class SQLitePlugin extends Plugin {
 					long insertId = myStatement.executeInsert();
 
 					String result = "{'insertId':'" + insertId + "'}";
-					this.sendJavascript("SQLitePluginTransaction.queryCompleteCallback('" + tx_id + "','" + query_id + "', " + result + ");");
+					this.webView.sendJavascript("SQLitePluginTransaction.queryCompleteCallback('" + tx_id + "','" + query_id + "', " + result + ");");
 				} else {
 					String[] params = null;
 
@@ -229,16 +238,16 @@ public class SQLitePlugin extends Plugin {
 		catch (SQLiteException ex) {
 			ex.printStackTrace();
 			Log.v("executeSqlBatch", "SQLitePlugin.executeSql(): Error=" +  ex.getMessage());
-			this.sendJavascript("SQLitePluginTransaction.txErrorCallback('" + tx_id + "', '"+ex.getMessage()+"');");
+			this.webView.sendJavascript("SQLitePluginTransaction.txErrorCallback('" + tx_id + "', '"+ex.getMessage()+"');");
 		} catch (JSONException ex) {
 			ex.printStackTrace();
 			Log.v("executeSqlBatch", "SQLitePlugin.executeSql(): Error=" +  ex.getMessage());
-			this.sendJavascript("SQLitePluginTransaction.txErrorCallback('" + tx_id + "', '"+ex.getMessage()+"');");
+			this.webView.sendJavascript("SQLitePluginTransaction.txErrorCallback('" + tx_id + "', '"+ex.getMessage()+"');");
 		}
 		finally {
 			myDb.endTransaction();
 			Log.v("executeSqlBatch", tx_id);
-			this.sendJavascript("SQLitePluginTransaction.txCompleteCallback('" + tx_id + "');");
+			this.webView.sendJavascript("SQLitePluginTransaction.txCompleteCallback('" + tx_id + "');");
 		}
 	}
 
@@ -306,7 +315,7 @@ public class SQLitePlugin extends Plugin {
 			result = fullresult.toString();
 		}
 		if(query_id.length() > 0)
-			this.sendJavascript(" SQLitePluginTransaction.queryCompleteCallback('" + tx_id + "','" + query_id + "', " + result + ");");
+			this.webView.sendJavascript(" SQLitePluginTransaction.queryCompleteCallback('" + tx_id + "','" + query_id + "', " + result + ");");
 
 	}
 
@@ -314,7 +323,7 @@ public class SQLitePlugin extends Plugin {
 	{
 		String result = this.results2string(cur);
 
-		this.sendJavascript(" SQLitePluginCallback.p1('" + id + "', " + result + ");");
+		this.webView.sendJavascript(" SQLitePluginCallback.p1('" + id + "', " + result + ");");
 	}
 
 	private String results2string(Cursor cur)

@@ -433,7 +433,7 @@ getURL: function(bounds) {
 	// this is the best we can do unless this call actually truly blocks the thread without hammering the cpu and running down battery of the device
 	// TODO: might be able to do a synchronous ajax call with duration of pause in the loop but will probably fail when there is no connection
 	//       consider other blocking calls like printing to console 
-	tilePath = Arbiter.fileSystem.root.fullPath + "/" + "osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + finalUrl.substr(finalUrl.lastIndexOf("."));
+	tilePath = Arbiter.fileSystem.root.fullPath + "/Arbiter/" + "osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + finalUrl.substr(finalUrl.lastIndexOf("."));
 
     if (TileUtil.debug) {
     	TileUtil.getURLCounter += 1;

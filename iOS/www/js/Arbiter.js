@@ -1503,7 +1503,9 @@ var Arbiter = {
 		console.log("PopulateServersList");
 		
 		//clear the list
-		Arbiter.serversList.clearList();
+		if(Arbiter.serversList) {
+			Arbiter.serversList.clearList();
+		}
 		
 		if(!map){
 			//Load servers that are available
@@ -1518,7 +1520,7 @@ var Arbiter = {
 						servername: serverName
 					}, (Arbiter.currentProject.serverList[serverName]) ? true : false);
 				}
-			}, Arbiter.error)
+			}, Arbiter.error);
 		}else{
 			for(var key in Arbiter.currentProject.serverList){
 				var server = Arbiter.currentProject.serverList[key];

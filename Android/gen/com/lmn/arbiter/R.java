@@ -5,7 +5,7 @@
  * should not be modified by hand.
  */
 
-package com.lmn.arbiter;
+package com.lmn.Arbiter;
 
 public final class R {
     public static final class attr {

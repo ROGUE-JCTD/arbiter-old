@@ -17,9 +17,8 @@
        under the License.
  */
 
-package com.lmn.arbiter;
+package com.lmn.Arbiter;
 
-import android.app.Activity;
 import android.os.Bundle;
 import org.apache.cordova.*;
 
@@ -29,7 +28,6 @@ public class Arbiter extends DroidGap
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        super.loadUrl("file:///android_asset/www/index.html");
+        super.loadUrl("file:///android_asset/www/src/index.html");
     }
 }
-
