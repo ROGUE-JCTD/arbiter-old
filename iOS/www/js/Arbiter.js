@@ -115,7 +115,7 @@ var editorTabOpen = false;
 
 var Arbiter = { 
 	
-	debugAlertOnError: true,
+	debugAlertOnError: false,
 	
 	debugAlertOnWarning: false,
 	
@@ -1176,7 +1176,8 @@ var Arbiter = {
 				console.log($("input[type=radio]:checked").attr('id'));
 				
 				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.deactivate();
-				Arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
+				//Arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
+				Arbiter.currentProject.activeLayer = $("input[type=radio]:checked")[0].getAttribute('id');
 				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 			});
 			
