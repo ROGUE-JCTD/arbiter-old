@@ -2381,7 +2381,6 @@ var Arbiter = {
 		console.log("Submiting Time! ARBITER SMASH!");
 		var valid = Arbiter.validateAddLayerSubmit();
 		
-		console.log(valid);
 		if(valid){
 			var serverName = jqServerSelect.val();
 			var serverInfo = Arbiter.currentProject.serverList[serverName];
@@ -2391,60 +2390,66 @@ var Arbiter = {
 				url: serverInfo.url + "/wfs?service=wfs&version=1.1.0&request=DescribeFeatureType&typeName=" + typeName,
 				callback: function(response){
 					var obj = describeFeatureTypeReader.read(response.responseText);
-										 
-					var layerattributes = [];
-					var attributeTypes = [];
-					var geometryName = "";
-					var geometryType = "";
-					var featureType = "";
-					var property;
 													 
-					/*right now just assuming that theres only 1 featureType*/
-					
-					//have the typeName from before, but this way we don't have to parse
+					if(obj.featureTypes && obj.featureTypes.length){
+						var layerattributes = [];
+						var attributeTypes = [];
+						var geometryName = "";
+						var geometryType = "";
+						var featureType = "";
+						var property;
+														 
+						/*right now just assuming that theres only 1 featureType*/
+						
+						//have the typeName from before, but this way we don't have to parse
 
-					featureType = obj.featureTypes[0].typeName;
-					
-					for(var j = 0; j < obj.featureTypes[0].properties.length; j++){
-						property = obj.featureTypes[0].properties[j];
-						if(property.type.indexOf("gml:") >= 0){
-							geometryName = property.name;
-							geometryType = property.type.substring(4, property.type.indexOf('PropertyType')); 
-						}else if(property.type.indexOf("xsd:") >= 0){
-							layerattributes.push(property.name);
-							
-							//types don't actually matter that much for storing in sqlite, but
-							//we need them persistent so we can check manually
-							attributeTypes.push({
-								type: property.type.substr(4),
-								notnull: !property.nillable
-							});
+						featureType = obj.featureTypes[0].typeName;
+						
+						for(var j = 0; j < obj.featureTypes[0].properties.length; j++){
+							property = obj.featureTypes[0].properties[j];
+							if(property.type.indexOf("gml:") >= 0){
+								geometryName = property.name;
+								geometryType = property.type.substring(4, property.type.indexOf('PropertyType')); 
+							}else if(property.type.indexOf("xsd:") >= 0){
+								layerattributes.push(property.name);
+								
+								//types don't actually matter that much for storing in sqlite, but
+								//we need them persistent so we can check manually
+								attributeTypes.push({
+									type: property.type.substr(4),
+									notnull: !property.nillable
+								});
+							}
 						}
-					}
-					
-					var selectedOption = jqLayerSelect.find('option:selected');
-					
-					var layernickname = jqLayerNickname.val();
-					serverInfo.layers[layernickname] = {
-						featureNS: obj.targetNamespace,
-						geomName: geometryName,
-						geometryType: geometryType,
-						featureType: featureType,
-						typeName: typeName,
-						srsName: selectedOption.attr('layersrs'),
-						attributes: layerattributes,
-						attributeTypes: attributeTypes
-					};
 						
-					if(!map){
-						var layerName = selectedOption.html();
-						var li = "<li><a onClick='Arbiter.editLayer(\"" + typeName + "\", \"" + layernickname + "\", " + serverInfo.serverId + ")' class='layer-list-item'>" + layernickname + "</a></li>";
+						var selectedOption = jqLayerSelect.find('option:selected');
 						
-						$("ul#layer-list").append(li).listview("refresh");
+						var layernickname = jqLayerNickname.val();
+						serverInfo.layers[layernickname] = {
+							featureNS: obj.targetNamespace,
+							geomName: geometryName,
+							geometryType: geometryType,
+							featureType: featureType,
+							typeName: typeName,
+							srsName: selectedOption.attr('layersrs'),
+							attributes: layerattributes,
+							attributeTypes: attributeTypes
+						};
+							
+						if(!map){
+							var layerName = selectedOption.html();
+							var li = "<li><a onClick='Arbiter.editLayer(\"" + typeName + "\", \"" + layernickname + "\", " + serverInfo.serverId + ")' class='layer-list-item'>" + layernickname + "</a></li>";
+							
+							$("ul#layer-list").append(li).listview("refresh");
+						}else{
+							Arbiter.layerCount = 1;
+							Arbiter.insertProjectsLayer(serverInfo.serverId, serverName, layernickname, serverInfo.layers[layernickname], true);
+						}								 
+						
 					}else{
-						Arbiter.layerCount = 1;
-						Arbiter.insertProjectsLayer(serverInfo.serverId, serverName, layernickname, serverInfo.layers[layernickname], true);
-					}								 
+						console.log("no feature type");
+					}
+													 
 					jqLayerSubmit.removeClass('ui-btn-active');
 					window.history.back();
 				}
