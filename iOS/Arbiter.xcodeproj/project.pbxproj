@@ -511,7 +511,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "iPhone Developer: Joseph Stuhr (LJDHAD8JT9)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Joseph Stuhr (LJDHAD8JT9)";
 				GCC_C_LANGUAGE_STANDARD = c99;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
@@ -536,6 +537,8 @@
 					"-all_load",
 					"-Obj-C",
 				);
+				PROVISIONING_PROFILE = "B7A1BBAA-D42E-45B6-8D44-FB2D121923BA";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "B7A1BBAA-D42E-45B6-8D44-FB2D121923BA";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = NO;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -546,7 +549,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "iPhone Developer: Joseph Stuhr (LJDHAD8JT9)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: Joseph Stuhr (LJDHAD8JT9)";
 				GCC_C_LANGUAGE_STANDARD = c99;
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
@@ -571,6 +575,8 @@
 					"-all_load",
 					"-Obj-C",
 				);
+				PROVISIONING_PROFILE = "B7A1BBAA-D42E-45B6-8D44-FB2D121923BA";
+				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "B7A1BBAA-D42E-45B6-8D44-FB2D121923BA";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = NO;
 				USER_HEADER_SEARCH_PATHS = "";

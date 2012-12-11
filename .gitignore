@@ -27,6 +27,7 @@ local.properties
 build/
 
 *.pbxuser
+*.pbxproj
 *.perspective
 *.perspectivev3
 
@@ -34,7 +35,3 @@ build/
 *.mode2v3
 
 xcuserdata
-
-# Arbiter files
-Android/assets/www/src
-iOS/www/src

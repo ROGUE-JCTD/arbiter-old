@@ -161,6 +161,11 @@ var Arbiter = {
 		
 		Cordova.Initialize(Arbiter);
 		
+		//HACK: online event doesn't fire in Cordova 2.2.0
+		// - work around to see if we are online
+		if(Cordova.checkConnection()){Arbiter.onOnline();} else { Arbiter.onOffline();}
+		setInterval(function(){if(Cordova.checkConnection()){Arbiter.onOnline();} else { Arbiter.onOffline();}}, 30000);
+		
 		//Save divs for later
 		div_MapPage 		= $('#idMapPage');
 		div_WelcomePage		= $('#idWelcomePage');
