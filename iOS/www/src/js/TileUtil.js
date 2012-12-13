@@ -4,6 +4,8 @@ debug: false,
 debugProgress: false,
 cacheTilesTest1Couter: 0,
 getURLCounter : 0,
+counterCacheInProgressMax: 5,
+
 
 		
 dumpFiles: function() {
@@ -149,7 +151,10 @@ startCachingTiles: function(successCallback) {
 		Arbiter.warning("Tile Caching already in progress. Aborting new request");
 		return;
 	}
-
+	
+	$("#cachingPercentComplete").html("<center>Queuing Requests</center>");
+	alert("start queuing");
+	
 	var layer = map.baseLayer;
 
 	caching = {
@@ -166,7 +171,9 @@ startCachingTiles: function(successCallback) {
 		counterEstimatedMax: TileUtil.countTilesInBounds(Arbiter.currentProject.aoi),
 		successCallback: successCallback, 
 		startZoom: -1,
-		cachedUrls: {}
+		cacheRequests: {},
+		cacheRequestsLength: 0,
+		queuingCompleted: false
 	};
 
 	if (TileUtil.debug){
@@ -215,47 +222,73 @@ stopCachingTiles: function() {
     console.log("---- stopCachingTiles");
     console.log(caching);
     
-    var cachingComplete = function(){
-        console.log("---- caching complete!");
-        console.log(caching);
+	$("#cachingPercentComplete").html("<center>Downloading Tiles</center>");
+    alert("will start downloading now.");
+    
+    caching.queuingCompleted = true;
+    //TODO: we should really start serviceCacheRequests and then from there one a an attempt fails or succeeds do more.  
+    TileUtil.checkCachingStatus();
+},
 
-        var callback = caching.successCallback;
-        
-        // keep for debugging
-        cachingLast = caching;
-    	caching = undefined;
-
-    	// Note: caching var is removed before servicing call back as a issue in callback will
-    	// leave caching hanging around which will have serious implications 
-		if (callback){
-			callback();
-		}
+checkCachingStatus: function(){
+	
+	caching.counterCacheInProgressWaitAttempt += 1;
+	console.log("---[ waiting for caching to complete. cacheRequestsLength: " + caching.cacheRequestsLength + ", counterCacheInProgress: " + caching.counterCacheInProgress + ", waiting attempts: " + caching.counterCacheInProgressWaitAttempt );
+	
+    if (caching.cacheRequestsLength === 0){
+    	if (caching.counterCacheInProgress === 0){
+    		TileUtil.cachingComplete();
+    	} else {
+	    	// wait one second to see if the tiles finish caching. 
+			caching.counterCacheInProgressWaitTimer = setTimeout(TileUtil.checkCachingStatus, 500);
+    	}
+    } else {
+    	TileUtil.serviceCacheRequests();
     	
-		console.log("---- finalized last line of TileUtil.cacheTiles!");
-    };
-
-	if (caching.counterCacheInProgress === 0){
-		cachingComplete();
-	} else {
-       console.log("***** caching.counterCacheInProgress is not ZERO: " + caching.counterCacheInProgress);
-        
-    	var checkCachingStatus = function(){
-    		caching.counterCacheInProgressWaitAttempt += 1;
-    		console.log("---[ waiting for caching.counterCacheInProgress to get 0:  " + caching.counterCacheInProgress + ", waiting attempts: " + caching.counterCacheInProgressWaitAttempt );
-    		
-    		if (caching.counterCacheInProgress === 0){
-    			console.log("************************* counterCacheInProgress === 0 **********************. not setting timeout!");
-    			//clearTimeout(caching.counterCacheInProgressWaitTimer);
-    			cachingComplete();
-    			//alert("BINGO!");
-    		} else {
-    	    	// wait one second to see if the tiles finish caching. 
-    			caching.counterCacheInProgressWaitTimer = setTimeout(checkCachingStatus, 1000);
-    		}
-    	};
-    	
-    	checkCachingStatus();
+    	// wait one second to see if the tiles finish caching. 
+		caching.counterCacheInProgressWaitTimer = setTimeout(TileUtil.checkCachingStatus, 500);
     }
+},
+
+
+cachingComplete: function(){
+    console.log("---- caching complete!");
+    console.log(caching);
+
+    var callback = caching.successCallback;
+    
+    // keep for debugging
+    cachingLast = caching;
+	caching = undefined;
+
+	// Note: caching var is removed before servicing call back as a issue in callback will
+	// leave caching hanging around which will have serious implications 
+	if (callback){
+		callback();
+	}
+	
+	console.log("---- finalized last line of TileUtil.cacheTiles!");
+},
+
+serviceCacheRequests: function(){
+	// start more downloads if we can
+	if (caching.counterCacheInProgress < TileUtil.counterCacheInProgressMax){
+		var newStart = 0;
+		
+		for(var url in caching.cacheRequests){
+			newStart += 1;
+			
+			var obj = caching.cacheRequests[url];
+			delete caching.cacheRequests[url];
+			caching.cacheRequestsLength -= 1;
+
+			TileUtil.cacheTile(url, obj);
+			
+			if (caching.counterCacheInProgress + newStart === TileUtil.counterCacheInProgressMax){
+				break;
+			}
+		}
+	}
 },
 
 cacheTiles: function(successCallback, errorCallback){
@@ -399,7 +432,7 @@ testTilesTableIsEmpty: function(_success, _error){
 testPngTileCount: function(){
 },
 
-onUpdateProgress: function(){
+onUpdateCachingDownloadProgress: function(){
 	var percent = Math.round(((caching.counterDownloaded)/caching.counterEstimatedMax * 100));
 	
 	if (percent > 100) {
@@ -409,9 +442,22 @@ onUpdateProgress: function(){
 	$("#cachingPercentComplete").html("<center>Downloaded " + percent + "%</center>");
 	
 	if (TileUtil.debugProgress) {
-		console.log("caching estimated percent complete: " + percent + ". counterDownloaded: " + caching.counterDownloaded + ", counterEstimatedMax: " + caching.counterEstimatedMax);
+		console.log("onUpdateCachingDownloadProgress: " + percent + ". counterDownloaded: " + caching.counterDownloaded + ", counterEstimatedMax: " + caching.counterEstimatedMax);
+	}
+},
+
+onUpdateQueuingRequestProgress: function(){
+	var percent = Math.round(((caching.cacheRequestsLength)/caching.counterEstimatedMax * 100));
+	
+	if (percent > 100) {
+		percent = 100;
 	}
 	
+	$("#cachingPercentComplete").html("<center>Queuing Request #" + caching.cacheRequestsLength + "</center>");
+	
+	if (TileUtil.debugProgress) {
+		console.log("onUpdateQueuingRequestProgress #" + caching.cacheRequestsLength + ", %: " + percent + ", counterEstimatedMax: " + caching.counterEstimatedMax);
+	}
 },
 
 getURL: function(bounds) {
@@ -423,122 +469,119 @@ getURL: function(bounds) {
         url = this.selectUrl(s, url);
     }
     
-    var finalUrl = OpenLayers.String.format(url, xyz);
+    var url = OpenLayers.String.format(url, xyz);
     
     
-    var tilePath = null;
+    // use the info we have to derive were the tile would be stored on the device
+    var path = Arbiter.fileSystem.root.fullPath + "/" + "osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + url.substr(url.lastIndexOf("."));
     
-    
-    // assume we ave already saved the tile to the device and return what would be the path to it. 
-	// this is the best we can do unless this call actually truly blocks the thread without hammering the cpu and running down battery of the device
-	// TODO: might be able to do a synchronous ajax call with duration of pause in the loop but will probably fail when there is no connection
-	//       consider other blocking calls like printing to console 
-	tilePath = Arbiter.fileSystem.root.fullPath + "/" + "osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + finalUrl.substr(finalUrl.lastIndexOf("."));
-
-    if (TileUtil.debug) {
-    	TileUtil.getURLCounter += 1;
-    	console.log("--- TileUtil.getURL, counter: " + TileUtil.getURLCounter + ", url: " + finalUrl + " tile: " + tilePath);
-    }
-	
- 
     // only attempt to cache if we are:
     // - in caching mode
-    // - this cache pass has not seen this url yet. sometimes openlayers getsURL multiple times!  
- 	if (typeof caching !== 'undefined') {
- 		if ((typeof caching.cachedUrls[finalUrl]) === 'undefined') { 
- 			//TODO: consider  if it fails?? fet to false again?
-	 		caching.cachedUrls[finalUrl] = true;
-
-	 		
-	 		// track that we are starting to save this tile so that incase the save takes along time in rare cases, 
-	 		// we can detect that caching is not really complete yet. once we save the file or the attempt fails for ANY reason, 
-	 		// we'll decrement the counter. 
-	 		caching.counterCacheInProgress += 1;	 		
-	 		
-			// have we cached the tile already? 
-			Arbiter.globalDatabase.transaction(function(tx){
-				//---- have we cached the tile already?
-				//TODO: bring everythign back for now for debugging we only need url though!
-				var selectTileSql = "SELECT * FROM tiles WHERE url=?;";
-				
-				if (TileUtil.debug) {
-					console.log("SQL: " + selectTileSql + "params: " + finalUrl);
-				}
-				
-				tx.executeSql(selectTileSql, [finalUrl], function(tx, res){
-					
-					if (TileUtil.debug) {
-						console.log("getURL.res.rows.length: " + res.rows.length);
-						console.log(TileUtil.rowsToString(res.rows));
-					}
-					
-					var tileNewRefCounter = -1;
-					var tileId = -1;
-					
-					// if we do not have this tile already, it'll have ref_count of 1 and
-					// if we already have this tile, we'll increment its ref_counter by one also retrieve the tileId
-					if (res.rows.length === 0) {
-						tileNewRefCounter = 1;
-					} else if (res.rows.length === 1) {
-						tileNewRefCounter = res.rows.item(0).ref_counter + 1;
-						tileId = res.rows.item(0).id;
-					} else {
-						// for some reason the tile have been cached under two separate entries!!
-						console.log("====>> ERROR: TileUtil.getURL: Multiple Entries for tile " + TileUtil.rowsToString(res.rows));
-						Arbiter.error("TileUtil.getURL: Multiple Entries for tile! see console for details. count: " + res.rows.length);
-					}
-					
-					var addTileCallback = function(){
-			    		//TODO: save tile should rely on add tile!!! and if add tile fails, the whole thing fail?
-			    		
-						var saveTileSuccess = function(url, path){
-							caching.counterCacheInProgress -= 1;
-							
-							if (typeof caching !== 'undefined') {
-								caching.counterDownloaded += 1;
-								TileUtil.onUpdateProgress();
-							} else {
-								Arbiter.error("** caching** object is null during caching!");
-							}
-						};
-						
-						var saveTileError = function(url, path, err){
-							caching.counterCacheInProgress -= 1;
-							Arbiter.warning("saveTileError filename: " + url + ", path: " + path, err);
-							//TODO: failed to download file and save to disk so just remove it from global.tiles and project.tileIds tables
-							//TileUtil.removeTile(url, path);
-						};
-						
-						// write the tile to device
-						tilePath = TileUtil.saveTile(finalUrl, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, saveTileError);
-					};
-
-					//TODO: get rid of tile ids in general and just store it as a json array in projectKeyValueDatabase?
-					
-					// add the tile to databases immediately so that if multiple getURL calls come in for a given tile, 
-					// we do not download the tile multiple times
-		    		TileUtil.addTile(finalUrl, tilePath, "osm", xyz.z, xyz.x, xyz.y, addTileCallback, tileNewRefCounter, tileId);				
-				}, function(e1, e2) {
-					Arbiter.error("chk27", e1, e2);
-				});	
-			}, function(e1, e2) {
-				Arbiter.error("chk28", e1, e2);
-			});
- 		} else {
- 			// Arbiter.warning("saved trying to cache a url more than once this session: " + finalUrl);
+    // - this cache pass has not seen this url yet. Sometimes openlayers does multiple getsURL for a tile.  
+ 	if (typeof caching !== 'undefined' && caching.queuingCompleted === false) {
+ 		if (typeof caching.cacheRequests[url] === 'undefined' || caching.cacheRequests[url] === null) {
+ 			
+ 			// map the tile path to the url so that we know where to save the tile when we get to saving it
+ 			//TODO: can we get everything we need by parsing the url?
+ 			caching.cacheRequests[url] = { 
+ 					tileset: "osm",
+					x: xyz.x,
+					y: xyz.y,
+					z: xyz.z
+			};
+ 			
+ 			caching.cacheRequestsLength += 1;
+ 			
+ 			TileUtil.onUpdateQueuingRequestProgress();
+ 			
  		}
+ 	}
+ 	
+ 	return path;
+},
+
+cacheTile: function(url, tileObject){
+    if (TileUtil.debug) {
+    	TileUtil.getURLCounter += 1;
+    	console.log("--- TileUtil.cacheTile, counter: " + TileUtil.getURLCounter + ", url: " + url + " tileObject: ", tileObject);
+    }
+	 		
+	// track that we are planning to and have essentially starting to cache this tile.
+	// once we save the file or the attempt fails for ANY reason, we'll decrement the counter.
+	// when the counter hits 0, we are done caching. 
+	caching.counterCacheInProgress += 1;	 		
+
+	// have we cached the tile already? 
+	Arbiter.globalDatabase.transaction(function(tx){
+		//---- have we cached the tile already?
+		//TODO: bring everythign back for now for debugging we only need url though!
+		var selectTileSql = "SELECT * FROM tiles WHERE url=?;";
 		
-	} else {
-		//TODO: if not chached, if we have connection, just return URL aka finalUrl
-		//      so that if they have not cached anything, they can still browse around
-	}
-	
-	if (TileUtil.debug) {
-		console.log("<<<<<<<< ------ returning tile: " + tilePath + " for: " + finalUrl);
-	}
-   
-	return tilePath;
-}, 
+		if (TileUtil.debug) {
+			console.log("SQL: " + selectTileSql + ", params: " + url);
+		}
+		
+		tx.executeSql(selectTileSql, [url], function(tx, res){
+			
+			if (TileUtil.debug) {
+				console.log("getURL.res.rows.length: " + res.rows.length);
+				console.log(TileUtil.rowsToString(res.rows));
+			}
+			
+			var tileNewRefCounter = -1;
+			var tileId = -1;
+			
+			// if we do not have this tile already, it'll have ref_count of 1 and
+			// if we already have this tile, we'll increment its ref_counter by one also retrieve the tileId
+			if (res.rows.length === 0) {
+				tileNewRefCounter = 1;
+			} else if (res.rows.length === 1) {
+				tileNewRefCounter = res.rows.item(0).ref_counter + 1;
+				tileId = res.rows.item(0).id;
+			} else {
+				// for some reason the tile have been cached under two separate entries!!
+				console.log("====>> ERROR: TileUtil.getURL: Multiple Entries for tile " + TileUtil.rowsToString(res.rows));
+				Arbiter.error("TileUtil.getURL: Multiple Entries for tile! see console for details. count: " + res.rows.length);
+			}
+			
+			var addTileCallback = function(){
+	    		//TODO: save tile should rely on add tile!!! and if add tile fails, the whole thing fail?
+	    		
+				var saveTileSuccess = function(url, path){
+					caching.counterCacheInProgress -= 1;
+					
+					if (typeof caching !== 'undefined') {
+						caching.counterDownloaded += 1;
+						TileUtil.onUpdateCachingDownloadProgress();
+					} else {
+						Arbiter.error("** caching** object is null during caching!");
+					}
+				};
+				
+				var saveTileError = function(url, path, err){
+					caching.counterCacheInProgress -= 1;
+					Arbiter.warning("saveTileError filename: " + url + ", path: " + path, err);
+					//TODO: failed to download file and save to disk so just remove it from global.tiles and project.tileIds tables
+					//TileUtil.removeTile(url, path);
+				};
+				
+				// write the tile to device
+				TileUtil.saveTile(url, tileObject.tileset, tileObject.z, tileObject.x, tileObject.y, saveTileSuccess, saveTileError);
+			};
+
+			//TODO: get rid of tile ids in general and just store it as a json array in projectKeyValueDatabase?
+			
+			// add the tile to databases immediately so that if multiple getURL calls come in for a given tile, 
+			// we do not download the tile multiple times
+    		TileUtil.addTile(url, tileObject.tileset, tileObject.z, tileObject.x, tileObject.y, addTileCallback, tileNewRefCounter, tileId);				
+		}, function(e1, e2) {
+			Arbiter.error("chk27", e1, e2);
+		});	
+	}, function(e1, e2) {
+		Arbiter.error("chk28", e1, e2);
+	});
+},
+
 
 saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 	if (TileUtil.debug) {
@@ -605,22 +648,27 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 		}
 	);
 
-	var filePath2 = Arbiter.fileSystem.root.fullPath + "/" + tileset +"/" + z + "/" + x + "/" + y + extention;
+	//TODO: remove
+	//var filePath2 = Arbiter.fileSystem.root.fullPath + "/" + tileset +"/" + z + "/" + x + "/" + y + extention;
 	
 	// NOTE: file may not be ready for reading yet since write operation is async
-	return filePath2;
+	return; //filePath2;
 },
 
-addTile : function(url, path, tileset, z, x, y, successCallback, tileNewRefCounter, tileId) {
+addTile: function(url, tileset, z, x, y, successCallback, tileNewRefCounter, tileId) {
 	
     if (TileUtil.debug) {
-    	console.log("---- TileUtil.addTile");
+    	console.log("---- TileUtil.addTile: ", url, tileset, z, x, y, tileNewRefCounter, tileId );
     }
 
 	if (tileNewRefCounter === 1) {
 		// alert("inserted tile. id: " + res.insertId);
 		Arbiter.globalDatabase.transaction(
 			function(tx) {
+				
+				//TODO: avoid saving the path itself. between uril and the params we can rebuild it
+				var path = Arbiter.fileSystem.root.fullPath + "/" + tileset +"/" + z + "/" + x + "/" + y + url.substr(url.lastIndexOf("."));
+
 				var statement = "INSERT INTO tiles (tileset, z, x, y, path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?, ?);";
 				tx.executeSql(statement, [ tileset, z, x, y, path, url, 1 ], function(tx, res) {
 					
