@@ -500,6 +500,83 @@ getURL: function(bounds) {
  	return path;
 },
 
+
+QueueCacheRequests: function(bounds, zoomLevel) {
+	
+	var layers = map.getLayersByName('OpenStreetMap');
+	var layer = null; 
+	
+	if (layers.length) {
+		layer = layers[0];
+	}
+	
+	requestQueue = [];
+
+    var resolutionForZoom = map.getResolutionForZoom(zoomLevel);
+    var extentWidth = map.getExtent().getWidth() / resolutionForZoom;
+    var extentHeight = map.getExtent().getHeight() / resolutionForZoom;
+	var minCols = extentWidth / layer.tileSize.w;
+	var minRows = extentHeight / layer.tileSize.h;
+	
+	var origin = layer.getTileOrigin();
+	var resolution = layer.getServerResolution();
+
+	var tileLayout = layer.calculateGridLayout(bounds, origin, resolution);
+
+	var tileoffsetx = Math.round(tileLayout.tileoffsetx); 
+	var tileoffsety = Math.round(tileLayout.tileoffsety);
+
+	var tileoffsetlon = tileLayout.tileoffsetlon;
+	var tileoffsetlat = tileLayout.tileoffsetlat;
+
+	var tilelon = tileLayout.tilelon;
+	var tilelat = tileLayout.tilelat;
+
+	var startX = tileoffsetx;
+	var startLon = tileoffsetlon;
+
+	var rowidx = 0;
+
+	do {
+		rowidx++;
+		tileoffsetlon = startLon;
+		tileoffsetx = startX;
+
+		var colidx = 0;
+
+		do {
+			colidx++;
+			var tileBoundsLeft = tileoffsetlon;
+			//var tileBoundsRight = tileoffsetlon + tilelon;
+			var tileBoundsTop = tileoffsetlat + tilelat;
+			//var tileBoundsBottom = tileoffsetlat;
+			
+			tileoffsetlon += tilelon;
+			tileoffsetx += layer.tileSize.w;
+			
+			var x = Math.round((tileBoundsLeft - layer.maxExtent.left) / (resolution * layer.tileSize.w));
+			var y = Math.round((layer.maxExtent.top - tileBoundsTop) / (resolution * layer.tileSize.h));
+	        		
+			var xyz = {
+		 		x: x,
+		 		y: y,
+		 		z: zoomLevel
+		 	}
+			
+		 	requestQueue.push(xyz);
+			
+			console.log("xIndex: " + colidx + ", yIndex: " + rowidx + ", z/x/y: " + xyz.z + "/" + xyz.x + "/" + xyz.y );
+			
+		} while (colidx < minCols);
+
+		tileoffsetlat -= tilelat;
+		tileoffsety += layer.tileSize.h;
+		
+	} while (rowidx < minRows);
+
+	console.log(requestQueue);
+},
+
 cacheTile: function(url, tileObject){
     if (TileUtil.debug) {
     	TileUtil.getURLCounter += 1;
