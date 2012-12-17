@@ -282,7 +282,7 @@ var Arbiter = {
 															
 															Arbiter.deleteLayerCount = Arbiter.getAssociativeArraySize(Arbiter.currentProject.serverList[itemInfo.servername].layers);
 															
-															jqSyncUpdates.mouseup();
+															jqSyncUpdates.click();
 														}
 													},
 													edit_button_id: "idEditServersButton",
@@ -477,7 +477,7 @@ var Arbiter = {
 							}, Arbiter.error);
 					};*/
 					
-					jqSyncUpdates.mouseup();
+					jqSyncUpdates.click();
 				}
 			},
 			edit_button_id: "layersSettingsEditButton",
@@ -486,7 +486,7 @@ var Arbiter = {
 			}
 		});
 		
-		$('#layersSettingsEditButton').live('mouseup', function(){
+		$('#layersSettingsEditButton').live('click', function(){
 			/*var locale = $(this).attr('data-localize');
 			
 			if(locale == "button.edit"){
@@ -523,7 +523,7 @@ var Arbiter = {
 			}
 		});
 		
-		jqSaveButton.mouseup(function(event){
+		jqSaveButton.click(function(event){
 			map.layers[map.layers.length - 1].strategies[0].save();
 		});
 
@@ -532,7 +532,8 @@ var Arbiter = {
 			Arbiter.onBeforeCreateProject();
 		});
 		
-		jqToServersButton.mouseup(function(event){
+		jqToServersButton.click(function(event){
+			event.preventDefault();
 			var newName = jqNewProjectName.val();
 			
 			//Fail if the project already exists
@@ -594,7 +595,7 @@ var Arbiter = {
 			jqEditLayerNickname.val(jqEditLayerSelect.find('option:selected').text());
 		});
 		
-		jqAddFeature.mouseup(function(event){
+		jqAddFeature.click(function(event){
 			console.log("Add Feature");
 			if(Arbiter.currentProject.activeLayer){
 				var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
@@ -608,8 +609,8 @@ var Arbiter = {
 			}
 		});
 		
-		jqDeleteFeatureButton.mouseup(function(){
-			console.log("Delete Feature Button Mouseup");
+		jqDeleteFeatureButton.click(function(){
+			console.log("Delete Feature Button Click");
 			
 			if(Arbiter.currentProject.activeLayer){
 				var ans = confirm("Are you sure you want to delete this feature?");
@@ -627,11 +628,11 @@ var Arbiter = {
 			}
 		});
 		
-		jqGoToAOI.mouseup(function(event){
+		jqGoToAOI.click(function(event){
 			map.zoomToExtent(Arbiter.currentProject.aoi);
 		});
 		
-		jqFindMeButton.mouseup(function(event){
+		jqFindMeButton.click(function(event){
 			Cordova.getGeolocation(function(position){
 				var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
 				console.log("center: ", center);
@@ -645,7 +646,7 @@ var Arbiter = {
 			});
 		});
 		
-		jqAOIFindMeButton.mouseup(function(event){
+		jqAOIFindMeButton.click(function(event){
 			Cordova.getGeolocation(function(position){
 				var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
 				console.log("aoi center: ", center);
@@ -659,9 +660,9 @@ var Arbiter = {
 			});
 		});
 		
-		jqSyncUpdates.mouseup(function(event){
+		jqSyncUpdates.click(function(event){
 			if(Arbiter.isOnline) {
-				console.log("---- jqSyncUpdates.mouseup");
+				console.log("---- jqSyncUpdates.click");
 				var layers = map.getLayersByClass('OpenLayers.Layer.Vector');
 			
 				var ans = true;
@@ -692,22 +693,22 @@ var Arbiter = {
 		
 		jqSyncUpdates.taphold(function(){
 			// re-cache tiles and when done, perform normal sync to take care of vector data
-			TileUtil.cacheTiles(function(){ jqSyncUpdates.mouseup(); });
+			TileUtil.cacheTiles(function(){ jqSyncUpdates.click(); });
 		});
 				
-		jqEditorTab.mouseup(function(event){
+		jqEditorTab.click(function(event){
 			Arbiter.ToggleEditorMenu();
 		});
 		
-		jqAttributeTab.mouseup(function(event){
+		jqAttributeTab.click(function(event){
 			Arbiter.ToggleAttributeMenu();
 		});
 				
-		$(".layer-list-item").mouseup(function(event){
+		$(".layer-list-item").click(function(event){
 			Arbiter.populateAddLayerDialog($(this).text());
 		});
 		
-		$('.project-name').live('mouseup', function(event){
+		$('.project-name').live('click', function(event){
 			//alert("project name mouse up");
 			if(!$('.project-checkbox').is(':visible'))
 				Arbiter.onOpenProject($(this).text());
@@ -728,7 +729,7 @@ var Arbiter = {
 			}
 		});
 		
-		$('.project-checkbox').live('mouseup', function(event){
+		$('.project-checkbox').live('click', function(event){
 				console.log("delete");
 				
 				var ans = confirm("Are you sure you want to delete this project?!");
@@ -1273,7 +1274,7 @@ var Arbiter = {
     },
     
     onShowServers: function(){
-    	console.log("---- onShowArbiterSettings");
+    	console.log("---- onShowServers");
     	Arbiter.serversList.checkbox = true;
     	Arbiter.changePage_Pop(div_ServersPage);
     	$('#idServersPage .SettingsPageFooter').animate({ "left": "100%" }, 0);
@@ -1323,7 +1324,7 @@ var Arbiter = {
         			map.zoomToExtent(Arbiter.currentProject.aoi, true);
     				
     				//TODO: this really should happen after showmap completes
-        			jqSyncUpdates.mouseup();
+        			jqSyncUpdates.click();
     			};
 
     			TileUtil.cacheTiles(successCacheTiles);    				
@@ -1587,7 +1588,7 @@ var Arbiter = {
 	
 	//listname = existingServer or project
 	appendToListView: function(listname, id, name, leftplaceholder){
-		/*$(_item).appendTo(_listview).mouseup(_mouseup);
+		/*$(_item).appendTo(_listview).click(_click);
 		
 		if(_listview.hasClass('ui-listview'))
 			_listview.listview("refresh");
