@@ -1416,7 +1416,7 @@ var Arbiter = {
 	},
 	
 	showMessageOverlay: function(title, message) {
-		$("#idWorkingOverlay").animate({ "left": "0%" }, 100);
+		$("#idWorkingOverlay").animate({ "left": "0%" }, 5);
 		Arbiter.setMessageOverlay(title, message);
 	},
 	
@@ -1435,7 +1435,7 @@ var Arbiter = {
 	},
 	
 	hideMessageOverlay: function() {
-		$("#idWorkingOverlay").animate({ "left": "100%" }, 100);
+		$("#idWorkingOverlay").animate({ "left": "100%" }, 5);
 	},
 	
 	PopulateProjectsList: function() {

@@ -100,11 +100,8 @@ startCachingTiles: function(successCallback) {
 	
 	TileUtil.QueueCacheRequests(caching.extent);
 	
-	Arbiter.setMessageOverlay("Caching Tiles", "Preparing To Download");
-	//alert("Preparing to download");
-
-    //TODO: we should really start serviceCacheRequests and then from there one a an attempt fails or succeeds do more.  
-    TileUtil.checkCachingStatus();	
+	Arbiter.setMessageOverlay("Caching Tiles", "Downloading");
+	TileUtil.serviceCacheRequests();
 
 	// we're done - go back to the view user had before they started caching
     map.zoomToExtent(caching.extentOriginal, true);
@@ -112,22 +109,12 @@ startCachingTiles: function(successCallback) {
 
 
 checkCachingStatus: function(){
-	
-	caching.counterCacheInProgressWaitAttempt += 1;
-	console.log("---[ waiting for caching to complete. requestQueue.length: " + caching.requestQueue.length + ", counterCacheInProgress: " + caching.counterCacheInProgress + ", waiting attempts: " + caching.counterCacheInProgressWaitAttempt );
-	
     if (caching.requestQueue.length === 0){
     	if (caching.counterCacheInProgress === 0){
     		TileUtil.cachingComplete();
-    	} else {
-	    	// wait a bit to see if the tiles finish caching. 
-			caching.counterCacheInProgressWaitTimer = setTimeout(TileUtil.checkCachingStatus, 500);
     	}
     } else {
     	TileUtil.serviceCacheRequests();
-    	
-    	// wait a bit to see if the tiles finish caching. 
-		caching.counterCacheInProgressWaitTimer = setTimeout(TileUtil.checkCachingStatus, 500);
     }
 },
 
@@ -317,7 +304,7 @@ testPngTileCount: function(){
 onUpdateCachingDownloadProgress: function(){
 	var percent = Math.round(caching.counterDownloaded/caching.counterMax * 100);
 	
-	Arbiter.setMessageOverlay("Cache Tiles", "Downloaded " + percent + "%");
+	Arbiter.setMessageOverlay("Caching Tiles", "Downloaded " + percent + "%");
 
 	if (TileUtil.debugProgress) {
 		console.log("onUpdateCachingDownloadProgress: " + percent + ". counterDownloaded: " + caching.counterDownloaded + ", counterMax: " + caching.counterMax);
@@ -471,6 +458,8 @@ cacheTile: function(xyz){
 					caching.counterCacheInProgress--;
 					caching.counterDownloaded++;
 					TileUtil.onUpdateCachingDownloadProgress();
+					
+					TileUtil.checkCachingStatus();
 				};
 				
 				var saveTileError = function(url, path, err){
@@ -478,6 +467,8 @@ cacheTile: function(xyz){
 					caching.counterCacheInProgress--;
 					TileUtil.onUpdateCachingDownloadProgress();
 					Arbiter.warning("saveTileError filename: " + url + ", path: " + path, err);
+					
+					TileUtil.checkCachingStatus();
 					//TODO: failed to download file and save to disk so just remove it from global.tiles and project.tileIds tables
 					//TileUtil.removeTile(url, path);
 				};
@@ -644,7 +635,7 @@ clearCache : function(tileset, successCallback, vDb) {
 		console.log("---- TileUtil.clearCache");
 	}	
 	
-	Arbiter.setMessageOverlay("Cache Tiles", "Removing Tiles");
+	Arbiter.setMessageOverlay("Caching Tiles", "Removing Tiles");
 
 	
 	var op = function(tx){
@@ -658,7 +649,7 @@ clearCache : function(tileset, successCallback, vDb) {
 				var removeCounterCallback = function() {
 					removeCounter += 1;
 					var percent = Math.round(removeCounter/res.rows.length * 100);
-					Arbiter.setMessageOverlay("Cache Tiles", "Removed " + percent + "%");
+					Arbiter.setMessageOverlay("Caching Tiles", "Removed " + percent + "%");
 
 					if (TileUtil.debug) {
 						console.log("removeCounter: " + removeCounter + ", percent cleared: " + percent);
