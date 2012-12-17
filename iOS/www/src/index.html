@@ -31,7 +31,7 @@
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.theme-1.2.0.min.css"/>
 		<link rel="stylesheet" type="text/css" href="css/glyphish.css"/>
 		<link rel="stylesheet" type="text/css" href="OpenLayers-2.12/theme/default/style.mobile.css"/>
-		<script src="http://192.168.10.181:8080/target/target-script-min.js#anonymous"></script>
+		<script src="http://localhost:8082/target/target-script-min.js#anonymous"></script>
 		<script type="text/javascript" src="../cordova-2.2.0.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
 		<script type="text/javascript" src="js/Arbiter.js"></script>
@@ -298,11 +298,11 @@
 					</div>
 				</div>
 				
-				<div id="idCachingTilesMenu" style="position:absolute;z-index:2000;">
+				<div id="idWorkingOverlay" style="position:absolute;z-index:2000;">
 					<div data-role="content" id="cachingTilesMenuContent" style="position:absolute; top:50%; left:30%; height:10em; margin-top:-5em">
-						<center>Caching Tiles</center>
 						<div id="loadingIndicator"><div style="padding: 3px 1px;"></div></div>
-						<div id="cachingPercentComplete"><center>0%</center></div>
+						<div id="idWorkingOverlayTitle"><center></center></div>
+						<div id="idWorkingOverlayMessage"><center></center></div>
 					</div>
 				</div>
 				

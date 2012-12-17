@@ -1416,13 +1416,27 @@ var Arbiter = {
 		$("#editorTab").animate({ "opacity": "1.0" }, 0);
 	},
 	
-	ShowCachingTilesMenu: function() {
-		$("#idCachingTilesMenu").animate({ "left": "0%" }, 50);
-		$("#cachingPercentComplete").html("<center>Clearing Cache</center>");
+	showMessageOverlay: function(title, message) {
+		$("#idWorkingOverlay").animate({ "left": "0%" }, 5);
+		Arbiter.setMessageOverlay(title, message);
 	},
 	
-	HideCachingTilesMenu: function() {
-		$("#idCachingTilesMenu").animate({ "left": "100%" }, 50);
+	setMessageOverlay: function(title, message) {
+		
+		if (!title){
+			title = "";
+		}
+		
+		if (!message){
+			message = "";
+		}
+		
+		$("#idWorkingOverlayTitle").html("<center>" + title + "</center>");
+		$("#idWorkingOverlayMessage").html("<center>" + message + "</center>");
+	},
+	
+	hideMessageOverlay: function() {
+		$("#idWorkingOverlay").animate({ "left": "100%" }, 5);
 	},
 	
 	PopulateProjectsList: function() {
