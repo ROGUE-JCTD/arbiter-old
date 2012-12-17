@@ -100,7 +100,7 @@ startCachingTiles: function(successCallback) {
 	
 	TileUtil.QueueCacheRequests(caching.extent);
 	
-	Arbiter.setMessageOverlay("Caching Tiles", "Downloading");
+	Arbiter.setMessageOverlay("Caching Tiles", "Will Download " + caching.counterMax + " Tiles");
 	TileUtil.serviceCacheRequests();
 
 	// we're done - go back to the view user had before they started caching
@@ -124,7 +124,7 @@ cachingComplete: function(){
     console.log(caching);
 	
     if (caching.counterDownloadFailed > 0){
-    	var msg = "caching completed but " + caching.counterDownloadFailed + " tiles were not downloaded successfully. Recache if possible."; 
+    	var msg = "Tile caching completed but " + caching.counterDownloadFailed + " of " + caching.counterMax + " tiles failed to download. Recache if possible."; 
 		alert(msg);
 		Arbiter.warning(msg);
 	}
@@ -217,27 +217,6 @@ cacheTiles: function(successCallback, errorCallback){
 			);
 		}
 	});
-	
-	//Original
-/*
-	TileUtil.clearCache("osm", function(){
-		console.log("~~~~ done clearing clearing cache");
-		// once all the cache for this project is cleared, start caching again. 
-		TileUtil.startCachingTiles(
-			function(){
-				console.log("~~~~ done caching");
-				Arbiter.hideMessageOverlay();
-				
-				//console.log("######## tiles with ref count of 2");
-				//TileUtil.dumpTilesWithRefCount(2);
-				
-				if (successCallback){
-					successCallback();
-				}
-			}
-		);
-	});
-*/
 },
 
 testCacheTilesRepeatStart: function(millisec, maxRepeat){
@@ -336,8 +315,7 @@ QueueCacheRequests: function(bounds) {
 	}
 	
 	caching.counterMax = caching.requestQueue.length;
-
-	console.log(caching.requestQueue);
+	alert("Will cache: " + caching.counterMax);
 },
 
 
