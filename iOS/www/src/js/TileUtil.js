@@ -3,7 +3,6 @@ var TileUtil = {
 debug: false,
 debugProgress: false,
 cacheTilesTest1Couter: 0,
-getURLCounter : 0,
 counterCacheInProgressMax: 5,
 
 
@@ -65,83 +64,6 @@ dumpDirectory: function(dir) {
 	}
 },
 
-countTilesInBounds: function (bounds){
-    var layer =  map.baseLayer;
-    var tileWidth = layer.tileSize.w;
-    var tileHeight = layer.tileSize.h;
-
-    var zoomLevel = map.getZoomForExtent(bounds, true);
-    
-    var totalTiles = 0;
-    
-    while (zoomLevel < layer.numZoomLevels) {
-
-        var extentWidth = bounds.getWidth() / map.getResolutionForZoom(zoomLevel);
-        
-        var widthInTiles = Math.ceil(extentWidth / tileWidth);
-        // add one for good measure since when the buffer is computed during caching, it tries to subtract 
-        // the tiles that are already downloaded. but since the map is not square (and layer.buffer essentially assumes it is since we dont have layer.buffer.x and layer.buffer.y), 
-        // we can have more tiles already downloaded vertically than horizontally. Also, the center of map can be falling such that we have more tiles needed in the view vertically 
-        // vs horizontally or vice versa. It can be computed but for now probably not worth it. 
-        widthInTiles += 1;  /// seems like map always gets 3x3. if this is really true, layer.buffer can just be set to Math.ceil(extentWidth / tileWidth); - 1.5
-        totalTiles += widthInTiles * widthInTiles;
-        
-        // Test data
-        // widthInTiles+1       widthInTiles+1.5    count..InBounds2 actual 
-        // 218                  248                 212              217  
-        // 623                  673                 684              715
-        // 2466                 2562                2460             2482
-        // 9190                 9369                9184             9235 (45.2MB) 
-        //
-        //
-        //
-        if (TileUtil.debug){
-        	console.log("-----<< Will cache " + widthInTiles * widthInTiles + " tiles for zoom level: " + zoomLevel + ", widthInTiles: " + widthInTiles);
-        }
-        
-    	zoomLevel += 1;
-    }
-    
-    if (TileUtil.debug || TileUtil.debugProgress){
-    	console.log("=====<< simple method Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
-    }
-    
-    return totalTiles;
-},
-
-countTilesInBounds2: function (){
-    var layer =  map.baseLayer;
-    var tileWidth = layer.tileSize.w;
-    var tileHeight = layer.tileSize.h;
-
-    var zoomLevel = map.getZoom();
-    
-    var totalTiles = 0;
-    
-    while (zoomLevel < layer.numZoomLevels) {
-
-        var extentWidth = map.getExtent().getWidth() / map.getResolutionForZoom(zoomLevel);
-        
-        // buffer is being computed the same way it gets computed in cacheTile to help get as close of an estimate as possible 
-        // the number of tiles downloaded should really be  Math.ceil(extentWidth / tileWidth) * Math.ceil(extentHeight / tileHeight);
-        // but we're playing along since we want to be as close to the number we actually end up downloading as possible. 
-        var buffer = Math.ceil((extentWidth / tileWidth - map.getSize().w / tileWidth) / 2);
-        var widthInTiles =  Math.ceil(buffer * 2 + map.getSize().w / tileWidth);
-        var heightInTiles =  Math.ceil(buffer * 2 + map.getSize().h / tileHeight);
-        totalTiles += (widthInTiles * heightInTiles);
-        
-        //alert("Will cache " + (widthInTiles * widthInTiles) + " tiles for zoom level: " + zoomLevel);
-        console.log("-----<< Will cache " + (widthInTiles * heightInTiles) + " tiles for zoom level: " + zoomLevel + " widthInTiles: " + widthInTiles + " heightInTiles: " + heightInTiles);
-        
-    	zoomLevel += 1;
-    }
-    
-    console.log("=====<< complex method Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
-    //alert("Will cache " + totalTiles + " tiles for all " + (layer.numZoomLevels - map.getZoom()) + " zoom levels");
-    
-    return totalTiles;
-},
-
 
 // start caching the cacheTile
 startCachingTiles: function(successCallback) {
@@ -152,100 +74,59 @@ startCachingTiles: function(successCallback) {
 		return;
 	}
 	
-	$("#cachingPercentComplete").html("<center>Queuing Requests</center>");
-	alert("start queuing");
+	Arbiter.setMessageOverlay("Caching Tiles", "Queuing Request");
+	//alert("Queuing Request");
 	
 	var layer = map.baseLayer;
+	
 
 	caching = {
 		// extent before we start caching	
 		extentOriginal: map.getExtent(),
 		// extent that we should use as starting point of caching
 		extent: Arbiter.currentProject.aoi,
-		buffer: layer.buffer,
+		startZoom: map.getZoomForExtent(Arbiter.currentProject.aoi, true),
 		layer: layer,
 		counterDownloaded: 0,
-		counterReused: 0,
+		counterDownloadFailed: 0,
 		counterCacheInProgress: 0,
 		counterCacheInProgressWaitAttempt: 0,
-		counterEstimatedMax: TileUtil.countTilesInBounds(Arbiter.currentProject.aoi),
+		counterMax: -1,
 		successCallback: successCallback, 
-		startZoom: -1,
-		cacheRequests: {},
-		cacheRequestsLength: 0,
-		queuingCompleted: false
+		requestQueue: [] 
 	};
 
-	if (TileUtil.debug){
-		console.log("---- startCachingTiles. counterEstimatedMax: " + caching.counterEstimatedMax);
-	}
-
-	// TODO: zoom to a level other than caching.extent
-	// make sure the next setCenter triggers a load
-	caching.startZoom = map.getZoomForExtent(caching.extent, true);
-	map.zoomTo(caching.startZoom === map.numZoomLevels ? caching.startZoom - 1 : caching.startZoom + 1);
-
-	layer.events.register("loadend", null, TileUtil.cacheTilesForCurrentZoom);
-
-	// start caching
 	map.zoomToExtent(caching.extent, true);
-},
+	
+	TileUtil.QueueCacheRequests(caching.extent);
+	
+	Arbiter.setMessageOverlay("Caching Tiles", "Preparing To Download");
+	//alert("Preparing to download");
 
-
-// cacheTile a zoom level based on the extent at the time startCachingTiles was
-// called
-cacheTilesForCurrentZoom: function() {
-    var layer = caching.layer;
-    var tileWidth = layer.tileSize.w;
-    var nextZoom = map.getZoom() + 1;
-
-    if (nextZoom === layer.numZoomLevels) {
-    	console.log("caching.startZoom: " + caching.startZoom + ", nextZoom: " + nextZoom + ", layer.numZoomLevels: " + layer.numZoomLevels);
-    	console.log("caching tiles completed: additional " + caching.counterDownloaded + " cached. estimated max: " + caching.counterEstimatedMax);
-        TileUtil.stopCachingTiles();
-    } else {
-        var extentWidth = caching.extent.getWidth() / map.getResolutionForZoom(nextZoom);
-        // adjust the layer's buffer size so we don't have to pan
-        layer.buffer = Math.ceil((extentWidth / tileWidth - map.getSize().w / tileWidth) / 2);
-        //alert("setting buffer to: " + layer.buffer + ", for zoom: " + nextZoom);
-        map.zoomIn();
-    }
-},
-
-// stop caching (when done or when cacheTile is full)
-stopCachingTiles: function() {
-	// we're done - restore previous settings
-	caching.layer.events.unregister("loadend", null, TileUtil.cacheTilesForCurrentZoom);
-	caching.layer.buffer = caching.buffer;
-    map.zoomToExtent(caching.extentOriginal, true);
-    
-    console.log("---- stopCachingTiles");
-    console.log(caching);
-    
-	$("#cachingPercentComplete").html("<center>Downloading Tiles</center>");
-    alert("will start downloading now.");
-    
-    caching.queuingCompleted = true;
     //TODO: we should really start serviceCacheRequests and then from there one a an attempt fails or succeeds do more.  
-    TileUtil.checkCachingStatus();
+    TileUtil.checkCachingStatus();	
+
+	// we're done - go back to the view user had before they started caching
+    map.zoomToExtent(caching.extentOriginal, true);
 },
+
 
 checkCachingStatus: function(){
 	
 	caching.counterCacheInProgressWaitAttempt += 1;
-	console.log("---[ waiting for caching to complete. cacheRequestsLength: " + caching.cacheRequestsLength + ", counterCacheInProgress: " + caching.counterCacheInProgress + ", waiting attempts: " + caching.counterCacheInProgressWaitAttempt );
+	console.log("---[ waiting for caching to complete. requestQueue.length: " + caching.requestQueue.length + ", counterCacheInProgress: " + caching.counterCacheInProgress + ", waiting attempts: " + caching.counterCacheInProgressWaitAttempt );
 	
-    if (caching.cacheRequestsLength === 0){
+    if (caching.requestQueue.length === 0){
     	if (caching.counterCacheInProgress === 0){
     		TileUtil.cachingComplete();
     	} else {
-	    	// wait one second to see if the tiles finish caching. 
+	    	// wait a bit to see if the tiles finish caching. 
 			caching.counterCacheInProgressWaitTimer = setTimeout(TileUtil.checkCachingStatus, 500);
     	}
     } else {
     	TileUtil.serviceCacheRequests();
     	
-    	// wait one second to see if the tiles finish caching. 
+    	// wait a bit to see if the tiles finish caching. 
 		caching.counterCacheInProgressWaitTimer = setTimeout(TileUtil.checkCachingStatus, 500);
     }
 },
@@ -254,14 +135,20 @@ checkCachingStatus: function(){
 cachingComplete: function(){
     console.log("---- caching complete!");
     console.log(caching);
-
+	
+    if (caching.counterDownloadFailed > 0){
+    	var msg = "caching completed but " + caching.counterDownloadFailed + " tiles were not downloaded successfully. Recache if possible."; 
+		alert(msg);
+		Arbiter.warning(msg);
+	}
+	
     var callback = caching.successCallback;
     
     // keep for debugging
     cachingLast = caching;
 	caching = undefined;
-
-	// Note: caching var is removed before servicing call back as a issue in callback will
+	
+	// Note: caching var is removed before servicing call back as an issue in callback will
 	// leave caching hanging around which will have serious implications 
 	if (callback){
 		callback();
@@ -275,14 +162,12 @@ serviceCacheRequests: function(){
 	if (caching.counterCacheInProgress < TileUtil.counterCacheInProgressMax){
 		var newStart = 0;
 		
-		for(var url in caching.cacheRequests){
+		while (caching.requestQueue.length) {
 			newStart += 1;
 			
-			var obj = caching.cacheRequests[url];
-			delete caching.cacheRequests[url];
-			caching.cacheRequestsLength -= 1;
+			var xyz = caching.requestQueue.pop();
 
-			TileUtil.cacheTile(url, obj);
+			TileUtil.cacheTile(xyz);
 			
 			if (caching.counterCacheInProgress + newStart === TileUtil.counterCacheInProgressMax){
 				break;
@@ -298,11 +183,8 @@ cacheTiles: function(successCallback, errorCallback){
 		return;
 	} 
 	
-	
-	TileUtil.getURLCounter = 0;
-	Arbiter.ShowCachingTilesMenu();
+	Arbiter.showMessageOverlay("Caching Tiles");
 
-	
 	TileUtil.clearCache("osm", function(){
 		
 		if (TileUtil.cacheTilesTest1Couter > 0) {
@@ -315,7 +197,7 @@ cacheTiles: function(successCallback, errorCallback){
 					TileUtil.startCachingTiles(
 						function(){
 							console.log("~~~~ done caching");
-							Arbiter.HideCachingTilesMenu();
+							Arbiter.hideMessageOverlay();
 							
 							if (successCallback){
 								successCallback();
@@ -326,7 +208,7 @@ cacheTiles: function(successCallback, errorCallback){
 				function(){
 					TileUtil.dumpTilesTable();
 					Arbiter.error("----[ TEST FAILED: testTilesTableIsEmpty cacheTiles.clearCache: failed! Tiles Table not empty. just dumped tilestable");
-					Arbiter.HideCachingTilesMenu();
+					Arbiter.hideMessageOverlay();
 	
 					if (errorCallback){
 						errorCallback();
@@ -339,7 +221,7 @@ cacheTiles: function(successCallback, errorCallback){
 			TileUtil.startCachingTiles(
 				function(){
 					console.log("~~~~ done caching");
-					Arbiter.HideCachingTilesMenu();
+					Arbiter.hideMessageOverlay();
 					
 					if (successCallback){
 						successCallback();
@@ -357,7 +239,7 @@ cacheTiles: function(successCallback, errorCallback){
 		TileUtil.startCachingTiles(
 			function(){
 				console.log("~~~~ done caching");
-				Arbiter.HideCachingTilesMenu();
+				Arbiter.hideMessageOverlay();
 				
 				//console.log("######## tiles with ref count of 2");
 				//TileUtil.dumpTilesWithRefCount(2);
@@ -433,30 +315,12 @@ testPngTileCount: function(){
 },
 
 onUpdateCachingDownloadProgress: function(){
-	var percent = Math.round(((caching.counterDownloaded)/caching.counterEstimatedMax * 100));
+	var percent = Math.round(caching.counterDownloaded/caching.counterMax * 100);
 	
-	if (percent > 100) {
-		percent = 100;
-	}
+	Arbiter.setMessageOverlay("Cache Tiles", "Downloaded " + percent + "%");
 
-	$("#cachingPercentComplete").html("<center>Downloaded " + percent + "%</center>");
-	
 	if (TileUtil.debugProgress) {
-		console.log("onUpdateCachingDownloadProgress: " + percent + ". counterDownloaded: " + caching.counterDownloaded + ", counterEstimatedMax: " + caching.counterEstimatedMax);
-	}
-},
-
-onUpdateQueuingRequestProgress: function(){
-	var percent = Math.round(((caching.cacheRequestsLength)/caching.counterEstimatedMax * 100));
-	
-	if (percent > 100) {
-		percent = 100;
-	}
-	
-	$("#cachingPercentComplete").html("<center>Queuing Request #" + caching.cacheRequestsLength + "</center>");
-	
-	if (TileUtil.debugProgress) {
-		console.log("onUpdateQueuingRequestProgress #" + caching.cacheRequestsLength + ", %: " + percent + ", counterEstimatedMax: " + caching.counterEstimatedMax);
+		console.log("onUpdateCachingDownloadProgress: " + percent + ". counterDownloaded: " + caching.counterDownloaded + ", counterMax: " + caching.counterMax);
 	}
 },
 
@@ -474,47 +338,31 @@ getURL: function(bounds) {
     
     // use the info we have to derive were the tile would be stored on the device
     var path = Arbiter.fileSystem.root.fullPath + "/" + "osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + url.substr(url.lastIndexOf("."));
-    
-    // only attempt to cache if we are:
-    // - in caching mode
-    // - this cache pass has not seen this url yet. Sometimes openlayers does multiple getsURL for a tile.  
- 	if (typeof caching !== 'undefined' && caching.queuingCompleted === false) {
- 		if (typeof caching.cacheRequests[url] === 'undefined' || caching.cacheRequests[url] === null) {
- 			
- 			// map the tile path to the url so that we know where to save the tile when we get to saving it
- 			//TODO: can we get everything we need by parsing the url?
- 			caching.cacheRequests[url] = { 
- 					tileset: "osm",
-					x: xyz.x,
-					y: xyz.y,
-					z: xyz.z
-			};
- 			
- 			caching.cacheRequestsLength += 1;
- 			
- 			TileUtil.onUpdateQueuingRequestProgress();
- 			
- 		}
- 	}
  	
  	return path;
 },
 
+QueueCacheRequests: function(bounds) {
 
-QueueCacheRequests: function(bounds, zoomLevel) {
-	
-	var layers = map.getLayersByName('OpenStreetMap');
-	var layer = null; 
-	
-	if (layers.length) {
-		layer = layers[0];
+	for (var i=1; i < caching.layer.numZoomLevels; i++) {
+		TileUtil.QueueCacheRequestsForZoom(caching.layer, bounds, i);
 	}
 	
-	requestQueue = [];
+	caching.counterMax = caching.requestQueue.length;
 
+	console.log(caching.requestQueue);
+},
+
+
+QueueCacheRequestsForZoom: function(layer, bounds, zoomLevel) {
+	
+	//TODO: would like to not have to change map zoom. find out what is needed to 
+	//      keep computation valid without having to do this
+	map.zoomTo(zoomLevel);
+		
     var resolutionForZoom = map.getResolutionForZoom(zoomLevel);
-    var extentWidth = map.getExtent().getWidth() / resolutionForZoom;
-    var extentHeight = map.getExtent().getHeight() / resolutionForZoom;
+    var extentWidth = (bounds.right - bounds.left) / resolutionForZoom;
+    var extentHeight = (bounds.top - bounds.bottom) / resolutionForZoom;
 	var minCols = extentWidth / layer.tileSize.w;
 	var minRows = extentHeight / layer.tileSize.h;
 	
@@ -535,21 +383,13 @@ QueueCacheRequests: function(bounds, zoomLevel) {
 	var startX = tileoffsetx;
 	var startLon = tileoffsetlon;
 
-	var rowidx = 0;
-
-	do {
-		rowidx++;
+	for (var row = 0; row < minRows; row++) {
 		tileoffsetlon = startLon;
 		tileoffsetx = startX;
 
-		var colidx = 0;
-
-		do {
-			colidx++;
+		for (var col = 0; col < minCols; col++) {
 			var tileBoundsLeft = tileoffsetlon;
-			//var tileBoundsRight = tileoffsetlon + tilelon;
 			var tileBoundsTop = tileoffsetlat + tilelat;
-			//var tileBoundsBottom = tileoffsetlat;
 			
 			tileoffsetlon += tilelon;
 			tileoffsetx += layer.tileSize.w;
@@ -563,25 +403,28 @@ QueueCacheRequests: function(bounds, zoomLevel) {
 		 		z: zoomLevel
 		 	}
 			
-		 	requestQueue.push(xyz);
-			
-			console.log("xIndex: " + colidx + ", yIndex: " + rowidx + ", z/x/y: " + xyz.z + "/" + xyz.x + "/" + xyz.y );
-			
-		} while (colidx < minCols);
+		 	caching.requestQueue.push(xyz);
+		}
 
 		tileoffsetlat -= tilelat;
 		tileoffsety += layer.tileSize.h;
-		
-	} while (rowidx < minRows);
-
-	console.log(requestQueue);
+	}
 },
 
-cacheTile: function(url, tileObject){
+cacheTile: function(xyz){
+	
     if (TileUtil.debug) {
-    	TileUtil.getURLCounter += 1;
-    	console.log("--- TileUtil.cacheTile, counter: " + TileUtil.getURLCounter + ", url: " + url + " tileObject: ", tileObject);
+    	console.log("--- TileUtil.cacheTile, tile: ", xyz);
     }
+    
+    var url = caching.layer.url;
+    
+    if (OpenLayers.Util.isArray(url)) {
+        var s = '' + xyz.x + xyz.y + xyz.z;
+        url = caching.layer.selectUrl(s, url);
+    }
+    
+    url = OpenLayers.String.format(url, xyz);    
 	 		
 	// track that we are planning to and have essentially starting to cache this tile.
 	// once we save the file or the attempt fails for ANY reason, we'll decrement the counter.
@@ -625,32 +468,29 @@ cacheTile: function(url, tileObject){
 	    		//TODO: save tile should rely on add tile!!! and if add tile fails, the whole thing fail?
 	    		
 				var saveTileSuccess = function(url, path){
-					caching.counterCacheInProgress -= 1;
-					
-					if (typeof caching !== 'undefined') {
-						caching.counterDownloaded += 1;
-						TileUtil.onUpdateCachingDownloadProgress();
-					} else {
-						Arbiter.error("** caching** object is null during caching!");
-					}
+					caching.counterCacheInProgress--;
+					caching.counterDownloaded++;
+					TileUtil.onUpdateCachingDownloadProgress();
 				};
 				
 				var saveTileError = function(url, path, err){
-					caching.counterCacheInProgress -= 1;
+					caching.counterDownloadFailed++;
+					caching.counterCacheInProgress--;
+					TileUtil.onUpdateCachingDownloadProgress();
 					Arbiter.warning("saveTileError filename: " + url + ", path: " + path, err);
 					//TODO: failed to download file and save to disk so just remove it from global.tiles and project.tileIds tables
 					//TileUtil.removeTile(url, path);
 				};
 				
 				// write the tile to device
-				TileUtil.saveTile(url, tileObject.tileset, tileObject.z, tileObject.x, tileObject.y, saveTileSuccess, saveTileError);
+				TileUtil.saveTile(url, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, saveTileError);
 			};
 
 			//TODO: get rid of tile ids in general and just store it as a json array in projectKeyValueDatabase?
 			
 			// add the tile to databases immediately so that if multiple getURL calls come in for a given tile, 
 			// we do not download the tile multiple times
-    		TileUtil.addTile(url, tileObject.tileset, tileObject.z, tileObject.x, tileObject.y, addTileCallback, tileNewRefCounter, tileId);				
+    		TileUtil.addTile(url, "osm", xyz.z, xyz.x, xyz.y, addTileCallback, tileNewRefCounter, tileId);				
 		}, function(e1, e2) {
 			Arbiter.error("chk27", e1, e2);
 		});	
@@ -725,11 +565,7 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 		}
 	);
 
-	//TODO: remove
-	//var filePath2 = Arbiter.fileSystem.root.fullPath + "/" + tileset +"/" + z + "/" + x + "/" + y + extention;
-	
-	// NOTE: file may not be ready for reading yet since write operation is async
-	return; //filePath2;
+	return;
 },
 
 addTile: function(url, tileset, z, x, y, successCallback, tileNewRefCounter, tileId) {
@@ -802,35 +638,14 @@ addTile: function(url, tileset, z, x, y, successCallback, tileNewRefCounter, til
 	}
 }, 
 
-//BUG: it always inserts! either not supported in sqlite or plugin bug
-addTileReplaceBug: function(url, path, tileset, z, x, y) {
-
-	// add to global.tiles table. if already exists, increment ref counter
-	Arbiter.globalDatabase.transaction(function(tx){
-		
-		var insertTilesSql = "INSERT OR REPLACE INTO tiles (tileset, z, x, y, path, url, ref_counter)" +
-							"VALUES (?, ?, ?, ?, ?, ?, " +  
-							  "COALESCE(" +
-							    "(SELECT ref_counter FROM tiles WHERE url=?), " +
-							    "0) + 1);";
-							    
-	    console.log("SQL: "+ insertTilesSql);
-		
-		//TODO: does the second url get replaced as expected?
-		tx.executeSql(insertTilesSql, [tileset, z, x, y, path, url, url], function(tx, res){
-		    TileUtil.insertIntoTileIds(res.insertId);
-		}, Arbiter.error);
-	}, Arbiter.error);	
-
-	// add id to project.variablesDatabase.tileIds
-	// TODO: add entry to groutDatabase
-}, 
-
 //clear entries in db, removed tiles from device
 clearCache : function(tileset, successCallback, vDb) {
 	if (TileUtil.debug) {
 		console.log("---- TileUtil.clearCache");
 	}	
+	
+	Arbiter.setMessageOverlay("Cache Tiles", "Removing Tiles");
+
 	
 	var op = function(tx){
 		var sql = "SELECT id FROM tileIds;";
@@ -843,7 +658,7 @@ clearCache : function(tileset, successCallback, vDb) {
 				var removeCounterCallback = function() {
 					removeCounter += 1;
 					var percent = Math.round(removeCounter/res.rows.length * 100);
-					$("#cachingPercentComplete").html("<center>Removed " + percent + "%</center>");
+					Arbiter.setMessageOverlay("Cache Tiles", "Removed " + percent + "%");
 
 					if (TileUtil.debug) {
 						console.log("removeCounter: " + removeCounter + ", percent cleared: " + percent);
@@ -1113,24 +928,7 @@ dumpTableNames: function(database){
 		Arbiter.error("chk20", e1, e2);
 	});
 },
-// TODO: neds a call baclk instead
-//tableToString: function(database, tableName){
-//	console.log("---- TileUtil.tableToString");
-//	var str = "";
-//	database.transaction(function(tx){
-//		tx.executeSql("SELECT * FROM " + tableName + ";", [], function(tx, res){
-//			str = TileUtil.rowsToString(res.rows);
-//		}, function(e1, e2) {
-//			alert("chk21");
-//			Arbiter.error(e1, e2);
-//		});	
-//	}, function(e1, e2) {
-//		alert("chk22");
-//		Arbiter.error(e1, e2);
-//	});
-//	
-//	return str;
-//},
+
 
 dumpTableRows: function(database, tableName){
 	console.log("---- TileUtil.dumpTableRows");

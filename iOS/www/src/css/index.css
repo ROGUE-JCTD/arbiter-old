@@ -130,7 +130,7 @@ html, body {
 	display:none;
 }
 
-#idCachingTilesMenu {
+#idWorkingOverlay {
 	overflow: scroll;
 	left: 100%;
 	right: 0px;
