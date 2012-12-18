@@ -3490,9 +3490,29 @@ var Arbiter = {
 				jqDeleteFeatureButton.toggle();
 			}
 		});
+		
+		var poiInBounds;
+		newWFSLayer.events.register("beforefeatureadded", null, function(event) {
+			//if in bounds
+			if(event.feature.geometry.x > Arbiter.currentProject.aoi.left &&
+					event.feature.geometry.x < Arbiter.currentProject.aoi.right &&
+					event.feature.geometry.y > Arbiter.currentProject.aoi.bottom &&
+					event.feature.geometry.y < Arbiter.currentProject.aoi.top) {
+				poiInBounds = true;
+				return true;
+			}
+				
+			//if out of bounds
+			console.log('Feature is out of bounds');
+			poiInBounds = false;
+			return false;
+		});
 
 		var addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer, OpenLayers.Handler.Point);
 		addFeatureControl.events.register("featureadded", null, function(event) {
+			if(poiInBounds == false) {
+				return false;
+			}
 			// populate the features attributes object
 			var attributes = Arbiter.currentProject.serverList[meta.serverName].layers[meta.nickname].attributes;
 
