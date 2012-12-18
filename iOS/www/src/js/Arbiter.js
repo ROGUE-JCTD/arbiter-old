@@ -2632,9 +2632,17 @@ var Arbiter = {
 				if(capes && capes.capability && capes.capability.layers){
 					var layer;
 					var layersrs;
+					var layerList = capes.capability.layers;
+					layerList.sort(function(a, b){
+						var titleA = a.title.toLowerCase();
+						var titleB = b.title.toLowerCase();
+						if(titleA < titleB) return -1;
+						if(titleA > titleB) return 1;
+						return 0;
+					});
 					
-					for(var i = 0;i < capes.capability.layers.length;i++){
-						layer = capes.capability.layers[i];
+					for(var i = 0;i < layerList.length;i++){
+						layer = layerList[i];
 						
 						//Get the layers srs
 						for(var x in layer.bbox){
