@@ -1511,7 +1511,7 @@ var Arbiter = {
 	
 	populateAddServerDialog: function(){
 		jqNewNickname.val("");
-		jqNewServerURL.val("");
+		jqNewServerURL.val("http://");
 		jqNewUsername.val("");
 		jqNewPassword.val("");
 
