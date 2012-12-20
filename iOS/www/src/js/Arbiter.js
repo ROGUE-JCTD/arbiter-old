@@ -1511,7 +1511,7 @@ var Arbiter = {
 	
 	populateAddServerDialog: function(){
 		jqNewNickname.val("");
-		jqNewServerURL.val("");
+		jqNewServerURL.val("http://");
 		jqNewUsername.val("");
 		jqNewPassword.val("");
 
@@ -2632,9 +2632,17 @@ var Arbiter = {
 				if(capes && capes.capability && capes.capability.layers){
 					var layer;
 					var layersrs;
+					var layerList = capes.capability.layers;
+					layerList.sort(function(a, b){
+						var titleA = a.title.toLowerCase();
+						var titleB = b.title.toLowerCase();
+						if(titleA < titleB) return -1;
+						if(titleA > titleB) return 1;
+						return 0;
+					});
 					
-					for(var i = 0;i < capes.capability.layers.length;i++){
-						layer = capes.capability.layers[i];
+					for(var i = 0;i < layerList.length;i++){
+						layer = layerList[i];
 						
 						//Get the layers srs
 						for(var x in layer.bbox){
@@ -3482,9 +3490,29 @@ var Arbiter = {
 				jqDeleteFeatureButton.toggle();
 			}
 		});
+		
+		var poiInBounds;
+		newWFSLayer.events.register("beforefeatureadded", null, function(event) {
+			//if in bounds
+			if(event.feature.geometry.x > Arbiter.currentProject.aoi.left &&
+					event.feature.geometry.x < Arbiter.currentProject.aoi.right &&
+					event.feature.geometry.y > Arbiter.currentProject.aoi.bottom &&
+					event.feature.geometry.y < Arbiter.currentProject.aoi.top) {
+				poiInBounds = true;
+				return true;
+			}
+				
+			//if out of bounds
+			console.log('Feature is out of bounds');
+			poiInBounds = false;
+			return false;
+		});
 
 		var addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer, OpenLayers.Handler.Point);
 		addFeatureControl.events.register("featureadded", null, function(event) {
+			if(poiInBounds == false) {
+				return false;
+			}
 			// populate the features attributes object
 			var attributes = Arbiter.currentProject.serverList[meta.serverName].layers[meta.nickname].attributes;
 
