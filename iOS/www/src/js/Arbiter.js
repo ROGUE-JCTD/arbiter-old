@@ -1298,7 +1298,7 @@ var Arbiter = {
     	if(awayFromMap === true){
     		Arbiter.changePage_Pop(div_MapPage);
     	}else{ //change to the project name page
-    		window.history.back();
+    		Arbiter.changePage_Pop(div_NewProjectPage);
     	}
     },
     
@@ -3523,7 +3523,7 @@ var Arbiter = {
 	},
 	
 	changePage_Pop: function(_div) {
-		$.mobile.changePage(_div, "pop");
+		$.mobile.changePage(_div /*, {transition: "pop"}*/);
 	},
 	
 	getOrientation: function() {
