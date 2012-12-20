@@ -31,9 +31,9 @@
 		<link rel="stylesheet" type="text/css" href="css/jquery.mobile.theme-1.2.0.min.css"/>
 		<link rel="stylesheet" type="text/css" href="css/glyphish.css"/>
 		<link rel="stylesheet" type="text/css" href="OpenLayers-2.12/theme/default/style.mobile.css"/>
-		<!--
+		
 		<script src="http://localhost:8082/target/target-script-min.js#anonymous"></script>
-		-->
+		
 		<script type="text/javascript" src="../cordova-2.2.0.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
 		<script type="text/javascript" src="js/Arbiter.js"></script>
@@ -214,19 +214,29 @@
 				<a onClick="Arbiter.onClick_EditLayers()" class="ui-btn-right" data-icon="info" data-localize="button.edit">Edit</a>
 			</div>
 			
-			<!-- Content -->
+			<!-- Content --
 			<div data-role="content" class="LayersPageContent" id='idLayersPageContent'>
 				<ul data-role="listview" id='layer-list'>
 				</ul>
 			</div>
-			<!-- /Content -->
-			
+			<!-- Content -->
+			<div data-role="content" class="LayerSettingsPageContent" id='idLayerSettingsPageContent'>
+				<a onClick="Arbiter.onAddLayerPage()" id="idLayerSettingsAddLayer"><input type="submit" value="Add a layer" data-mini="true"></a>
+				<div id="idLayerSettingsList"></div>
+			</div>
+						
 			<!-- Footer -->
+			<div data-role="footer" class="PageFooter" id="idPageFooterWizard" data-position="fixed">
+				<div data-role="navbar" data-iconpos="top">
+					<ul>
+						<li><a href="#idAreaOfInterestPage"><div data-localize="footer.next">Next</div></a></li>
+					</ul>
+				</div>
+			</div>
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
-						<li><a href="#idAddLayerPage"><div data-localize="footer.newLayer">Add a new layer.</div></a></li>
-						<li><a href="#idAreaOfInterestPage"><div data-localize="footer.next">Next</div></a></li>
+						<li><a href="#idProjectSettingsPage"><div data-localize="footer.done">Done</div></a></li>
 					</ul>
 				</div>
 			</div>
@@ -371,7 +381,7 @@
 			<!-- Content -->
 			<div data-role="content" class="ProjectSettingsPageContent" id='idProjectSettingsPageContent'>
 				<a href="#idAreaOfInterestPage"><input type="submit" value="Area Of Interest" data-mini="true"></a>
-				<a href="#idLayerSettingsPage"><input type="submit" value="Layers" data-mini="true"></a>
+				<a href="#idLayersPage"><input type="submit" value="Layers" data-mini="true"></a>
 				<!--
 				<a href="#idAreaOfInterestPage" data-icon="gear"><div data-localize="footer.arbiter">Area Of Interest</div></a>
 				-->

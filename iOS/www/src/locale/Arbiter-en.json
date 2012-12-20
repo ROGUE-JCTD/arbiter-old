@@ -39,6 +39,7 @@
 		"createNewProject" : "Create a new project.",
 		"previous": "Previous",
 		"next": "Next",
+		"done": "Done",
 		"newServer": "Add a new server.",
 		"addServer": "Add Server",
 		"editServer": "Edit Server",

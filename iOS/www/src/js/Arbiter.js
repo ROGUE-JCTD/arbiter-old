@@ -52,8 +52,8 @@ var div_ProjectsPage;
 var div_NewProjectPage;
 var div_ServersPage;
 var div_LayersPage;
-var div_AddLayersPage;
-var div_EditLayersPage;
+var div_AddLayerPage;
+var div_EditLayerPage;
 var div_AreaOfInterestPage;
 var div_ArbiterSettingsPage;
 var div_ProjectSettingsPage;
@@ -173,8 +173,8 @@ var Arbiter = {
 		div_NewProjectPage	= $('#idNewProjectPage');
 		div_ServersPage		= $('#idServersPage');
 		div_LayersPage		= $('#idLayersPage');
-		div_AddLayersPage	= $('#idAddLayerPage');
-		div_EditLayersPage	= $('#idEditLayerPage');
+		div_AddLayerPage	= $('#idAddLayerPage');
+		div_EditLayerPage	= $('#idEditLayerPage');
 		div_AreaOfInterestPage = $('#idAreaOfInterestPage');
 		div_ArbiterSettingsPage	= $('#idArbiterSettingsPage');
 		div_ProjectSettingsPage	= $('#idProjectSettingsPage');
@@ -216,9 +216,10 @@ var Arbiter = {
 		jqSyncUpdates	 = $('#syncUpdates');
 		jqProjectPageContent = $('#idProjectPageContent');
 		jqServersPageContent = $('.ServersPageContent');
+		
+		
 		div_ProjectsPage.live('pageshow', Arbiter.PopulateProjectsList);
 		div_ServersPage.live('pagebeforeshow', Arbiter.PopulateServersList);
-		div_LayersPage.live('pageshow', Arbiter.PopulateLayersList);
 
 		//Acquire the file system
 
@@ -407,8 +408,6 @@ var Arbiter = {
 		div_AreaOfInterestPage.live('pageshow', Arbiter.onShowAOIMap);
 		div_AreaOfInterestPage.live('pagehide', Arbiter.onHideAOIMap);
 
-		div_AddLayersPage.live('pagebeforeshow', Arbiter.resetAddLayersPage);
-		div_EditLayersPage.live('pagebeforeshow', Arbiter.resetEditLayersPage);
 		
 		Arbiter.layersSettingsList = new ListWidget({
 			div_id: "idLayerSettingsList", 
@@ -506,7 +505,17 @@ var Arbiter = {
 			}
 		});
 		
-		$('#idLayerSettingsPage').live('pagebeforeshow', function(){
+		$('#idLayersPage').live('pageshow', function(){
+			if (awayFromMap === true){
+				$('#idLayersPage #idPageFooter').show();
+				$('#idLayersPage #idPageFooterWizard').hide();
+			} else {
+				$('#idLayersPage #idPageFooter').hide();
+				$('#idLayersPage #idPageFooterWizard').show();
+			}
+		});		
+		
+		$('#idLayersPage').live('pagebeforeshow', function(){
 			Arbiter.layersSettingsList.clearList();
 			var serverList = Arbiter.currentProject.serverList;
 			
@@ -2129,77 +2138,43 @@ var Arbiter = {
 		}
 	},
 	
-	resetAddLayersPage: function() {
-		//alert("resetAddLayersPage");
-		console.log("Reset Add Layers");
-		Arbiter.addServersToLayerDropdown();
-		Arbiter.disableLayerSelectAndNickname();
-	},
-	
-	resetEditLayersPage: function() {
-		//alert("resetEditLayersPage");
-		console.log("Reset Edit Layers");
-		//Arbiter.addServersToLayerDropdown();
-		//Arbiter.disableLayerSelectAndNickname();
-		
-		if(tempLayerToEdit) {
-			console.log("Change Layer - " + tempLayerToEdit);
-			jqEditLayerSelect.val(tempLayerToEdit).change();
-			tempLayerToEdit = null;
-		}
-		
-		if(jqEditLayerSelect.parent().parent().hasClass('ui-select')) {
-			console.log("Refresh Layer Select");
-			jqEditLayerSelect.selectmenu('refresh', true);
-		}
-	},
-	
 	restExistingServersCheckboxes: function() {
 		$('.existingServer-checkbox').each(function(index) {
 		    $(this).prop('checked', false);
 		});		
 	},
 	
-	addServersToLayerDropdown: function(_serverName) {
+	addServersToLayerDropdown: function() {
+		console.log('addServersToLayerDropdown: ' );
 		console.log(Arbiter.currentProject.serverList);
 		
 		//Clear the list
 		jqServerSelect.empty();
-		jqEditServerSelect.empty();
+//		jqEditServerSelect.empty();
 		
 		//Choose your server option
 		var option = '<option value="" data-localize="label.chooseAServer">Choose a server...</option>';
 		jqServerSelect.append(option);
-		jqEditServerSelect.append(option);
+//		jqEditServerSelect.append(option);
 
 
 		//Add all the servers to the list
 		for(var key in Arbiter.currentProject.serverList) {
 			option = '<option value="' + key + '">' + key + '</option>';
 			jqServerSelect.append(option);
-			jqEditServerSelect.append(option);
+//			jqEditServerSelect.append(option);
 		}
-		
-		// if a server is not specified and we only have one server, choose the 1st one
-		if (!_serverName){
-			var severListKeys = Object.keys(Arbiter.currentProject.serverList);
-			if (severListKeys.length === 1){
-				_serverName = severListKeys[0];
-			}
-		}
-		
-		if(_serverName) {
-			jqServerSelect.val(_serverName).change();
-			jqEditServerSelect.val(_serverName).change();
-		}
+				
 		
 		if(jqServerSelect.parent().parent().hasClass('ui-select')) {
 			jqServerSelect.selectmenu('refresh', true);
 		}
 		
-		if(jqEditServerSelect.parent().parent().hasClass('ui-select')) {
-			jqEditServerSelect.selectmenu('refresh', true);
-		}
+//		if(jqEditServerSelect.parent().parent().hasClass('ui-select')) {
+//			jqEditServerSelect.selectmenu('refresh', true);
+//		}
+		console.log('addServersToLayerDropdown, done ' );
+		
 	},
 	
 	onClick_EditServer: function() {
@@ -2313,15 +2288,6 @@ var Arbiter = {
 		}
 	},
 	
-	PopulateLayersList: function() {
-		//Fill the servers list (id=idLayersList) with the ones that are available.
-		// - Make the div's id = to some number...idk;
-		console.log("PopulateLayersList");
-	
-		//TODO: Load layers that are available
-		// - add them to the LayersList
-	},
-	
 	onClick_EditLayers: function() {
 		//TODO: Make the servers List editable
 		console.log("User wants to edit his/her layers.");
@@ -2365,10 +2331,7 @@ var Arbiter = {
 	failedGetProjectDirectory: function(error) {
 		console.log("Failed to read Project Directory.");
 	},
-	
-	parseProjectFromDirectory: function(_dir) {
-		
-	},
+
 		
 	validateAddLayerSubmit: function(){
 		var valid = true;
@@ -2458,7 +2421,7 @@ var Arbiter = {
 							
 						if(!map){
 							var layerName = selectedOption.html();
-							var li = "<li><a onClick='Arbiter.editLayer(\"" + typeName + "\", \"" + layernickname + "\", " + serverInfo.serverId + ")' class='layer-list-item'>" + layernickname + "</a></li>";
+							var li = "<li><a onClick='Arbiter.onAddLayerPage(\"" + typeName + "\", \"" + layernickname + "\", " + serverInfo.serverId + ")' class='layer-list-item'>" + layernickname + "</a></li>";
 							
 							$("ul#layer-list").append(li).listview("refresh");
 						}else{
@@ -2476,8 +2439,9 @@ var Arbiter = {
 			});
 		}
 	},
-	
+/*	
 	editLayer: function(_layerName, _layerNickname, _serverID){
+		alert('editLayer');
 		console.log("Layer to edit: " + _layerName + " - " + _serverID);
 	
 		console.log("Edit Server " + _serverID);
@@ -2497,9 +2461,61 @@ var Arbiter = {
 		Arbiter.addServersToLayerDropdown(serverIndex);
 		tempLayerToEdit = _layerName;
 		console.log("Setting Nickname to " + _layerNickname);
-		jqEditLayerNickname.val(_layerNickname);
+		jqLayerNickname.val(_layerNickname);
 		
-		Arbiter.changePage_Pop(div_EditLayersPage);
+		Arbiter.changePage_Pop(div_AddLayerPage);
+	},
+*/	
+	onAddLayerPage: function(_layerName, _layerNickname, _serverID){
+		alert('onAddLayerPage');
+		//console.log("onAddLayerPage: " + _layerName + " - " + _serverID);
+		
+		var serverName = null;
+
+		Arbiter.addServersToLayerDropdown();
+		
+		// if this is a new layer
+		if (!_layerNickname){
+			
+			
+			// if we only have one server, select it
+			var severListKeys = Object.keys(Arbiter.currentProject.serverList);
+			if (severListKeys.length === 1){
+				serverName = severListKeys[0];
+				Arbiter.enableLayerSelectAndNickname();
+			} else {
+				Arbiter.disableLayerSelectAndNickname();
+			}
+			
+			console.log('onAddLayerPage, new layer section done');
+		} else {
+			// if this is editing an existing layer
+
+			Arbiter.enableLayerSelectAndNickname();
+			
+			console.log("Edit Server " + _serverID);
+		
+			for(var key in Arbiter.currentProject.serverList) {
+				console.log("Current Server to check:");
+				console.log(Arbiter.currentProject.serverList[key]);
+				if(_serverID == Arbiter.currentProject.serverList[key].serverId) {
+					serverName = key;
+					console.log("Server Found! - " + serverName);
+					break;
+				}
+			}
+			
+			console.log("Setting Server to " + serverName);
+			console.log("Setting Nickname to " + _layerNickname);
+			jqLayerNickname.val(_layerNickname);
+		}
+
+		if(serverName) {
+			jqServerSelect.val(serverName).change();
+		}
+		
+		console.log('about to pop the page');
+		Arbiter.changePage_Pop(div_AddLayerPage);
 	},
 	
 	saveLayer: function() {
