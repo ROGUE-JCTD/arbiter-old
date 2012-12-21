@@ -547,7 +547,7 @@
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
 				<a data-rel="back" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
-				<h1 data-localize="page.newLayer">New Layer</h1>
+				<h1 data-localize="page.layer">Layer</h1>
 			</div>
 			
 			<!-- Content -->
@@ -564,9 +564,9 @@
 						<option value="" data-localize="label.chooseALayer">Choose a layer...</option>
 					</select>
 				</div>
-				<div data-role="fieldcontain" class="ui-hide-label">
+				<div data-role="fieldcontain">
 					<label for="layernickname">Give it a nickname</label>
-					<input type="text" autocorrect="off" autocapitalize="off" name="layernickname" id="layernickname" disabled="disabled" placeholder="Give layer a nickname *" data-localize="label.layerNickname"/>
+					<input type="text" autocorrect="off" autocapitalize="off" name="layernickname" id="layernickname" placeholder="Give layer a nickname *" data-localize="label.layerNickname"/>
 				</div>
 			</div>
 			
@@ -574,7 +574,7 @@
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
-						<li><a id="addLayerSubmit" onClick="Arbiter.submitLayer()"><div data-localize="footer.addLayer">Add Layer</div></a></li>
+						<li><a id="addLayerSubmit" onClick="Arbiter.submitLayer()"><div data-localize="footer.save">Save</div></a></li>
 					</ul>
 				</div>
 			</div>

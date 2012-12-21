@@ -2427,53 +2427,31 @@ var Arbiter = {
 		
 		// if this is a new layer
 		if (!_layerNickName){
-			alert("Add layer");
+			console.log("onAddLayerPage.Add layer");
 			
 			// if we only have one server, select it
 			var severListKeys = Object.keys(Arbiter.currentProject.serverList);
 			if (severListKeys.length === 1){
-				_serverName = severListKeys[0];
 				Arbiter.enableLayerSelectAndNickname();
+				jqServerSelect.val(severListKeys[0]).change();
 			} else {
 //				Arbiter.disableLayerSelectAndNickname();
 			}
-			
-			console.log('onAddLayerPage, new layer section done');
 		} else {
 			// if this is editing an existing layer
-			alert("Edit layer");
+			console.log("onAddLayerPage.Edit layer");
 
-			console.log("_serverName ", _serverName);
-			console.log("_layerNickName ", _layerNickName);
-			console.log("_layerTypeName ", _layerTypeName);
-			
-			alert("check names!");
-			
 			Arbiter.enableLayerSelectAndNickname();
-			
-			/*
-			for(var key in Arbiter.currentProject.serverList) {
-				console.log("Current Server to check:");
-				console.log(Arbiter.currentProject.serverList[key]);
-				if(_serverID == Arbiter.currentProject.serverList[key].serverId) {
-					serverName = key;
-					console.log("Server Found! - " + serverName);
-					break;
-				}
-			}
-			*/
+
 			jqLayerNickname.val(_layerNickName);
+
+			// set server name and refresh but do not cause a change event 
+			jqServerSelect.val(_serverName);
+			jqServerSelect.selectmenu('refresh', true);
 			
 			jqLayerSelect.val(_layerTypeName).change();
 		}
 		
-		if(_serverName) {
-			jqServerSelect.val(_serverName);//.change();
-			//TODO: refresh it when we are editing layer
-			// when not editing layer, call change()
-		}
-		
-		console.log('about to pop the page');
 		Arbiter.changePage_Pop(div_AddLayerPage);
 	},
 	

@@ -40,6 +40,7 @@
 		"previous": "Previous",
 		"next": "Next",
 		"done": "Done",
+		"save": "Save",
 		"newServer": "Add a new server.",
 		"addServer": "Add Server",
 		"editServer": "Edit Server",
@@ -51,6 +52,7 @@
 		"project" : "Project",
 		"servers" : "Servers",
 		"layers" : "Layers",
+		"layer" : "Layer",
 		"area" : "Area"
 	},
 	"feature": {
