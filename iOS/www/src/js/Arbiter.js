@@ -53,7 +53,6 @@ var div_NewProjectPage;
 var div_ServersPage;
 var div_LayersPage;
 var div_AddLayerPage;
-var div_EditLayerPage;
 var div_AreaOfInterestPage;
 var div_ArbiterSettingsPage;
 var div_ProjectSettingsPage;
@@ -77,11 +76,8 @@ var jqEditServerButton;
 var jqGoToAddServer;
 var jqAddServerPage;
 var jqServerSelect;
-var jqEditServerSelect;
 var jqLayerSelect;
-var jqEditLayerSelect;
 var jqLayerNickname;
-var jqEditLayerNickname;
 var jqLayerSubmit;
 var jqProjectsList;
 var jqEditorTab;
@@ -174,7 +170,6 @@ var Arbiter = {
 		div_ServersPage		= $('#idServersPage');
 		div_LayersPage		= $('#idLayersPage');
 		div_AddLayerPage	= $('#idAddLayerPage');
-		div_EditLayerPage	= $('#idEditLayerPage');
 		div_AreaOfInterestPage = $('#idAreaOfInterestPage');
 		div_ArbiterSettingsPage	= $('#idArbiterSettingsPage');
 		div_ProjectSettingsPage	= $('#idProjectSettingsPage');
@@ -198,12 +193,9 @@ var Arbiter = {
 		jqGoToAddServer = $('#goToAddServer');
 		jqAddServerPage = $('#idAddServerPage');
 		jqServerSelect = $('#serverselect');
-		jqEditServerSelect = $('#Edit_serverselect');
 		jqExistingServers = $('#existingServers');
 		jqLayerSelect = $('#layerselect');
-		jqEditLayerSelect = $('#Edit_layerselect');
 		jqLayerNickname = $('#layernickname');
-		jqEditLayerNickname = $('#Edit_layernickname');
 		jqLayerSubmit = $('#addLayerSubmit');
 		jqProjectsList = $('ul#idProjectsList');
 		jqEditorTab = $('#editorTab');
@@ -309,7 +301,7 @@ var Arbiter = {
 														delete Arbiter.currentProject.serverList[itemInfo.servername];
 													},
 													onContentClicked: function(itemInfo){ //TODO : FIX THIS SHIAT
-														console.log("Content clicked!", itemInfo);
+														console.log("server list content clicked!", itemInfo);
 																							
 															Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers WHERE name=?;", [itemInfo.servername], function(tx, res){
 																if(res.rows.length){
@@ -481,7 +473,8 @@ var Arbiter = {
 			},
 			edit_button_id: "layersSettingsEditButton",
 			onContentClicked: function(itemInfo){
-				console.log("content clicked!", itemInfo);
+				console.log("layers list content clicked!", itemInfo);
+				Arbiter.onAddLayerPage(itemInfo.layernickname, itemInfo.layertypename, itemInfo.servername);
 			}
 		});
 		
@@ -525,8 +518,9 @@ var Arbiter = {
 			for(var serverKey in serverList){
 				for(var layerKey in serverList[serverKey].layers){
 					Arbiter.layersSettingsList.append(layerKey, {
-						"serverName": serverKey,
-						"layerName": layerKey
+						"servername": serverKey,
+						"layernickname": layerKey, 
+						"layertypename": serverList[serverKey].layers[layerKey].typeName
 					});
 				}
 			}
@@ -582,28 +576,19 @@ var Arbiter = {
 			var serverName = $(this).val();
 			if(serverName){
 				Arbiter.getFeatureTypesOnServer(serverName);
+				Arbiter.enableLayerSelectAndNickname();
 			}else{
 				jqLayerSelect.html('<option value="" data-localize="label.chooseALayer">Choose a layer...</option>');
 				jqLayerSelect.selectmenu('refresh', true);
 				jqLayerNickname.val('');
-				Arbiter.disableLayerSelectAndNickname();
+//				Arbiter.disableLayerSelectAndNickname();
 			}
-		});
-
-		jqEditServerSelect.change(function(event){
-			//var serverUrl = $(this).val();
-							  console.log($(this).val());
-			Arbiter.getFeatureTypesOnServer($(this).val());
 		});
 
 		jqLayerSelect.change(function(event){
 			jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
 		});
-		
-		jqEditLayerSelect.change(function(event){
-			jqEditLayerNickname.val(jqEditLayerSelect.find('option:selected').text());
-		});
-		
+
 		jqAddFeature.click(function(event){
 			console.log("Add Feature");
 			if(Arbiter.currentProject.activeLayer){
@@ -2150,19 +2135,15 @@ var Arbiter = {
 		
 		//Clear the list
 		jqServerSelect.empty();
-//		jqEditServerSelect.empty();
 		
 		//Choose your server option
 		var option = '<option value="" data-localize="label.chooseAServer">Choose a server...</option>';
 		jqServerSelect.append(option);
-//		jqEditServerSelect.append(option);
-
 
 		//Add all the servers to the list
 		for(var key in Arbiter.currentProject.serverList) {
 			option = '<option value="' + key + '">' + key + '</option>';
 			jqServerSelect.append(option);
-//			jqEditServerSelect.append(option);
 		}
 				
 		
@@ -2170,11 +2151,7 @@ var Arbiter = {
 			jqServerSelect.selectmenu('refresh', true);
 		}
 		
-//		if(jqEditServerSelect.parent().parent().hasClass('ui-select')) {
-//			jqEditServerSelect.selectmenu('refresh', true);
-//		}
 		console.log('addServersToLayerDropdown, done ' );
-		
 	},
 	
 	onClick_EditServer: function() {
@@ -2372,6 +2349,7 @@ var Arbiter = {
 			var request = new OpenLayers.Request.GET({
 				url: serverInfo.url + "/wfs?service=wfs&version=1.1.0&request=DescribeFeatureType&typeName=" + typeName,
 				callback: function(response){
+					console.log('response for get info on wms: ', response );
 					var obj = describeFeatureTypeReader.read(response.responseText);
 													 
 					if(obj.featureTypes && obj.featureTypes.length){
@@ -2407,6 +2385,8 @@ var Arbiter = {
 						
 						var selectedOption = jqLayerSelect.find('option:selected');
 						
+						//var selectedOption = jqLayerSelect.val();
+
 						var layernickname = jqLayerNickname.val();
 						serverInfo.layers[layernickname] = {
 							featureNS: obj.targetNamespace,
@@ -2419,82 +2399,59 @@ var Arbiter = {
 							attributeTypes: attributeTypes
 						};
 							
-						if(!map){
-							var layerName = selectedOption.html();
-							var li = "<li><a onClick='Arbiter.onAddLayerPage(\"" + typeName + "\", \"" + layernickname + "\", " + serverInfo.serverId + ")' class='layer-list-item'>" + layernickname + "</a></li>";
-							
-							$("ul#layer-list").append(li).listview("refresh");
-						}else{
+						if(awayFromMap){
 							Arbiter.layerCount = 1;
 							Arbiter.insertProjectsLayer(serverInfo.serverId, serverName, layernickname, serverInfo.layers[layernickname], true);
-						}								 
+						}													 
 						
 					}else{
-						console.log("no feature type");
+						Arbiter.error("Invalid feature type");
 					}
 													 
 					jqLayerSubmit.removeClass('ui-btn-active');
 					window.history.back();
 				}
 			});
+		} else {
+			Arbiter.error('Selected layer is not valid');
 		}
 	},
-/*	
-	editLayer: function(_layerName, _layerNickname, _serverID){
-		alert('editLayer');
-		console.log("Layer to edit: " + _layerName + " - " + _serverID);
 	
-		console.log("Edit Server " + _serverID);
-		var serverIndex;
-	
-		for(var index in Arbiter.currentProject.serverList) {
-			console.log("Current Server to check:");
-			console.log(Arbiter.currentProject.serverList[index]);
-			if(_serverID == Arbiter.currentProject.serverList[index].serverId) {
-				serverIndex = index;
-				console.log("Server Found! - " + serverIndex);
-				break;
-			}
-		}
-		
-		console.log("Setting Server to " + serverIndex);
-		Arbiter.addServersToLayerDropdown(serverIndex);
-		tempLayerToEdit = _layerName;
-		console.log("Setting Nickname to " + _layerNickname);
-		jqLayerNickname.val(_layerNickname);
-		
-		Arbiter.changePage_Pop(div_AddLayerPage);
-	},
-*/	
-	onAddLayerPage: function(_layerName, _layerNickname, _serverID){
-		alert('onAddLayerPage');
-		//console.log("onAddLayerPage: " + _layerName + " - " + _serverID);
-		
-		var serverName = null;
+	onAddLayerPage: function(_layerNickName, _layerTypeName, _serverName){
+		console.log('onAddLayerPage');
+		console.log("_serverName ", _serverName);
+		console.log("_layerNickName ", _layerNickName);
+		console.log("_layerTypeName ", _layerTypeName);
 
 		Arbiter.addServersToLayerDropdown();
 		
 		// if this is a new layer
-		if (!_layerNickname){
-			
+		if (!_layerNickName){
+			alert("Add layer");
 			
 			// if we only have one server, select it
 			var severListKeys = Object.keys(Arbiter.currentProject.serverList);
 			if (severListKeys.length === 1){
-				serverName = severListKeys[0];
+				_serverName = severListKeys[0];
 				Arbiter.enableLayerSelectAndNickname();
 			} else {
-				Arbiter.disableLayerSelectAndNickname();
+//				Arbiter.disableLayerSelectAndNickname();
 			}
 			
 			console.log('onAddLayerPage, new layer section done');
 		} else {
 			// if this is editing an existing layer
+			alert("Edit layer");
 
+			console.log("_serverName ", _serverName);
+			console.log("_layerNickName ", _layerNickName);
+			console.log("_layerTypeName ", _layerTypeName);
+			
+			alert("check names!");
+			
 			Arbiter.enableLayerSelectAndNickname();
 			
-			console.log("Edit Server " + _serverID);
-		
+			/*
 			for(var key in Arbiter.currentProject.serverList) {
 				console.log("Current Server to check:");
 				console.log(Arbiter.currentProject.serverList[key]);
@@ -2504,22 +2461,20 @@ var Arbiter = {
 					break;
 				}
 			}
+			*/
+			jqLayerNickname.val(_layerNickName);
 			
-			console.log("Setting Server to " + serverName);
-			console.log("Setting Nickname to " + _layerNickname);
-			jqLayerNickname.val(_layerNickname);
+			jqLayerSelect.val(_layerTypeName).change();
 		}
-
-		if(serverName) {
-			jqServerSelect.val(serverName).change();
+		
+		if(_serverName) {
+			jqServerSelect.val(_serverName);//.change();
+			//TODO: refresh it when we are editing layer
+			// when not editing layer, call change()
 		}
 		
 		console.log('about to pop the page');
 		Arbiter.changePage_Pop(div_AddLayerPage);
-	},
-	
-	saveLayer: function() {
-		console.log("Saving disabled for the time being.");
 	},
 	
 	//override: Bool, should override
@@ -2607,14 +2562,10 @@ var Arbiter = {
 		jqLayerSelect.removeAttr('aria-disabled disabled').removeClass('mobile-selectmenu-disabled ui-state-disabled');
 		
 		jqLayerNickname.removeAttr('disabled');
-		
-		jqEditLayerSelect.parent().removeClass('ui-disabled').removeAttr('aria-disabled');
-		jqEditLayerSelect.removeAttr('aria-disabled disabled').removeClass('mobile-selectmenu-disabled ui-state-disabled');
-		
-		jqEditLayerNickname.removeAttr('disabled');
 	},
 	
 	disableLayerSelectAndNickname: function(){
+		
 		//Clear the list
 		jqLayerSelect.empty();
 		
@@ -2674,10 +2625,6 @@ var Arbiter = {
 							
 					if(jqLayerSelect.parent().parent().hasClass('ui-select')) {
 						jqLayerSelect.html(options).selectmenu('refresh', true);
-					}
-					
-					if(jqEditLayerSelect.parent().parent().hasClass('ui-select')) {
-						jqEditLayerSelect.html(options).selectmenu('refresh', true);
 					}
 					
 					Arbiter.enableLayerSelectAndNickname();
