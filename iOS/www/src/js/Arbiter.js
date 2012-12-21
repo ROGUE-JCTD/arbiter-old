@@ -2560,11 +2560,11 @@ var Arbiter = {
 		var option = '<option value="" data-localize="label.chooseALayer">Choose a layer...</option>';
 		jqLayerSelect.append(option);
 		
-		jqLayerSelect.parent().addClass('ui-disabled').attr('aria-disabled', 'true');
-		jqLayerSelect.attr('disabled', 'disabled').attr('aria-disabled', 'true').addClass('mobile-selectmenu-disabled ui-state-disabled');
+		//jqLayerSelect.parent().addClass('ui-disabled').attr('aria-disabled', 'true');
+		//jqLayerSelect.attr('disabled', 'disabled').attr('aria-disabled', 'true').addClass('mobile-selectmenu-disabled ui-state-disabled');
 		
 		jqLayerNickname.val("");
-		jqLayerNickname.attr('disabled', 'disabled');
+		//jqLayerNickname.attr('disabled', 'disabled');
 		
 		if(jqLayerSelect.parent().parent().hasClass('ui-select')) {
 			jqLayerSelect.selectmenu('refresh', true);
