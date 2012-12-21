@@ -573,15 +573,16 @@ var Arbiter = {
 		});
 		
 		jqServerSelect.change(function(event){
+			console.log('jqServerSelect.change');
 			var serverName = $(this).val();
 			if(serverName){
-				Arbiter.getFeatureTypesOnServer(serverName);
+				Arbiter.addLayersOnServerToLayerDropdown(serverName);
 				Arbiter.enableLayerSelectAndNickname();
 			}else{
 				jqLayerSelect.html('<option value="" data-localize="label.chooseALayer">Choose a layer...</option>');
 				jqLayerSelect.selectmenu('refresh', true);
 				jqLayerNickname.val('');
-//				Arbiter.disableLayerSelectAndNickname();
+				Arbiter.disableLayerSelectAndNickname();
 			}
 		});
 
@@ -2133,6 +2134,10 @@ var Arbiter = {
 		console.log('addServersToLayerDropdown: ' );
 		console.log(Arbiter.currentProject.serverList);
 		
+		// initialize the select menue. in some cases it might not be initialized already
+		// such as when a project open and you go directly to edit a layer 
+		jqServerSelect.selectmenu();
+		
 		//Clear the list
 		jqServerSelect.empty();
 		
@@ -2145,11 +2150,12 @@ var Arbiter = {
 			option = '<option value="' + key + '">' + key + '</option>';
 			jqServerSelect.append(option);
 		}
-				
+	
+		// build the list
+		jqServerSelect.selectmenu('refresh', true);
 		
-		if(jqServerSelect.parent().parent().hasClass('ui-select')) {
-			jqServerSelect.selectmenu('refresh', true);
-		}
+//		if(jqServerSelect.parent().parent().hasClass('ui-select')) {
+//		}
 		
 		console.log('addServersToLayerDropdown, done ' );
 	},
@@ -2435,7 +2441,7 @@ var Arbiter = {
 				Arbiter.enableLayerSelectAndNickname();
 				jqServerSelect.val(severListKeys[0]).change();
 			} else {
-//				Arbiter.disableLayerSelectAndNickname();
+				Arbiter.disableLayerSelectAndNickname();
 			}
 		} else {
 			// if this is editing an existing layer
@@ -2448,8 +2454,13 @@ var Arbiter = {
 			// set server name and refresh but do not cause a change event 
 			jqServerSelect.val(_serverName);
 			jqServerSelect.selectmenu('refresh', true);
-			
-			jqLayerSelect.val(_layerTypeName).change();
+						
+			// wait for the layer list to make it back from the server, then try to select the layer
+			// when teh layer page opens we might still be waiting for server's response 
+			Arbiter.addLayersOnServerToLayerDropdown(_serverName, function(){
+				jqLayerSelect.val(_layerTypeName);
+				jqLayerSelect.selectmenu('refresh', true);
+			})
 		}
 		
 		Arbiter.changePage_Pop(div_AddLayerPage);
@@ -2538,12 +2549,10 @@ var Arbiter = {
 	enableLayerSelectAndNickname: function(){
 		jqLayerSelect.parent().removeClass('ui-disabled').removeAttr('aria-disabled');
 		jqLayerSelect.removeAttr('aria-disabled disabled').removeClass('mobile-selectmenu-disabled ui-state-disabled');
-		
 		jqLayerNickname.removeAttr('disabled');
 	},
 	
 	disableLayerSelectAndNickname: function(){
-		
 		//Clear the list
 		jqLayerSelect.empty();
 		
@@ -2562,15 +2571,19 @@ var Arbiter = {
 		}
 	},
 	
-	getFeatureTypesOnServer: function(serverName){
-		console.log('getFeaturetypesOnServer');
+	addLayersOnServerToLayerDropdown: function(serverName, successCallback){
+		console.log('addLayersOnServerToLayerDropdown');
+		
+		// initialize the select element as in some situation it might not have already been initialized
+		jqLayerSelect.selectmenu();
+		
 		var serverInfo = Arbiter.currentProject.serverList[serverName];
 		var request = new OpenLayers.Request.GET({
 			url: serverInfo.url + "/wms?service=wms&version=1.1.1&request=getCapabilities",
 			user: serverInfo.username,
 			password: serverInfo.password,
 			callback: function(response){
-				console.log('getFeaturetypesOnServer success');
+				console.log('addLayersOnServerToLayerDropdown success');
 				var capes = capabilitiesFormatter.read(response.responseText);
 				var options = '<option value="" data-localize="label.chooseALayer">Choose a Layer...</option>';
 				
@@ -2601,11 +2614,13 @@ var Arbiter = {
 							layer.name + '">' + layer.title + '</option>';
 					}
 							
-					if(jqLayerSelect.parent().parent().hasClass('ui-select')) {
-						jqLayerSelect.html(options).selectmenu('refresh', true);
-					}
+					jqLayerSelect.html(options).selectmenu('refresh', true);
 					
 					Arbiter.enableLayerSelectAndNickname();
+					
+					if (successCallback) {
+						successCallback();
+					}
 				}
 			}
 		});
