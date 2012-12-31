@@ -1732,7 +1732,9 @@ var Arbiter = {
 		li += "' value='choice-";
 		li += Arbiter.radioNumber + "'";
 		
-		if($('ul#editor-layer-list li').length || Arbiter.radioNumber == 1) {
+		//TODO: Save this value for repeated visits.
+		Arbiter.currentProject.currentLayerRadioNumber = 1;
+		if(Arbiter.radioNumber == Arbiter.currentProject.currentLayerRadioNumber) {
 			li += "checked='checked'/>";
 			Arbiter.currentProject.activeLayer = layerName;
 			Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
