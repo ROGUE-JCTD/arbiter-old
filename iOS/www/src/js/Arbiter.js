@@ -2066,9 +2066,28 @@ var Arbiter = {
 		});
 	},
 	
+	
+	onClick_AddServerBack : function() {
+		jqNewNickname.removeClass('invalid-field');
+		jqNewServerURL.removeClass('invalid-field');
+		jqNewUsername.removeClass('invalid-field');
+		jqNewPassword.removeClass('invalid-field');
+
+		jqAddServerButton.removeClass('ui-btn-active');
+	},
+	
+	onClick_EditServerBack : function() {
+		jqEditUsername.removeClass('invalid-field');
+		jqEditPassword.removeClass('invalid-field');
+		jqEditNickname.removeClass('invalid-field');
+		jqEditServerURL.removeClass('invalid-field');
+		
+		jqEditServerButton.removeClass('ui-btn-active');
+	},
+	
 	onClick_AddServer: function() {
 		//TODO: Add the new server to the server list
-		console.log("User wants to submit a new servers.");
+		console.log("User wants to submit a new server.");
 
 		var args = {
 			jqusername: jqNewUsername,
@@ -2076,9 +2095,10 @@ var Arbiter = {
 			jqurl: jqNewServerURL,
 			jqnickname: jqNewNickname
 		};
+
+		jqAddServerButton.removeClass('ui-btn-active');
 		
 		args.func = function(){
-			console.log("func called");
 			var name = jqNewNickname.val();
 			var url = jqNewServerURL.val();
 			var username = jqNewUsername.val();
@@ -2086,7 +2106,7 @@ var Arbiter = {
 			
 			//It's a new server so add it to the global servers table
 			var insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES (?, ?, ?, ?);";
-			
+
 			var success = function(serverId){
 				jqNewUsername.removeClass('invalid-field');
 				jqNewPassword.removeClass('invalid-field');
@@ -2098,12 +2118,10 @@ var Arbiter = {
 					serverId: serverId,
 					layers: {}
 				};
-				
-				jqAddServerButton.removeClass('ui-btn-active');
 							 
 				window.history.back();
 			};
-			
+
 			Cordova.transaction(Arbiter.globalDatabase, insertServerSql, [name, url, username, password], function(tx, res){
 				var serverId = res.insertId;
 				if(map && Arbiter.currentProject.variablesDatabase){
@@ -2168,6 +2186,7 @@ var Arbiter = {
 			jqurl: jqEditServerURL,
 			jqnickname: jqEditNickname
 		};
+		jqEditServerButton.removeClass('ui-btn-active');
 		
 		args.func = function(){
 			var username = jqEditUsername.val();
@@ -2197,8 +2216,6 @@ var Arbiter = {
 							layers: {}
 						};
 					}
-							  
-					jqEditServerButton.removeClass('ui-btn-active');
 							  
 					window.history.back();
 
@@ -2347,10 +2364,14 @@ var Arbiter = {
 		console.log("Submiting Time! ARBITER SMASH!");
 		var valid = Arbiter.validateAddLayerSubmit();
 		
+		jqLayerSubmit.removeClass('ui-btn-active');
+		
 		if(valid){
 			var serverName = jqServerSelect.val();
 			var serverInfo = Arbiter.currentProject.serverList[serverName];
 			var typeName = jqLayerSelect.val();
+
+			jqLayerNickname.removeClass('invalid-field');
 			
 			var request = new OpenLayers.Request.GET({
 				url: serverInfo.url + "/wfs?service=wfs&version=1.1.0&request=DescribeFeatureType&typeName=" + typeName,
@@ -2414,7 +2435,6 @@ var Arbiter = {
 						Arbiter.error("Invalid feature type");
 					}
 													 
-					jqLayerSubmit.removeClass('ui-btn-active');
 					window.history.back();
 				}
 			});
@@ -3450,10 +3470,7 @@ var Arbiter = {
 		var poiInBounds;
 		newWFSLayer.events.register("beforefeatureadded", null, function(event) {
 			//if in bounds
-			if(event.feature.geometry.x > Arbiter.currentProject.aoi.left &&
-					event.feature.geometry.x < Arbiter.currentProject.aoi.right &&
-					event.feature.geometry.y > Arbiter.currentProject.aoi.bottom &&
-					event.feature.geometry.y < Arbiter.currentProject.aoi.top) {
+			if(Arbiter.currentProject.aoi.contains(event.feature.geometry.x, event.feature.geometry.y)) {
 				poiInBounds = true;
 				return true;
 			}
