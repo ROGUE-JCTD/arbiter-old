@@ -554,23 +554,22 @@ var Arbiter = {
 				//Keep going when the file wasn't found
 				if(error.code == FileError.NOT_FOUND_ERR){
 					Arbiter.currentProject.name = newName;
-					Arbiter.changePage_Pop(div_ServersPage);
 					jqNewProjectName.removeClass('invalid-field');
 					jqNewProjectName.attr('placeholder', 'Name your Project *');
 					jqToServersButton.removeClass('ui-btn-active');
+					Arbiter.onShowServers();
 				}else{
 					console.log("file system error: " + error.code);				  
 				}
 		  	};
 			
-			if(newName)
+			if(newName) {
 				Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + jqNewProjectName.val(), null, projectAlreadyExists, projectDoesntExist);
+			}
 			else{
 				jqNewProjectName.addClass('invalid-field');
 				jqToServersButton.removeClass('ui-btn-active');
 			}
-			
-			Arbiter.onShowServers();
 		});
 		
 		jqServerSelect.change(function(event){
@@ -1276,7 +1275,6 @@ var Arbiter = {
     
     onShowSettings: function(){
     	console.log("---- onShowSettings");
-
     	//$('#idArbiterSettingsPage .PageFooter').animate({ "left": "0%" }, 0);
     	//$('#idServersPage .SettingsPageFooter').animate({ "left": "0%" }, 0);
     	//$('#idServersPage .CreatePageFooter').animate({ "left": "100%" }, 0);
@@ -1292,22 +1290,22 @@ var Arbiter = {
 	
     onShowArbiterSettings: function(){
     	console.log("---- onShowArbiterSettings");
-    	
-    	
-    	Arbiter.changePage_Pop(div_ArbiterSettingsPage);
     	//$('#idArbiterSettingsPage .PageFooter').animate({ "left": "100%" }, 0);
 		$('#idArbiterSettingsPage .PageFooter').hide();
+		
+		Arbiter.changePage_Pop(div_ArbiterSettingsPage);
     },
     
     onShowServers: function(){
     	console.log("---- onShowServers");
     	Arbiter.serversList.checkbox = true;
-    	Arbiter.changePage_Pop(div_ServersPage);
     	//$('#idServersPage .SettingsPageFooter').animate({ "left": "100%" }, 0);
     	//$('#idServersPage .CreatePageFooter').animate({ "left": "0%"}, 0);
 		
 		$('#idServersPage .SettingsPageFooter').hide();
 		$('#idServersPage .CreatePageFooter').show();
+		
+		Arbiter.changePage_Pop(div_ServersPage);
     },
     
     onBackFromSettings: function(){
