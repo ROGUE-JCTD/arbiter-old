@@ -2032,16 +2032,26 @@ var Arbiter = {
 		if(!password){
 			args.jqpassword.addClass('invalid-field');
 			valid = false;
-		}else
+		}else {
 			args.jqpassword.removeClass('invalid-field');
+		}
+			
+		Cordova.transaction(Arbiter.globalDatabase, "select * from servers;", [], function(tx, res){
+			var serverName = "";
+					
+			for(var i = 0; i < res.rows.length; i++){
+				serverName = res.rows.item(i).name;
+				if(nickname == serverName) {
+					args.jqnickname.addClass('invalid-field');
+					args.jqnickname.val("");
+					args.jqnickname.attr("placeholder", "Choose another Nickname *");
+					valid = false;
+				}
+			}
+		}, Arbiter.error);
 		
-		if(!nickname){
+		if(!nickname && valid == false){
 			args.jqnickname.addClass('invalid-field');
-			valid = false;
-		}else if(Arbiter.currentProject.serverList[nickname]){ //TODO: need to check the global db now
-			args.jqnickname.addClass('invalid-field');
-			args.jqnickname.val("");
-			args.jqnickname.attr("placeholder", "Choose another Nickname *");
 			valid = false;
 		}else{
 			args.jqnickname.removeClass('invalid-field');
