@@ -1278,7 +1278,8 @@ var Arbiter = {
     	//$('#idArbiterSettingsPage .PageFooter').animate({ "left": "0%" }, 0);
     	//$('#idServersPage .SettingsPageFooter').animate({ "left": "0%" }, 0);
     	//$('#idServersPage .CreatePageFooter').animate({ "left": "100%" }, 0);
-		
+
+		$('#idArbiterSettingsPage .PageFooter').show();
 		$('#idServersPage .SettingsPageFooter').show();
 		$('#idServersPage .CreatePageFooter').hide();
 		
