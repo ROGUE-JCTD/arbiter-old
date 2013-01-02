@@ -20,7 +20,9 @@
 		"more" : "More",
 		"edit": "Edit",
 		"add" : "Add",
-		"done" : "Done"
+		"done" : "Done",
+	       "map" : "Map",
+               "projects" : "Projects"
 	},
 	"label" : {
 		"name": "Name your Project *",

@@ -212,6 +212,7 @@ var Arbiter = {
 		
 		div_ProjectsPage.live('pageshow', Arbiter.PopulateProjectsList);
 		div_ServersPage.live('pagebeforeshow', Arbiter.PopulateServersList);
+		div_ArbiterSettingsPage.live('pagebeforeshow', Arbiter.renameBackButtons);
 
 		//Acquire the file system
 
@@ -1252,23 +1253,47 @@ var Arbiter = {
     	}
     },
     
+    renameBackButtons: function(){
+    	var mapBtn = $('#idSettingsBackBtn_map');
+    	var projBtn = $('#idSettingsBackBtn_proj');
+    	
+    	mapBtn.removeClass('ui-btn-left');
+    	mapBtn.removeClass('ui-btn-right');
+    	
+    	projBtn.removeClass('ui-btn-left');
+    	projBtn.removeClass('ui-btn-right');
+    
+    	if(awayFromMap == false) {
+    		mapBtn.hide();
+    		projBtn.addClass('ui-btn-left');
+    		projBtn.show();
+    	} else {
+    		projBtn.hide();
+    		mapBtn.addClass('ui-btn-left');
+    		mapBtn.show();
+    	}
+    },
+    
     onShowSettings: function(){
     	console.log("---- onShowSettings");
-    	Arbiter.changePage_Pop(div_ArbiterSettingsPage);
+
     	//$('#idArbiterSettingsPage .PageFooter').animate({ "left": "0%" }, 0);
     	//$('#idServersPage .SettingsPageFooter').animate({ "left": "0%" }, 0);
     	//$('#idServersPage .CreatePageFooter').animate({ "left": "100%" }, 0);
 		
-		idArbiterSettingsPage
 		$('#idServersPage .SettingsPageFooter').show();
 		$('#idServersPage .CreatePageFooter').hide();
 		
     	Arbiter.serversList.checkbox = false;
     	awayFromMap = true;
+    	
+    	Arbiter.changePage_Pop(div_ArbiterSettingsPage);
     },
 	
     onShowArbiterSettings: function(){
     	console.log("---- onShowArbiterSettings");
+    	
+    	
     	Arbiter.changePage_Pop(div_ArbiterSettingsPage);
     	//$('#idArbiterSettingsPage .PageFooter').animate({ "left": "100%" }, 0);
 		$('#idArbiterSettingsPage .PageFooter').hide();

@@ -168,7 +168,7 @@
 		<div data-role="page" class="Page" id='idServersPage' data-theme="a">
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-				<a onClick="Arbiter.onBackFromServers()" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<a onClick="Arbiter.onBackFromServers()" class="ui-btn-left" data-icon="back" data-localize="button.map">Map</a>
 				<h1 data-localize="page.servers">Servers</h1>
 				<a id="idEditServersButton" onClick="Arbiter.onClick_EditServer()" class="ui-btn-right" data-icon="info" data-localize="button.edit">Edit</a>
 			</div>
@@ -288,7 +288,7 @@
 		<div data-role="page" class="Page" id='idMapPage' data-theme="a">
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-				<a data-role="button" href="#idProjectsPage" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<a data-role="button" href="#idProjectsPage" class="ui-btn-left" data-icon="back" data-localize="button.projects">Projects</a>
 				<h1 id="projectName">Map</h1>
 				<a onClick="Arbiter.onShowSettings()" class="ui-btn-right" data-icon="gear" data-localize="button.settings">Settings</a>
 			</div>
@@ -344,7 +344,8 @@
 		<div data-role="page" class="Page" id='idArbiterSettingsPage' data-theme="a">
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-				<a onClick="Arbiter.onBackFromSettings()" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<a id="idSettingsBackBtn_map" onClick="Arbiter.onBackFromSettings()" class="ui-btn-left" data-icon="back" data-localize="button.map">Map</a>
+				<a id="idSettingsBackBtn_proj" onClick="Arbiter.onBackFromSettings()" class="ui-btn-right" data-icon="back" data-localize="button.projects">Projects</a>
 				<h1 data-localize="page.settings">Settings</h1>
 			</div>
 			
@@ -373,7 +374,7 @@
 		<div data-role="page" class="Page" id='idProjectSettingsPage' data-theme="a">
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-				<a onClick="Arbiter.onBackFromSettings()" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<a onClick="Arbiter.onBackFromSettings()" class="ui-btn-left" data-icon="back" data-localize="button.map">Map</a>
 				<h1 data-localize="page.settings">Settings</h1>
 			</div>
 			
