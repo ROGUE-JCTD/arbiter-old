@@ -1255,9 +1255,14 @@ var Arbiter = {
     onShowSettings: function(){
     	console.log("---- onShowSettings");
     	Arbiter.changePage_Pop(div_ArbiterSettingsPage);
-    	$('#idArbiterSettingsPage .PageFooter').animate({ "left": "0%" }, 0);
-    	$('#idServersPage .SettingsPageFooter').animate({ "left": "0%" }, 0);
-    	$('#idServersPage .CreatePageFooter').animate({ "left": "100%" }, 0);
+    	//$('#idArbiterSettingsPage .PageFooter').animate({ "left": "0%" }, 0);
+    	//$('#idServersPage .SettingsPageFooter').animate({ "left": "0%" }, 0);
+    	//$('#idServersPage .CreatePageFooter').animate({ "left": "100%" }, 0);
+		
+		idArbiterSettingsPage
+		$('#idServersPage .SettingsPageFooter').show();
+		$('#idServersPage .CreatePageFooter').hide();
+		
     	Arbiter.serversList.checkbox = false;
     	awayFromMap = true;
     },
@@ -1265,15 +1270,19 @@ var Arbiter = {
     onShowArbiterSettings: function(){
     	console.log("---- onShowArbiterSettings");
     	Arbiter.changePage_Pop(div_ArbiterSettingsPage);
-    	$('#idArbiterSettingsPage .PageFooter').animate({ "left": "100%" }, 0);
+    	//$('#idArbiterSettingsPage .PageFooter').animate({ "left": "100%" }, 0);
+		$('#idArbiterSettingsPage .PageFooter').hide();
     },
     
     onShowServers: function(){
     	console.log("---- onShowServers");
     	Arbiter.serversList.checkbox = true;
     	Arbiter.changePage_Pop(div_ServersPage);
-    	$('#idServersPage .SettingsPageFooter').animate({ "left": "100%" }, 0);
-    	$('#idServersPage .CreatePageFooter').animate({ "left": "0%"}, 0);
+    	//$('#idServersPage .SettingsPageFooter').animate({ "left": "100%" }, 0);
+    	//$('#idServersPage .CreatePageFooter').animate({ "left": "0%"}, 0);
+		
+		$('#idServersPage .SettingsPageFooter').hide();
+		$('#idServersPage .CreatePageFooter').show();
     },
     
     onBackFromSettings: function(){

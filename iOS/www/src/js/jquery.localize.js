@@ -5,9 +5,11 @@
   $ = jQuery;
 
   normaliseLang = function(lang) {
-    lang = lang.replace(/_/, '-').toLowerCase();
-    if (lang.length > 3) {
-      lang = lang.substring(0, 3) + lang.substring(3).toUpperCase();
+ 	if (lang != null) {
+		lang = lang.replace(/_/, '-').toLowerCase();
+		if (lang.length > 3) {
+			lang = lang.substring(0, 3) + lang.substring(3).toUpperCase();
+		}
     }
     return lang;
   };
@@ -93,7 +95,7 @@
       });
     };
     localizeElement = function(elem, key, value) {
-      if (elem.is('input')) {
+      if (elem.is('input') || elem.is('textarea')) {
         localizeInputElement(elem, key, value);
       } else if (elem.is('img')) {
         localizeImageElement(elem, key, value);
@@ -130,7 +132,11 @@
       value = data;
       for (_i = 0, _len = keys.length; _i < _len; _i++) {
         key = keys[_i];
-        value = value != null ? value[key] : null;
+        //value = value != null ? value[key] : null;
+ 		value = value[key];
+		if (value === void 0) {
+			break;
+		}
       }
       return value;
     };
