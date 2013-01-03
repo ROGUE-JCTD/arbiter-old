@@ -156,7 +156,7 @@ var Arbiter = {
 		//sqlitePlugin.DEBUG = true;
 		
 		Cordova.Initialize(Arbiter);
-		
+
 		//HACK: online event doesn't fire in Cordova 2.2.0
 		// - work around to see if we are online
 		if(Cordova.checkConnection()){Arbiter.onOnline();} else { Arbiter.onOffline();}
@@ -2036,7 +2036,7 @@ var Arbiter = {
 			args.jqpassword.removeClass('invalid-field');
 		}
 			
-		Cordova.transaction(Arbiter.globalDatabase, "select * from servers;", [], function(tx, res){
+		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers;", [], function(tx, res){
 			var serverName = "";
 					
 			for(var i = 0; i < res.rows.length; i++){
@@ -2044,14 +2044,16 @@ var Arbiter = {
 				if(nickname == serverName) {
 					args.jqnickname.addClass('invalid-field');
 					args.jqnickname.val("");
-					args.jqnickname.attr("placeholder", "Choose another Nickname *");
+					args.jqnickname.attr("placeholder", 'Server "' + nickname + '"already exists! *');
 					valid = false;
 				}
 			}
 		}, Arbiter.error);
 		
-		if(!nickname && valid == false){
+		if(!nickname){
 			args.jqnickname.addClass('invalid-field');
+			args.jqnickname.val("");
+			args.jqnickname.attr("placeholder", "Please enter a Nickname. *");
 			valid = false;
 		}else{
 			args.jqnickname.removeClass('invalid-field');
