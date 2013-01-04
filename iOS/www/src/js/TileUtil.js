@@ -291,6 +291,16 @@ onUpdateCachingDownloadProgress: function(){
 },
 
 getURL: function(bounds) {
+	//alert("geturl");
+
+	//TODO:
+	/**
+	 * 
+	 * when queuing cache requests for a layer, queue the bounds not xyz or url
+	 * then call getURL of that layer passing in the bounds to get the url and save the file to disk (will this work with wms request as expected ?)
+	 * the actual map's getURL will always take a bounds, convert it to xyz using TileUtil.boundsToXYZ and return the url made from the XYZ
+	 * 
+	 */
 	
 	var xyz = this.getXYZ(bounds);
     var url = this.url;

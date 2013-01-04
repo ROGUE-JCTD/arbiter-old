@@ -690,7 +690,7 @@ var Arbiter = {
 				else
 					aoiMap.setCenter(center);
 			}, function(error){
-				Arbiter.error("Location not available... Please check that Location Services are on for Arbiter");
+				alert("Location not available... Please check that Location Services are on for Arbiter");
 			});
 		});
 		
@@ -882,21 +882,29 @@ var Arbiter = {
 
 			Arbiter.saveAreaOfInterest(true);
 
-			alert("pre set baseLayerInfo property");
 			Arbiter.setProjectProperty("baseLayerInfo", Arbiter.currentProject.baseLayerInfo);
-			alert("post set baseLayerInfo property");
 			
 			var serverList = Arbiter.currentProject.serverList;		
 			for(var x in serverList){
 				Arbiter.insertProjectsServer(serverList[x].serverId, x, function(serverId, serverName){
 					console.log("insertProjectServer success: " + serverName + ", ", serverList[serverName]);
 					var layerList = Arbiter.currentProject.serverList[serverName].layers;
-		    		var layerCount = Arbiter.getAssociativeArraySize(layerList);
-					Arbiter.layerCount += layerCount;
+
+					//var layerCount = Arbiter.getAssociativeArraySize(layerList);
+		    		//Arbiter.layerCount += layerCount;
+					
+					var addedLayers = 0;
 					
 		    		for(var layerKey in layerList){
-		    			Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
+		    			var layer = layerList[layerKey];
+		    			
+		    			// only add if it has feature type as otherwise it is a layer usable as base layer
+		    			if (layer.featureType) {
+		    				addedLayers++;
+		    				Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
+		    			}
 		    		}
+		    		Arbiter.layerCount += addedLayers;
 		    		
 					console.log("~~ CORDOVA TRANSACTION ERROR LINE 822 ~~");
 					console.log("ProjectID: " + projectId);
@@ -1151,10 +1159,9 @@ var Arbiter = {
 	    	if (map){
 	    		Arbiter.error("map should not exist!");
 	    	}
-	    	alert("pre create base layer");
-	    	baseLayer = Arbiter.createBaseLayer(Arbiter.currentProject.baseLayerInfo.servername, Arbiter.currentProject.baseLayerInfo.layernickname);		
-	    	alert("post create base layer");
-	    	
+
+	    	baseLayer = Arbiter.createBaseLayer(Arbiter.currentProject.baseLayerInfo.servername, Arbiter.currentProject.baseLayerInfo.layernickname, true);		
+
 			map = new OpenLayers.Map({
 				div: "map",
 				projection: WGS84_Google_Mercator,
@@ -1172,9 +1179,7 @@ var Arbiter = {
 				new OpenLayers.Control.Zoom()
 				]
 			});
-			
-	    	alert("created map");
-			
+						
 			// we have a map, lets zoom and center based on the aoi
 			if (map && Arbiter.currentProject.aoi) {
 				//---- add the aoi layer so that users can see the aoi				
@@ -1230,9 +1235,7 @@ var Arbiter = {
     		Arbiter.error("aoiMap should not exist!");
     	}
     	
-    	alert("onShowAOIMap.pre create base layer");
-    	aoi_baseLayer = Arbiter.createBaseLayer(Arbiter.currentProject.baseLayerInfo.servername, Arbiter.currentProject.baseLayerInfo.layernickname);		
-    	alert("onShowAOIMap.post create base layer");
+    	aoi_baseLayer = Arbiter.createBaseLayer(Arbiter.currentProject.baseLayerInfo.servername, Arbiter.currentProject.baseLayerInfo.layernickname, false);		
     	
 		aoiMap = new OpenLayers.Map({
 			div: "aoiMap",
@@ -1251,8 +1254,6 @@ var Arbiter = {
 				new OpenLayers.Control.Zoom()
 			]
 		});
-
-    	alert("onShowAOIMap.post createaoi map");
 		
 		if (Arbiter.currentProject && Arbiter.currentProject.aoi) {
 			aoiMap.zoomToExtent(Arbiter.currentProject.aoi, true);
@@ -1303,10 +1304,6 @@ var Arbiter = {
     
     onShowSettings: function(){
     	console.log("---- onShowSettings");
-    	//$('#idArbiterSettingsPage .PageFooter').animate({ "left": "0%" }, 0);
-    	//$('#idServersPage .SettingsPageFooter').animate({ "left": "0%" }, 0);
-    	//$('#idServersPage .CreatePageFooter').animate({ "left": "100%" }, 0);
-
 		$('#idArbiterSettingsPage .PageFooter').show();
 		$('#idServersPage .SettingsPageFooter').show();
 		$('#idServersPage .CreatePageFooter').hide();
@@ -1319,18 +1316,13 @@ var Arbiter = {
 	
     onShowArbiterSettings: function(){
     	console.log("---- onShowArbiterSettings");
-    	//$('#idArbiterSettingsPage .PageFooter').animate({ "left": "100%" }, 0);
 		$('#idArbiterSettingsPage .PageFooter').hide();
-		
 		Arbiter.changePage_Pop(div_ArbiterSettingsPage);
     },
     
     onShowServers: function(){
     	console.log("---- onShowServers");
     	Arbiter.serversList.checkbox = true;
-    	//$('#idServersPage .SettingsPageFooter').animate({ "left": "100%" }, 0);
-    	//$('#idServersPage .CreatePageFooter').animate({ "left": "0%"}, 0);
-		
 		$('#idServersPage .SettingsPageFooter').hide();
 		$('#idServersPage .CreatePageFooter').show();
 		
@@ -1406,7 +1398,7 @@ var Arbiter = {
 				successCallback, Arbiter.error);
 	},
 	
-	createBaseLayer: function(serverName, layerName){
+	createBaseLayer: function(serverName, layerName, useCache){
 		console.log("---- createBaseLayer");
 		var layer = null; 
 		
@@ -1416,9 +1408,8 @@ var Arbiter = {
 					singleTile : false,
 					ratio : 1.3671875,
 					isBaseLayer : true,
-					visibility : true,
-					getURL : TileUtil.getURL
-				}			
+					visibility : true
+				}	
 			);    	
 		} else {
 			var serverInfo = Arbiter.currentProject.serverList[serverName];
@@ -1428,10 +1419,14 @@ var Arbiter = {
 				layers : layerName, //"TD1-BaseMap-Group",
 				transparent : false,
 				isBaseLayer : true,
-				visibility : true,
-				getURL : TileUtil.getURL
+				visibility : true
 			});
 		}
+		
+		if (useCache){
+			layer.getURL = TileUtil.getURL;
+		}
+		
 		console.log("---- createBaseLayer, DONE");
 		
 		return layer;
@@ -1960,8 +1955,13 @@ var Arbiter = {
 		for(var x in serverList){
 			layers = serverList[x].layers;
 			
-			for(var y in layers){
-				Arbiter.readLayer(serverList[x], layers[y], x, y, false);
+			for(var layerKey in layers){
+    			var layer = layers[layerKey];
+    			
+    			// only add if it has feature type as otherwise it is a layer usable as base layer
+    			if (layer.featureType) {
+    				Arbiter.readLayer(serverList[x], layers[layerKey], x, layerKey, false);
+    			}
 			}
 		}
 	},
