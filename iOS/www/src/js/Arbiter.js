@@ -28,7 +28,7 @@ var layerColors = ['aqua', 'yellow', 'teal', 'purple', 'fuchsia', 'lime', 'maroo
 /* ============================ *
  * 			  Layer
  * ============================ */
-var osmLayer;
+var baseLayer;
 
 var wmsSelectControl;
 var wktFormatter;
@@ -52,7 +52,7 @@ var div_ProjectsPage;
 var div_NewProjectPage;
 var div_ServersPage;
 var div_LayersPage;
-var div_AddLayerPage;
+var div_AddLayerPage;			//TODO: rename to LayerPage
 var div_AreaOfInterestPage;
 var div_ArbiterSettingsPage;
 var div_ProjectSettingsPage;
@@ -76,6 +76,7 @@ var jqEditServerButton;
 var jqGoToAddServer;
 var jqAddServerPage;
 var jqServerSelect;
+var jqBaseLayerSelect;
 var jqLayerSelect;
 var jqLayerNickname;
 var jqLayerSubmit;
@@ -111,7 +112,7 @@ var editorTabOpen = false;
 
 var Arbiter = { 
 	
-	debugAlertOnError: false,
+	debugAlertOnError: true,
 	
 	debugAlertOnWarning: false,
 	
@@ -194,6 +195,7 @@ var Arbiter = {
 		jqAddServerPage = $('#idAddServerPage');
 		jqServerSelect = $('#serverselect');
 		jqExistingServers = $('#existingServers');
+		jqBaseLayerSelect = $('#baselayerselect');
 		jqLayerSelect = $('#layerselect');
 		jqLayerNickname = $('#layernickname');
 		jqLayerSubmit = $('#addLayerSubmit');
@@ -518,13 +520,45 @@ var Arbiter = {
 			 */////////////////////////////////////
 			for(var serverKey in serverList){
 				for(var layerKey in serverList[serverKey].layers){
+					var layer = serverList[serverKey].layers[layerKey];
+					
+					if (layer.featureType){					
+						Arbiter.layersSettingsList.append(layerKey, {
+							"servername": serverKey,
+							"layernickname": layerKey, 
+							"layertypename": serverList[serverKey].layers[layerKey].typeName
+						});
+					}
+				}
+			}
+			
+			// Populate list of built in base layers and any wms layer
+			jqBaseLayerSelect.selectmenu();
+			
+			
+			//Add all the servers to the list
+			for(var serverKey in serverList){
+				for(var layerKey in serverList[serverKey].layers){
+					
+					var layer = serverList[serverKey].layers[layerKey];
+					
+					if (!layer.featureType){
+						var option = '<option value="' + layerKey + '">' + layerKey + '</option>';
+						jqBaseLayerSelect.append(option);
+					}
+					/*
 					Arbiter.layersSettingsList.append(layerKey, {
 						"servername": serverKey,
 						"layernickname": layerKey, 
 						"layertypename": serverList[serverKey].layers[layerKey].typeName
 					});
+					*/
 				}
 			}
+			
+			jqBaseLayerSelect.val("osm");
+			jqBaseLayerSelect.selectmenu('refresh', true);
+			
 		});
 		
 		jqSaveButton.click(function(event){
@@ -862,54 +896,36 @@ var Arbiter = {
 					});
 				});
 			}
-			
-			// every project has a list of tiles it uses so that:
-			// - when the project is removed, the global tile's reference counter can be decremented.
-			// - when a project's tiles need to updated, we can potentially used this list... though normally, they will pull data in area of interest. 
-			var createTileIdsSql = "CREATE TABLE IF NOT EXISTS tileIds (id integer not null primary key);";  
-
-			Cordova.transaction(Arbiter.currentProject.variablesDatabase, createTileIdsSql, [], function(tx, res){
-				console.log("project tileIds table created");
-				
-				console.log("starting to cache tiles");
-				// cache tiles when new project is created. 
-				// TileUtil.startCachingTiles();
-				//TODO: try throwing exception and printing e.stack for more infor on error
-				// http://www.eriwen.com/javascript/js-stack-trace/
-			}, function(e){
-				console.log("project tileIds table err: ", e);
-			});
-
 		};
 		
 		var writeToDatabases = function(dir){
 		
 			//Set up a transaction for the global database
-				console.log("Add project " + Arbiter.squote(Arbiter.currentProject.name) + " to projects table...");
+			console.log("Add project " + Arbiter.squote(Arbiter.currentProject.name) + " to projects table...");
+		
+			//Add the project name to the projects table in globle.db
+			Cordova.transaction(Arbiter.globalDatabase, "INSERT INTO projects (name) VALUES (" + Arbiter.squote(Arbiter.currentProject.name) + ");", [], function(tx, res){
 			
-				//Add the project name to the projects table in globle.db
-				Cordova.transaction(Arbiter.globalDatabase, "INSERT INTO projects (name) VALUES (" + Arbiter.squote(Arbiter.currentProject.name) + ");", [], function(tx, res){
+				Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
+				Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
+
+				Arbiter.createMetaTables();
+				Arbiter.createDataTables();
+		
+				var projectId = res.insertId;
+				insertCurrentProject(projectId);
 				
-					Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
-					Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
-			
-					Arbiter.createMetaTables();
-					Arbiter.createDataTables();
-			
-					var projectId = res.insertId;
-					insertCurrentProject(projectId);
-					
-					console.log("Project " + projectId + ": " + Arbiter.squote(Arbiter.currentProject.name) + " added to projects table.");
-					
-					var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
-						'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';
-									
-					Arbiter.appendToListView("project", res.insertId, Arbiter.currentProject.name, leftplaceholder);		   
-					Arbiter.changePage_Pop(div_ProjectsPage);
+				console.log("Project " + projectId + ": " + Arbiter.squote(Arbiter.currentProject.name) + " added to projects table.");
 				
-				}, function(e){
-					console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " NOT added to projects table - " + e);
-				});
+				var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
+					'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';
+								
+				Arbiter.appendToListView("project", res.insertId, Arbiter.currentProject.name, leftplaceholder);		   
+				Arbiter.changePage_Pop(div_ProjectsPage);
+			
+			}, function(e){
+				console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " NOT added to projects table - " + e);
+			});
 		};
 		
 		var error = function(error){
@@ -1120,7 +1136,7 @@ var Arbiter = {
 	    		Arbiter.error("map should not exist!");
 	    	}
 	    	
-			osmLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
+			baseLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
 					transitionEffect : 'resize',
 					singleTile : false,
 					ratio : 1.3671875,
@@ -1129,6 +1145,15 @@ var Arbiter = {
 					getURL : TileUtil.getURL
 				}			
 			);    	
+/*			
+	    	//TODO: use png not jpg
+			baseLayer = new OpenLayers.Layer.WMS("baseLayer", "http://192.168.10.126/geoserver/wms", {
+				layers : "TD1-BaseMap-Group",
+				transparent : false,
+				isBaseLayer : true,
+				visibility : true
+			});
+*/			
 	    	
 			map = new OpenLayers.Map({
 				div: "map",
@@ -1136,7 +1161,7 @@ var Arbiter = {
 				displayProjection: WGS84,
 				theme: null,
 				numZoomLevels: 18,
-				layers: [osmLayer],
+				layers: [baseLayer],
 				controls: [
 				new OpenLayers.Control.Attribution(),
 				new OpenLayers.Control.TouchNavigation({
@@ -1204,7 +1229,7 @@ var Arbiter = {
     		Arbiter.error("aoiMap should not exist!");
     	}
     	
-		aoi_osmLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
+		aoi_baseLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
 			transitionEffect: 'resize'
 		});
 
@@ -1214,7 +1239,7 @@ var Arbiter = {
 			displayProjection: new OpenLayers.Projection("EPSG:4326"),
 			theme: null,
 			numZoomLevels: 18,
-			layers: [aoi_osmLayer],
+			layers: [aoi_baseLayer],
 			controls: [
 				new OpenLayers.Control.Attribution(),
 				new OpenLayers.Control.TouchNavigation({
@@ -1363,21 +1388,105 @@ var Arbiter = {
     },
     
     saveAreaOfInterest: function(insertNotUpdate, successCallback) {
-			Arbiter.currentProject.aoi = aoiMap.getExtent();
+		Arbiter.currentProject.aoi = aoiMap.getExtent();
 
-			var statement = "";
-			
-			if (insertNotUpdate) {
-				statement = "INSERT INTO settings (aoi_left, aoi_bottom, aoi_right, aoi_top) VALUES (?, ?, ?, ?);";
-			} else {
-				 //fake where clause. change table to key value json pair!
-				statement = "UPDATE settings SET aoi_left=?, aoi_bottom=?, aoi_right=?, aoi_top=? WHERE aoi_left <> '';"; 
-			}
+		var statement = "";
+		
+		if (insertNotUpdate) {
+			statement = "INSERT INTO settings (aoi_left, aoi_bottom, aoi_right, aoi_top) VALUES (?, ?, ?, ?);";
+		} else {
+			 //fake where clause. change table to key value json pair!
+			statement = "UPDATE settings SET aoi_left=?, aoi_bottom=?, aoi_right=?, aoi_top=? WHERE aoi_left <> '';"; 
+		}
 
-			Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], 
-					successCallback, Arbiter.error);
-    },
-    
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], 
+				successCallback, Arbiter.error);
+	},
+	
+	getProjectProperty: function(key, foundKeyCallback, notFoundKeyCallback) {
+		
+		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+			var statement = "SELECT key, value FROM properties WHERE key=?;";
+			tx.executeSql(statement, [key], function(tx, res){
+
+				if (res.rows.length === 0){
+					
+					if (notFoundKeyCallback){
+						notFoundKeyCallback();
+					}
+						
+				} else if (res.rows.length === 1){
+					
+					if (foundKeyCallback){
+						foundKeyCallback(res.rows.item(0).value);
+					}
+												
+				} else {
+					// should not happen
+					Arbiter.error("getProjectProperty: Multiple entries for property: " + key);
+				}
+			}, function(e1, e2) {
+				Arbiter.error("getProjectProperty.err1", e1, e2);
+			});
+		}, function(e1, e2) {
+			Arbiter.error("getProjectProperty.err1", e1, e2);
+		});	
+	},
+
+	setProjectProperty: function(key, value, successCallback) {
+		
+		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+			var statement = "SELECT key, value FROM properties WHERE key=?;";
+			tx.executeSql(statement, [key], function(tx, res){
+
+				if (res.rows.length === 0){
+					
+					Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+						var statement = "INSERT INTO properties (key, value) VALUES (?, ?);";
+						tx.executeSql(statement, [key, value], function(tx, res){
+							console.log("inserted property. key: ", key, ", value: ", value);
+							alert("inserted a property");
+							
+							if (successCallback){
+								successCallback();
+							}
+						}, function(e1, e2) {
+							Arbiter.error("setProjectProperty.err3", e1, e2);
+						});
+					}, function(e1, e2) {
+						Arbiter.error("setProjectProperty.err4", e1, e2);
+					});							
+						
+				} else if (res.rows.length === 1){
+
+					Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+						var statement = "UPDATE properties SET value=? WHERE key=?;";
+						tx.executeSql(statement, [value, key], function(tx, res){
+							console.log("updated property. key: ", key, ", value: ", value);
+							alert("updated a property");
+							
+							if (successCallback){
+								successCallback();
+							}							
+						}, function(e1, e2) {
+							Arbiter.error("setProjectProperty.err1", e1, e2);
+						});
+					}, function(e1, e2) {
+						Arbiter.error("setProjectProperty.err2", e1, e2);
+					});							
+						
+				} else {
+					// should not happen
+					Arbiter.error("setProjectProperty: Multiple entries for property: " + key);
+				}
+			}, function(e1, e2) {
+				Arbiter.error("setProjectProperty.err5", e1, e2);
+			});
+		}, function(e1, e2) {
+			Arbiter.error("setProjectProperty.err6", e1, e2);
+		});	
+	},
+
 	ToggleEditorMenu: function() {
 		if(!editorTabOpen) {
 			Arbiter.OpenEditorMenu();
@@ -2359,6 +2468,21 @@ var Arbiter = {
 		"FOREIGN KEY(server_id) REFERENCES servers(id));";
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createLayersTableSql, [],
 			function(tx, res){ console.log("createLayersTableSql win!"); }, function(e){ console.log("Error createLayersTableSql - " + e); });
+		
+		
+		// every project has a list of tiles it uses so that:
+		// - when the project is removed, the global tile's reference counter can be decremented.
+		// - when a project's tiles need to updated, we can potentially used this list... though normally, they will pull data in area of interest. 
+		var createTileIdsSql = "CREATE TABLE IF NOT EXISTS tileIds (id integer not null primary key);";  
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createTileIdsSql, [], function(tx, res){
+			console.log("project tileIds table created");
+		});
+
+		// every project has a properties table which can be used to store any key-value pair
+		var createPropertiesSql = "CREATE TABLE IF NOT EXISTS properties (key text not null primary key, value text not null);";  
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createPropertiesSql, [], function(tx, res){
+			console.log("project properties table created");
+		});
 	},
 	
 	createDataTables: function(){
@@ -2473,13 +2597,32 @@ var Arbiter = {
 							attributeTypes: attributeTypes
 						};
 							
+						//TODO: ummm, this needs to be fixed. 
 						if(awayFromMap){
 							Arbiter.layerCount = 1;
 							Arbiter.insertProjectsLayer(serverInfo.serverId, serverName, layernickname, serverInfo.layers[layernickname], true);
 						}													 
 						
 					}else{
-						Arbiter.error("Invalid feature type");
+						alert("adding as wms layer for basemap");
+						
+						var selectedOption = jqLayerSelect.find('option:selected');
+
+						var layernickname = jqLayerNickname.val();
+						//serverId, layerName, layer.featureType, layer.featureNS, layer.typeName
+						serverInfo.layers[layernickname] = {
+							featureType: "", // no feature type means wms?
+							featureNS: "",
+							typeName: typeName,
+							srsName: selectedOption.attr('layersrs')
+						};
+							
+						//TODO: ummm, this needs to be fixed. 
+						if(awayFromMap){
+							Arbiter.layerCount = 1;
+							Arbiter.insertProjectsLayer(serverInfo.serverId, serverName, layernickname, serverInfo.layers[layernickname], true);
+						}							
+
 					}
 													 
 					window.history.back();
@@ -3340,6 +3483,7 @@ var Arbiter = {
  	}
 	 */
 	AddLayer: function(meta) {
+		alter("AddLayer");
 		console.log("meta", meta);
 		var protocol = null;
 		var newLayers = [];

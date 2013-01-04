@@ -33,6 +33,7 @@
 		"password": "Password *",
 		"chooseAServer": "Choose a server...",
 		"chooseALayer": "Choose a layer...",
+		"chooseABaseLayer": "Choose a base layer...",
 		"noProjects": "There are currently no projects. You can created a new project by clicking the button at the bottom of the page.",
 		"selectProject": "Select a project to begin working",
 		"selectAOI": "Pinch and Drag the map to show the area that you want to work in."

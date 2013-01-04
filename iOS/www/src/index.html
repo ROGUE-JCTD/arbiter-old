@@ -222,6 +222,14 @@
 			<div data-role="content" class="LayerSettingsPageContent" id='idLayerSettingsPageContent'>
 				<a onClick="Arbiter.onAddLayerPage()" id="idLayerSettingsAddLayer"><input type="submit" value="Add a layer" data-mini="true"></a>
 				<div id="idLayerSettingsList"></div>
+				
+				
+				<div data-role="fieldcontain">
+					<label for="baselayerselect" style="text-align: center;">Choose base layer</label>
+					<select name="baselayerselect" id="baselayerselect">
+						<option value="osm">OpenStreetMap</option>
+					</select>
+				</div>				
 			</div>
 						
 			<!-- Footer -->
@@ -445,7 +453,7 @@
 			<!-- Content -->
 			<div data-role="content" class="LayerSettingsPageContent" id='idLayerSettingsPageContent'>
 				<a href="#idAddLayerPage" id="idLayerSettingsAddLayer"><input type="submit" value="Add a layer" data-mini="true"></a>
-				<div id="idLayerSettingsList"></div>
+				<div id="idLayerSettingsList"></div>		
 			</div>
 		</div>
 		<!--
@@ -538,7 +546,7 @@
 			</div>
 		</div>
 		
-		<!--
+		<!-- TODO: need to rename AddLayerPage to just LayerPage
 		 // =======================
 		 //		Add Layer Page
 		 // =======================
