@@ -535,7 +535,6 @@ var Arbiter = {
 			// Populate list of built in base layers and any wms layer
 			jqBaseLayerSelect.selectmenu();
 			
-			
 			//Add all the servers to the list
 			for(var serverKey in serverList){
 				for(var layerKey in serverList[serverKey].layers){
@@ -543,22 +542,15 @@ var Arbiter = {
 					var layer = serverList[serverKey].layers[layerKey];
 					
 					if (!layer.featureType){
-						var option = '<option value="' + layerKey + '">' + layerKey + '</option>';
+						var option = '<option value="' + layerKey + '" servername="' + serverKey + '" layernickname="' + layerKey + '">' + layerKey + '</option>';
 						jqBaseLayerSelect.append(option);
 					}
-					/*
-					Arbiter.layersSettingsList.append(layerKey, {
-						"servername": serverKey,
-						"layernickname": layerKey, 
-						"layertypename": serverList[serverKey].layers[layerKey].typeName
-					});
-					*/
 				}
 			}
 			
-			jqBaseLayerSelect.val("osm");
+			jqBaseLayerSelect.val("openstreetmap.org");
+			jqBaseLayerSelect.change();
 			jqBaseLayerSelect.selectmenu('refresh', true);
-			
 		});
 		
 		jqSaveButton.click(function(event){
@@ -606,6 +598,7 @@ var Arbiter = {
 			}
 		});
 		
+		
 		jqServerSelect.change(function(event){
 			console.log('jqServerSelect.change');
 			var serverName = $(this).val();
@@ -623,6 +616,18 @@ var Arbiter = {
 		jqLayerSelect.change(function(event){
 			jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
 		});
+
+		jqBaseLayerSelect.change(function(event){
+			console.log('jqBaseLayerSelect.change');
+			
+			// save baseLayer info
+			var selectedOption = jqBaseLayerSelect.find('option:selected');
+			
+			console.log("jqBaseLayerSelect selected option: ", selectedOption);
+			
+			Arbiter.currentProject.baseLayerInfo = { layernickname: selectedOption.attr('layernickname'), servername: selectedOption.attr('servername') };
+			console.log("baselayer info: ", Arbiter.currentProject.baseLayerInfo);
+		});		
 
 		jqAddFeature.click(function(event){
 			console.log("Add Feature");
@@ -685,7 +690,7 @@ var Arbiter = {
 				else
 					aoiMap.setCenter(center);
 			}, function(error){
-				alert("Location not available... Please check that Location Services are on for Arbiter");
+				Arbiter.error("Location not available... Please check that Location Services are on for Arbiter");
 			});
 		});
 		
@@ -872,9 +877,14 @@ var Arbiter = {
 		console.log("---- onCreateProject");
 
 		var insertCurrentProject = function(projectId){
-			Arbiter.saveAreaOfInterest(true);
 			Arbiter.layerCount = 0;
 			Arbiter.currentProject.projectId = projectId;
+
+			Arbiter.saveAreaOfInterest(true);
+
+			alert("pre set baseLayerInfo property");
+			Arbiter.setProjectProperty("baseLayerInfo", Arbiter.currentProject.baseLayerInfo);
+			alert("post set baseLayerInfo property");
 			
 			var serverList = Arbiter.currentProject.serverList;		
 			for(var x in serverList){
@@ -1072,6 +1082,12 @@ var Arbiter = {
 				);
 			}
 		});
+		
+		Arbiter.getProjectProperty("baseLayerInfo", function(key, value){
+			Arbiter.currentProject.baseLayerInfo = { servername: value.servername, layernickname: value.layernickname};
+		}, function(key){
+			Arbiter.error("did not find project property baseLayerInfo");
+		}, true);
 
     },
 	
@@ -1135,25 +1151,9 @@ var Arbiter = {
 	    	if (map){
 	    		Arbiter.error("map should not exist!");
 	    	}
-	    	
-			baseLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
-					transitionEffect : 'resize',
-					singleTile : false,
-					ratio : 1.3671875,
-					isBaseLayer : true,
-					visibility : true,
-					getURL : TileUtil.getURL
-				}			
-			);    	
-/*			
-	    	//TODO: use png not jpg
-			baseLayer = new OpenLayers.Layer.WMS("baseLayer", "http://192.168.10.126/geoserver/wms", {
-				layers : "TD1-BaseMap-Group",
-				transparent : false,
-				isBaseLayer : true,
-				visibility : true
-			});
-*/			
+	    	alert("pre create base layer");
+	    	baseLayer = Arbiter.createBaseLayer(Arbiter.currentProject.baseLayerInfo.servername, Arbiter.currentProject.baseLayerInfo.layernickname);		
+	    	alert("post create base layer");
 	    	
 			map = new OpenLayers.Map({
 				div: "map",
@@ -1173,6 +1173,7 @@ var Arbiter = {
 				]
 			});
 			
+	    	alert("created map");
 			
 			// we have a map, lets zoom and center based on the aoi
 			if (map && Arbiter.currentProject.aoi) {
@@ -1229,10 +1230,10 @@ var Arbiter = {
     		Arbiter.error("aoiMap should not exist!");
     	}
     	
-		aoi_baseLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
-			transitionEffect: 'resize'
-		});
-
+    	alert("onShowAOIMap.pre create base layer");
+    	aoi_baseLayer = Arbiter.createBaseLayer(Arbiter.currentProject.baseLayerInfo.servername, Arbiter.currentProject.baseLayerInfo.layernickname);		
+    	alert("onShowAOIMap.post create base layer");
+    	
 		aoiMap = new OpenLayers.Map({
 			div: "aoiMap",
 			projection: new OpenLayers.Projection("EPSG:900913"),
@@ -1250,6 +1251,8 @@ var Arbiter = {
 				new OpenLayers.Control.Zoom()
 			]
 		});
+
+    	alert("onShowAOIMap.post createaoi map");
 		
 		if (Arbiter.currentProject && Arbiter.currentProject.aoi) {
 			aoiMap.zoomToExtent(Arbiter.currentProject.aoi, true);
@@ -1403,7 +1406,43 @@ var Arbiter = {
 				successCallback, Arbiter.error);
 	},
 	
-	getProjectProperty: function(key, foundKeyCallback, notFoundKeyCallback) {
+	createBaseLayer: function(serverName, layerName){
+		console.log("---- createBaseLayer");
+		var layer = null; 
+		
+		if (serverName === "openstreetmap.org") {
+			layer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
+					transitionEffect : 'resize',
+					singleTile : false,
+					ratio : 1.3671875,
+					isBaseLayer : true,
+					visibility : true,
+					getURL : TileUtil.getURL
+				}			
+			);    	
+		} else {
+			var serverInfo = Arbiter.currentProject.serverList[serverName];
+			
+	    	//TODO: use png not jpg
+			layer = new OpenLayers.Layer.WMS("baseLayer", serverInfo.url + "/wms", {
+				layers : layerName, //"TD1-BaseMap-Group",
+				transparent : false,
+				isBaseLayer : true,
+				visibility : true,
+				getURL : TileUtil.getURL
+			});
+		}
+		console.log("---- createBaseLayer, DONE");
+		
+		return layer;
+	},
+	
+	getProjectProperty: function(key, foundKeyCallback, notFoundKeyCallback, convertValueToJSON) {
+		
+		if (typeof key !== "string") {
+			Arbiter.error("getProjectProperty: key must be a string");
+			return;
+		}
 		
 		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 			var statement = "SELECT key, value FROM properties WHERE key=?;";
@@ -1412,13 +1451,19 @@ var Arbiter = {
 				if (res.rows.length === 0){
 					
 					if (notFoundKeyCallback){
-						notFoundKeyCallback();
+						notFoundKeyCallback(key);
 					}
 						
 				} else if (res.rows.length === 1){
 					
 					if (foundKeyCallback){
-						foundKeyCallback(res.rows.item(0).value);
+						var valueReturn = res.rows.item(0).value;
+						
+						if (convertValueToJSON) {
+							valueReturn = JSON.parse(res.rows.item(0).value);
+						}
+						
+						foundKeyCallback(key, valueReturn);
 					}
 												
 				} else {
@@ -1434,6 +1479,17 @@ var Arbiter = {
 	},
 
 	setProjectProperty: function(key, value, successCallback) {
+
+		if (typeof key !== "string") {
+			Arbiter.error("setProjectProperty: key must be a string");
+			return;
+		}
+		
+		var valueString = value;
+		
+		if (typeof value !== "string") {
+			valueString = JSON.stringify(value, null, 2);
+		}
 		
 		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 			var statement = "SELECT key, value FROM properties WHERE key=?;";
@@ -1443,12 +1499,12 @@ var Arbiter = {
 					
 					Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 						var statement = "INSERT INTO properties (key, value) VALUES (?, ?);";
-						tx.executeSql(statement, [key, value], function(tx, res){
-							console.log("inserted property. key: ", key, ", value: ", value);
-							alert("inserted a property");
+						tx.executeSql(statement, [key, valueString], function(tx, res){
+							console.log("inserted property. key: ", key, ", value: ", valueString);
+							//alert("inserted a property");
 							
 							if (successCallback){
-								successCallback();
+								successCallback(key, valueString);
 							}
 						}, function(e1, e2) {
 							Arbiter.error("setProjectProperty.err3", e1, e2);
@@ -1461,12 +1517,12 @@ var Arbiter = {
 
 					Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 						var statement = "UPDATE properties SET value=? WHERE key=?;";
-						tx.executeSql(statement, [value, key], function(tx, res){
-							console.log("updated property. key: ", key, ", value: ", value);
-							alert("updated a property");
+						tx.executeSql(statement, [valueString, key], function(tx, res){
+							console.log("updated property. key: ", key, ", value: ", valueString);
+							//alert("updated a property");
 							
 							if (successCallback){
-								successCallback();
+								successCallback(key, valueString);
 							}							
 						}, function(e1, e2) {
 							Arbiter.error("setProjectProperty.err1", e1, e2);
@@ -1981,6 +2037,8 @@ var Arbiter = {
 					Arbiter.setLayerAttributeInfo(serversList, layer.layername, layer.f_table_name);
 				}
 
+				//TODO: this doesn't seem to be a good place to switch to map page... 
+				//      looks like this may get called multiple times from a parent function that is in a loop. 
 				Arbiter.changePage_Pop(div_MapPage);
 			}, Arbiter.error);
 	},
@@ -2604,7 +2662,7 @@ var Arbiter = {
 						}													 
 						
 					}else{
-						alert("adding as wms layer for basemap");
+						alert("layer will be added but can only be used as a base layer");
 						
 						var selectedOption = jqLayerSelect.find('option:selected');
 
@@ -3099,7 +3157,8 @@ var Arbiter = {
 			variablesDatabase: null,
 			dataDatabase: null,
 			serverList: {},
-			deletedServers: {}
+			deletedServers: {},
+			baseLayerInfo: null
 		};
 	},
 						  
