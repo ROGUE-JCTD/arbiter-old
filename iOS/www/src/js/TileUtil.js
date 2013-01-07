@@ -768,7 +768,8 @@ insertIntoTileIds: function(id, successCallback) {
 
 removeTileFromDevice: function(path, id, successCallback, errorCallback){
 	// remove tile from disk
-	Arbiter.fileSystem.root.getFile(path, {create: false},
+	var newPath = path.replace(Arbiter.fileSystem.root.fullPath + '/','');
+	Arbiter.fileSystem.root.getFile(newPath, {create: false},
 		function(fileEntry){
 			fileEntry.remove(
 				function(fileEntry){

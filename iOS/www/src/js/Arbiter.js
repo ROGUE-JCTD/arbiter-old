@@ -111,9 +111,9 @@ var editorTabOpen = false;
 
 var Arbiter = { 
 	
-	debugAlertOnError: false,
+	debugAlertOnError: true,
 	
-	debugAlertOnWarning: false,
+	debugAlertOnWarning: true,
 	
 	debugCallstack: false,	
 	
@@ -3615,6 +3615,7 @@ var Arbiter = {
 	
 	onResume: function() {
 		console.log("Arbiter: Resume");
+		if(Cordova.checkConnection()){Arbiter.onOnline();} else { Arbiter.onOffline();}
 	},
 	
 	onOnline: function() {
