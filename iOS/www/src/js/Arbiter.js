@@ -3532,7 +3532,7 @@ var Arbiter = {
  	}
 	 */
 	AddLayer: function(meta) {
-		alter("AddLayer");
+		alert("AddLayer");
 		console.log("meta", meta);
 		var protocol = null;
 		var newLayers = [];
