@@ -548,7 +548,13 @@ var Arbiter = {
 				}
 			}
 			
-			jqBaseLayerSelect.val("openstreetmap.org");
+			var selected = "openstreetmap.org";
+			
+			if (Arbiter.currentProject.baseLayerInfo) {
+				selected = Arbiter.currentProject.baseLayerInfo.layernickname;
+			}
+			
+			jqBaseLayerSelect.val(selected);
 			jqBaseLayerSelect.change();
 			jqBaseLayerSelect.selectmenu('refresh', true);
 		});
@@ -850,8 +856,10 @@ var Arbiter = {
     	Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertLayerSql, 
     			[serverId, layerName, layer.featureType, layer.featureNS, layer.typeName], function(tx, res){
     		console.log("insertProjectsLayer success");
-    		Arbiter.insertIntoGeometryColumnTable(layer);
-    		Arbiter.createFeatureTable(serverName, layer, layerName, projectIsOpen);
+    		if (layer.featureType) {
+	    		Arbiter.insertIntoGeometryColumnTable(layer);
+	    		Arbiter.createFeatureTable(serverName, layer, layerName, projectIsOpen);
+    		}
     	}, function(e){ console.log("insertLayerSql error: " + e); });
     },
     
@@ -901,8 +909,10 @@ var Arbiter = {
 		    			// only add if it has feature type as otherwise it is a layer usable as base layer
 		    			if (layer.featureType) {
 		    				addedLayers++;
-		    				Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
 		    			}
+		    			
+	    				Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
+		    			
 		    		}
 		    		Arbiter.layerCount += addedLayers;
 		    		
@@ -1219,6 +1229,7 @@ var Arbiter = {
 			var statement = "SELECT * FROM tileIds;";
 			// if the TileIds table is empty, cache tiles.
 			Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [], function(tx, res) {
+				alert("checking if tiles have been chacehd already or not");
 				if (res.rows.length === 0){
 					TileUtil.cacheTiles();
 				} else {
