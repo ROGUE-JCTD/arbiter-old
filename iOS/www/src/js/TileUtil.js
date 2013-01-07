@@ -503,6 +503,8 @@ cacheTile: function(bounds, zoom){
 				Arbiter.error("TileUtil.getURL: Multiple Entries for tile! see console for details. count: " + res.rows.length);
 			}
 			
+			var ext = TileUtil.getLayerFormatExtension(caching.layer);
+			
 			var addTileCallback = function(){
 	    		//TODO: save tile should rely on add tile!!! and if add tile fails, the whole thing fail?
 	    		
@@ -526,14 +528,14 @@ cacheTile: function(bounds, zoom){
 				};
 				
 				// write the tile to device
-				TileUtil.saveTile(url, "osm", xyz.z, xyz.x, xyz.y, saveTileSuccess, saveTileError);
+				TileUtil.saveTile(url, "osm", xyz.z, xyz.x, xyz.y, ext, saveTileSuccess, saveTileError);
 			};
 
 			//TODO: get rid of tile ids in general and just store it as a json array in projectKeyValueDatabase?
 			
 			// add the tile to databases immediately so that if multiple getURL calls come in for a given tile, 
 			// we do not download the tile multiple times
-    		TileUtil.addTile(url, "osm", xyz.z, xyz.x, xyz.y, addTileCallback, tileNewRefCounter, tileId);				
+    		TileUtil.addTile(url, "osm", xyz.z, xyz.x, xyz.y, ext, addTileCallback, tileNewRefCounter, tileId);				
 		}, function(e1, e2) {
 			Arbiter.error("chk27", e1, e2);
 		});	
@@ -543,13 +545,10 @@ cacheTile: function(bounds, zoom){
 },
 
 
-saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
+saveTile: function(fileUrl, tileset, z, x, y, ext, successCallback, errorCallback) {
 	if (TileUtil.debug) {
 		console.log("---- TileUtil.saveTile. tileset: " + tileset + ", z: " + z + ", x: " + x + ", y: " + y + ", url: " + fileUrl);
 	}
-
-	var ext = TileUtil.getLayerFormatExtension(caching.layer);
-	//console.log("---- TileUtil.saveTile.ext: " + ext);
 	
 	Arbiter.fileSystem.root.getDirectory(tileset, {create: true}, 
 		function(tilesetDirEntry){
@@ -612,19 +611,17 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 	return;
 },
 
-addTile: function(url, tileset, z, x, y, successCallback, tileNewRefCounter, tileId) {
+addTile: function(url, tileset, z, x, y, ext, successCallback, tileNewRefCounter, tileId) {
 	
     if (TileUtil.debug) {
-    	console.log("---- TileUtil.addTile: ", url, tileset, z, x, y, tileNewRefCounter, tileId );
+    	console.log("---- TileUtil.addTile: ", url, tileset, z, x, y, ext, tileNewRefCounter, tileId );
     }
 
 	if (tileNewRefCounter === 1) {
 		// alert("inserted tile. id: " + res.insertId);
 		Arbiter.globalDatabase.transaction(
 			function(tx) {
-				
-				//TODO: avoid saving the path itself. between uril and the params we can rebuild it
-				var path = Arbiter.fileSystem.root.fullPath + "/" + tileset +"/" + z + "/" + x + "/" + y + url.substr(url.lastIndexOf("."));
+				var path = Arbiter.fileSystem.root.fullPath + "/" + tileset +"/" + z + "/" + x + "/" + y + "." + ext;
 
 				var statement = "INSERT INTO tiles (tileset, z, x, y, path, url, ref_counter) VALUES (?, ?, ?, ?, ?, ?, ?);";
 				tx.executeSql(statement, [ tileset, z, x, y, path, url, 1 ], function(tx, res) {
