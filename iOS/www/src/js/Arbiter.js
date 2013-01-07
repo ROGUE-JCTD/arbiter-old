@@ -28,7 +28,7 @@ var layerColors = ['aqua', 'yellow', 'teal', 'purple', 'fuchsia', 'lime', 'maroo
 /* ============================ *
  * 			  Layer
  * ============================ */
-var osmLayer;
+var baseLayer;
 
 var wmsSelectControl;
 var wktFormatter;
@@ -52,7 +52,7 @@ var div_ProjectsPage;
 var div_NewProjectPage;
 var div_ServersPage;
 var div_LayersPage;
-var div_AddLayerPage;
+var div_AddLayerPage;			//TODO: rename to LayerPage
 var div_AreaOfInterestPage;
 var div_ArbiterSettingsPage;
 var div_ProjectSettingsPage;
@@ -76,6 +76,7 @@ var jqEditServerButton;
 var jqGoToAddServer;
 var jqAddServerPage;
 var jqServerSelect;
+var jqBaseLayerSelect;
 var jqLayerSelect;
 var jqLayerNickname;
 var jqLayerSubmit;
@@ -194,6 +195,7 @@ var Arbiter = {
 		jqAddServerPage = $('#idAddServerPage');
 		jqServerSelect = $('#serverselect');
 		jqExistingServers = $('#existingServers');
+		jqBaseLayerSelect = $('#baselayerselect');
 		jqLayerSelect = $('#layerselect');
 		jqLayerNickname = $('#layernickname');
 		jqLayerSubmit = $('#addLayerSubmit');
@@ -518,13 +520,37 @@ var Arbiter = {
 			 */////////////////////////////////////
 			for(var serverKey in serverList){
 				for(var layerKey in serverList[serverKey].layers){
-					Arbiter.layersSettingsList.append(layerKey, {
-						"servername": serverKey,
-						"layernickname": layerKey, 
-						"layertypename": serverList[serverKey].layers[layerKey].typeName
-					});
+					var layer = serverList[serverKey].layers[layerKey];
+					
+					if (layer.featureType){					
+						Arbiter.layersSettingsList.append(layerKey, {
+							"servername": serverKey,
+							"layernickname": layerKey, 
+							"layertypename": serverList[serverKey].layers[layerKey].typeName
+						});
+					}
 				}
 			}
+			
+			// Populate list of built in base layers and any wms layer
+			jqBaseLayerSelect.selectmenu();
+			
+			//Add all the servers to the list
+			for(var serverKey in serverList){
+				for(var layerKey in serverList[serverKey].layers){
+					
+					var layer = serverList[serverKey].layers[layerKey];
+					
+					if (!layer.featureType){
+						var option = '<option value="' + layerKey + '" servername="' + serverKey + '" layernickname="' + layerKey + '">' + layerKey + '</option>';
+						jqBaseLayerSelect.append(option);
+					}
+				}
+			}
+			
+			jqBaseLayerSelect.val("openstreetmap.org");
+			jqBaseLayerSelect.change();
+			jqBaseLayerSelect.selectmenu('refresh', true);
 		});
 		
 		jqSaveButton.click(function(event){
@@ -572,6 +598,7 @@ var Arbiter = {
 			}
 		});
 		
+		
 		jqServerSelect.change(function(event){
 			console.log('jqServerSelect.change');
 			var serverName = $(this).val();
@@ -589,6 +616,18 @@ var Arbiter = {
 		jqLayerSelect.change(function(event){
 			jqLayerNickname.val(jqLayerSelect.find('option:selected').text());
 		});
+
+		jqBaseLayerSelect.change(function(event){
+			console.log('jqBaseLayerSelect.change');
+			
+			// save baseLayer info
+			var selectedOption = jqBaseLayerSelect.find('option:selected');
+			
+			console.log("jqBaseLayerSelect selected option: ", selectedOption);
+			
+			Arbiter.currentProject.baseLayerInfo = { layernickname: selectedOption.attr('layernickname'), servername: selectedOption.attr('servername') };
+			console.log("baselayer info: ", Arbiter.currentProject.baseLayerInfo);
+		});		
 
 		jqAddFeature.click(function(event){
 			console.log("Add Feature");
@@ -838,21 +877,34 @@ var Arbiter = {
 		console.log("---- onCreateProject");
 
 		var insertCurrentProject = function(projectId){
-			Arbiter.saveAreaOfInterest(true);
 			Arbiter.layerCount = 0;
 			Arbiter.currentProject.projectId = projectId;
+
+			Arbiter.saveAreaOfInterest(true);
+
+			Arbiter.setProjectProperty("baseLayerInfo", Arbiter.currentProject.baseLayerInfo);
 			
 			var serverList = Arbiter.currentProject.serverList;		
 			for(var x in serverList){
 				Arbiter.insertProjectsServer(serverList[x].serverId, x, function(serverId, serverName){
 					console.log("insertProjectServer success: " + serverName + ", ", serverList[serverName]);
 					var layerList = Arbiter.currentProject.serverList[serverName].layers;
-		    		var layerCount = Arbiter.getAssociativeArraySize(layerList);
-					Arbiter.layerCount += layerCount;
+
+					//var layerCount = Arbiter.getAssociativeArraySize(layerList);
+		    		//Arbiter.layerCount += layerCount;
+					
+					var addedLayers = 0;
 					
 		    		for(var layerKey in layerList){
-		    			Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
+		    			var layer = layerList[layerKey];
+		    			
+		    			// only add if it has feature type as otherwise it is a layer usable as base layer
+		    			if (layer.featureType) {
+		    				addedLayers++;
+		    				Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
+		    			}
 		    		}
+		    		Arbiter.layerCount += addedLayers;
 		    		
 					console.log("~~ CORDOVA TRANSACTION ERROR LINE 822 ~~");
 					console.log("ProjectID: " + projectId);
@@ -862,54 +914,36 @@ var Arbiter = {
 					});
 				});
 			}
-			
-			// every project has a list of tiles it uses so that:
-			// - when the project is removed, the global tile's reference counter can be decremented.
-			// - when a project's tiles need to updated, we can potentially used this list... though normally, they will pull data in area of interest. 
-			var createTileIdsSql = "CREATE TABLE IF NOT EXISTS tileIds (id integer not null primary key);";  
-
-			Cordova.transaction(Arbiter.currentProject.variablesDatabase, createTileIdsSql, [], function(tx, res){
-				console.log("project tileIds table created");
-				
-				console.log("starting to cache tiles");
-				// cache tiles when new project is created. 
-				// TileUtil.startCachingTiles();
-				//TODO: try throwing exception and printing e.stack for more infor on error
-				// http://www.eriwen.com/javascript/js-stack-trace/
-			}, function(e){
-				console.log("project tileIds table err: ", e);
-			});
-
 		};
 		
 		var writeToDatabases = function(dir){
 		
 			//Set up a transaction for the global database
-				console.log("Add project " + Arbiter.squote(Arbiter.currentProject.name) + " to projects table...");
+			console.log("Add project " + Arbiter.squote(Arbiter.currentProject.name) + " to projects table...");
+		
+			//Add the project name to the projects table in globle.db
+			Cordova.transaction(Arbiter.globalDatabase, "INSERT INTO projects (name) VALUES (" + Arbiter.squote(Arbiter.currentProject.name) + ");", [], function(tx, res){
 			
-				//Add the project name to the projects table in globle.db
-				Cordova.transaction(Arbiter.globalDatabase, "INSERT INTO projects (name) VALUES (" + Arbiter.squote(Arbiter.currentProject.name) + ");", [], function(tx, res){
+				Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
+				Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
+
+				Arbiter.createMetaTables();
+				Arbiter.createDataTables();
+		
+				var projectId = res.insertId;
+				insertCurrentProject(projectId);
 				
-					Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
-					Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
-			
-					Arbiter.createMetaTables();
-					Arbiter.createDataTables();
-			
-					var projectId = res.insertId;
-					insertCurrentProject(projectId);
-					
-					console.log("Project " + projectId + ": " + Arbiter.squote(Arbiter.currentProject.name) + " added to projects table.");
-					
-					var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
-						'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';
-									
-					Arbiter.appendToListView("project", res.insertId, Arbiter.currentProject.name, leftplaceholder);		   
-					Arbiter.changePage_Pop(div_ProjectsPage);
+				console.log("Project " + projectId + ": " + Arbiter.squote(Arbiter.currentProject.name) + " added to projects table.");
 				
-				}, function(e){
-					console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " NOT added to projects table - " + e);
-				});
+				var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
+					'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';
+								
+				Arbiter.appendToListView("project", res.insertId, Arbiter.currentProject.name, leftplaceholder);		   
+				Arbiter.changePage_Pop(div_ProjectsPage);
+			
+			}, function(e){
+				console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " NOT added to projects table - " + e);
+			});
 		};
 		
 		var error = function(error){
@@ -1056,6 +1090,12 @@ var Arbiter = {
 				);
 			}
 		});
+		
+		Arbiter.getProjectProperty("baseLayerInfo", function(key, value){
+			Arbiter.currentProject.baseLayerInfo = { servername: value.servername, layernickname: value.layernickname};
+		}, function(key){
+			Arbiter.error("did not find project property baseLayerInfo");
+		}, true);
 
     },
 	
@@ -1119,24 +1159,16 @@ var Arbiter = {
 	    	if (map){
 	    		Arbiter.error("map should not exist!");
 	    	}
-	    	
-			osmLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
-					transitionEffect : 'resize',
-					singleTile : false,
-					ratio : 1.3671875,
-					isBaseLayer : true,
-					visibility : true,
-					getURL : TileUtil.getURL
-				}			
-			);    	
-	    	
+
+	    	baseLayer = Arbiter.createBaseLayer(Arbiter.currentProject.baseLayerInfo.servername, Arbiter.currentProject.baseLayerInfo.layernickname, true);		
+
 			map = new OpenLayers.Map({
 				div: "map",
 				projection: WGS84_Google_Mercator,
 				displayProjection: WGS84,
 				theme: null,
 				numZoomLevels: 18,
-				layers: [osmLayer],
+				layers: [baseLayer],
 				controls: [
 				new OpenLayers.Control.Attribution(),
 				new OpenLayers.Control.TouchNavigation({
@@ -1147,8 +1179,7 @@ var Arbiter = {
 				new OpenLayers.Control.Zoom()
 				]
 			});
-			
-			
+						
 			// we have a map, lets zoom and center based on the aoi
 			if (map && Arbiter.currentProject.aoi) {
 				//---- add the aoi layer so that users can see the aoi				
@@ -1204,17 +1235,15 @@ var Arbiter = {
     		Arbiter.error("aoiMap should not exist!");
     	}
     	
-		aoi_osmLayer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
-			transitionEffect: 'resize'
-		});
-
+    	aoi_baseLayer = Arbiter.createBaseLayer(Arbiter.currentProject.baseLayerInfo.servername, Arbiter.currentProject.baseLayerInfo.layernickname, false);		
+    	
 		aoiMap = new OpenLayers.Map({
 			div: "aoiMap",
 			projection: new OpenLayers.Projection("EPSG:900913"),
 			displayProjection: new OpenLayers.Projection("EPSG:4326"),
 			theme: null,
 			numZoomLevels: 18,
-			layers: [aoi_osmLayer],
+			layers: [aoi_baseLayer],
 			controls: [
 				new OpenLayers.Control.Attribution(),
 				new OpenLayers.Control.TouchNavigation({
@@ -1275,10 +1304,6 @@ var Arbiter = {
     
     onShowSettings: function(){
     	console.log("---- onShowSettings");
-    	//$('#idArbiterSettingsPage .PageFooter').animate({ "left": "0%" }, 0);
-    	//$('#idServersPage .SettingsPageFooter').animate({ "left": "0%" }, 0);
-    	//$('#idServersPage .CreatePageFooter').animate({ "left": "100%" }, 0);
-
 		$('#idArbiterSettingsPage .PageFooter').show();
 		$('#idServersPage .SettingsPageFooter').show();
 		$('#idServersPage .CreatePageFooter').hide();
@@ -1291,18 +1316,13 @@ var Arbiter = {
 	
     onShowArbiterSettings: function(){
     	console.log("---- onShowArbiterSettings");
-    	//$('#idArbiterSettingsPage .PageFooter').animate({ "left": "100%" }, 0);
 		$('#idArbiterSettingsPage .PageFooter').hide();
-		
 		Arbiter.changePage_Pop(div_ArbiterSettingsPage);
     },
     
     onShowServers: function(){
     	console.log("---- onShowServers");
     	Arbiter.serversList.checkbox = true;
-    	//$('#idServersPage .SettingsPageFooter').animate({ "left": "100%" }, 0);
-    	//$('#idServersPage .CreatePageFooter').animate({ "left": "0%"}, 0);
-		
 		$('#idServersPage .SettingsPageFooter').hide();
 		$('#idServersPage .CreatePageFooter').show();
 		
@@ -1363,21 +1383,163 @@ var Arbiter = {
     },
     
     saveAreaOfInterest: function(insertNotUpdate, successCallback) {
-			Arbiter.currentProject.aoi = aoiMap.getExtent();
+		Arbiter.currentProject.aoi = aoiMap.getExtent();
 
-			var statement = "";
+		var statement = "";
+		
+		if (insertNotUpdate) {
+			statement = "INSERT INTO settings (aoi_left, aoi_bottom, aoi_right, aoi_top) VALUES (?, ?, ?, ?);";
+		} else {
+			 //fake where clause. change table to key value json pair!
+			statement = "UPDATE settings SET aoi_left=?, aoi_bottom=?, aoi_right=?, aoi_top=? WHERE aoi_left <> '';"; 
+		}
+
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], 
+				successCallback, Arbiter.error);
+	},
+	
+	createBaseLayer: function(serverName, layerName, useCache){
+		console.log("---- createBaseLayer");
+		var layer = null; 
+		
+		if (serverName === "openstreetmap.org") {
+			layer = new OpenLayers.Layer.OSM('OpenStreetMap', null, {
+					transitionEffect : 'resize',
+					singleTile : false,
+					ratio : 1.3671875,
+					isBaseLayer : true,
+					visibility : true
+				}	
+			);    	
+		} else {
+			var serverInfo = Arbiter.currentProject.serverList[serverName];
 			
-			if (insertNotUpdate) {
-				statement = "INSERT INTO settings (aoi_left, aoi_bottom, aoi_right, aoi_top) VALUES (?, ?, ?, ?);";
-			} else {
-				 //fake where clause. change table to key value json pair!
-				statement = "UPDATE settings SET aoi_left=?, aoi_bottom=?, aoi_right=?, aoi_top=? WHERE aoi_left <> '';"; 
-			}
+	    	//TODO: use png not jpg
+			layer = new OpenLayers.Layer.WMS("baseLayer", serverInfo.url + "/wms", {
+				layers: layerName, //"TD1-BaseMap-Group",
+				noMagic: true, // dont switch between file format type automagically based on transparent ture/false
+				transparent: false,
+				isBaseLayer: true,
+				visibility: true
+			});
+		}
+		
+		if (useCache){
+			layer.getURL_Original = layer.getURL;
+			layer.getURL = TileUtil.getURL;
+		}
+		
+		console.log("---- createBaseLayer, DONE");
+		
+		return layer;
+	},
+	
+	getProjectProperty: function(key, foundKeyCallback, notFoundKeyCallback, convertValueToJSON) {
+		
+		if (typeof key !== "string") {
+			Arbiter.error("getProjectProperty: key must be a string");
+			return;
+		}
+		
+		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+			var statement = "SELECT key, value FROM properties WHERE key=?;";
+			tx.executeSql(statement, [key], function(tx, res){
 
-			Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], 
-					successCallback, Arbiter.error);
-    },
-    
+				if (res.rows.length === 0){
+					
+					if (notFoundKeyCallback){
+						notFoundKeyCallback(key);
+					}
+						
+				} else if (res.rows.length === 1){
+					
+					if (foundKeyCallback){
+						var valueReturn = res.rows.item(0).value;
+						
+						if (convertValueToJSON) {
+							valueReturn = JSON.parse(res.rows.item(0).value);
+						}
+						
+						foundKeyCallback(key, valueReturn);
+					}
+												
+				} else {
+					// should not happen
+					Arbiter.error("getProjectProperty: Multiple entries for property: " + key);
+				}
+			}, function(e1, e2) {
+				Arbiter.error("getProjectProperty.err1", e1, e2);
+			});
+		}, function(e1, e2) {
+			Arbiter.error("getProjectProperty.err1", e1, e2);
+		});	
+	},
+
+	setProjectProperty: function(key, value, successCallback) {
+
+		if (typeof key !== "string") {
+			Arbiter.error("setProjectProperty: key must be a string");
+			return;
+		}
+		
+		var valueString = value;
+		
+		if (typeof value !== "string") {
+			valueString = JSON.stringify(value, null, 2);
+		}
+		
+		Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+			var statement = "SELECT key, value FROM properties WHERE key=?;";
+			tx.executeSql(statement, [key], function(tx, res){
+
+				if (res.rows.length === 0){
+					
+					Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+						var statement = "INSERT INTO properties (key, value) VALUES (?, ?);";
+						tx.executeSql(statement, [key, valueString], function(tx, res){
+							console.log("inserted property. key: ", key, ", value: ", valueString);
+							//alert("inserted a property");
+							
+							if (successCallback){
+								successCallback(key, valueString);
+							}
+						}, function(e1, e2) {
+							Arbiter.error("setProjectProperty.err3", e1, e2);
+						});
+					}, function(e1, e2) {
+						Arbiter.error("setProjectProperty.err4", e1, e2);
+					});							
+						
+				} else if (res.rows.length === 1){
+
+					Arbiter.currentProject.variablesDatabase.transaction(function(tx){
+						var statement = "UPDATE properties SET value=? WHERE key=?;";
+						tx.executeSql(statement, [valueString, key], function(tx, res){
+							console.log("updated property. key: ", key, ", value: ", valueString);
+							//alert("updated a property");
+							
+							if (successCallback){
+								successCallback(key, valueString);
+							}							
+						}, function(e1, e2) {
+							Arbiter.error("setProjectProperty.err1", e1, e2);
+						});
+					}, function(e1, e2) {
+						Arbiter.error("setProjectProperty.err2", e1, e2);
+					});							
+						
+				} else {
+					// should not happen
+					Arbiter.error("setProjectProperty: Multiple entries for property: " + key);
+				}
+			}, function(e1, e2) {
+				Arbiter.error("setProjectProperty.err5", e1, e2);
+			});
+		}, function(e1, e2) {
+			Arbiter.error("setProjectProperty.err6", e1, e2);
+		});	
+	},
+
 	ToggleEditorMenu: function() {
 		if(!editorTabOpen) {
 			Arbiter.OpenEditorMenu();
@@ -1402,37 +1564,27 @@ var Arbiter = {
 
 	OpenEditorMenu: function() {
 		editorTabOpen = true;
+        
+        if(attributeTab === true) {
+            Arbiter.CloseAttributesMenu();
+        }
+        
 		$("#idEditorMenu").animate({ "left": "72px" }, 50);
-		var width;
-		
-		if(Arbiter.isOrientationPortrait()) {
-			width = screen.width - 72;
-		} else {
-			width = screen.height - 72;
-		}
-		$("#editorTab").animate({ "right": width }, 50);
-		$("#attributeTab").animate({ "opacity": "0.0" }, 0);
 	},
 	
 	CloseEditorMenu:function() {
 		editorTabOpen = false;
 		$("#idEditorMenu").animate({ "left": "100%" }, 50);
-		$("#editorTab").animate({ "right": "0px" }, 50);
-		$("#attributeTab").animate({ "opacity": "1.0" }, 0);
 	},
 	
 	OpenAttributesMenu: function() {
 		attributeTab = true;
+        
+        if(editorTabOpen === true) {
+            Arbiter.CloseEditorMenu();
+        }
+        
 		$("#idAttributeMenu").animate({ "left": "72px" }, 50);
-		var width;
-		
-		if(Arbiter.isOrientationPortrait()) {
-			width = screen.width - 72;
-		} else {
-			width = screen.height - 72;
-		}
-		$("#attributeTab").animate({ "right": width }, 50);
-		$("#editorTab").animate({ "opacity": "0.0" }, 0);
 		
 		Arbiter.PopulatePopup();
 	},
@@ -1440,8 +1592,6 @@ var Arbiter = {
 	CloseAttributesMenu: function() {
 		attributeTab = false;
 		$("#idAttributeMenu").animate({ "left": "100%" }, 50);
-		$("#attributeTab").animate({ "right": "0px" }, 50);
-		$("#editorTab").animate({ "opacity": "1.0" }, 0);
 	},
 	
 	showMessageOverlay: function(title, message) {
@@ -1795,8 +1945,13 @@ var Arbiter = {
 		for(var x in serverList){
 			layers = serverList[x].layers;
 			
-			for(var y in layers){
-				Arbiter.readLayer(serverList[x], layers[y], x, y, false);
+			for(var layerKey in layers){
+    			var layer = layers[layerKey];
+    			
+    			// only add if it has feature type as otherwise it is a layer usable as base layer
+    			if (layer.featureType) {
+    				Arbiter.readLayer(serverList[x], layers[layerKey], x, layerKey, false);
+    			}
 			}
 		}
 	},
@@ -1872,6 +2027,8 @@ var Arbiter = {
 					Arbiter.setLayerAttributeInfo(serversList, layer.layername, layer.f_table_name);
 				}
 
+				//TODO: this doesn't seem to be a good place to switch to map page... 
+				//      looks like this may get called multiple times from a parent function that is in a loop. 
 				Arbiter.changePage_Pop(div_MapPage);
 			}, Arbiter.error);
 	},
@@ -2359,6 +2516,21 @@ var Arbiter = {
 		"FOREIGN KEY(server_id) REFERENCES servers(id));";
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createLayersTableSql, [],
 			function(tx, res){ console.log("createLayersTableSql win!"); }, function(e){ console.log("Error createLayersTableSql - " + e); });
+		
+		
+		// every project has a list of tiles it uses so that:
+		// - when the project is removed, the global tile's reference counter can be decremented.
+		// - when a project's tiles need to updated, we can potentially used this list... though normally, they will pull data in area of interest. 
+		var createTileIdsSql = "CREATE TABLE IF NOT EXISTS tileIds (id integer not null primary key);";  
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createTileIdsSql, [], function(tx, res){
+			console.log("project tileIds table created");
+		});
+
+		// every project has a properties table which can be used to store any key-value pair
+		var createPropertiesSql = "CREATE TABLE IF NOT EXISTS properties (key text not null primary key, value text not null);";  
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createPropertiesSql, [], function(tx, res){
+			console.log("project properties table created");
+		});
 	},
 	
 	createDataTables: function(){
@@ -2473,13 +2645,32 @@ var Arbiter = {
 							attributeTypes: attributeTypes
 						};
 							
+						//TODO: ummm, this needs to be fixed. 
 						if(awayFromMap){
 							Arbiter.layerCount = 1;
 							Arbiter.insertProjectsLayer(serverInfo.serverId, serverName, layernickname, serverInfo.layers[layernickname], true);
 						}													 
 						
 					}else{
-						Arbiter.error("Invalid feature type");
+						alert("layer will be added but can only be used as a base layer");
+						
+						var selectedOption = jqLayerSelect.find('option:selected');
+
+						var layernickname = jqLayerNickname.val();
+						//serverId, layerName, layer.featureType, layer.featureNS, layer.typeName
+						serverInfo.layers[layernickname] = {
+							featureType: "", // no feature type means wms?
+							featureNS: "",
+							typeName: typeName,
+							srsName: selectedOption.attr('layersrs')
+						};
+							
+						//TODO: ummm, this needs to be fixed. 
+						if(awayFromMap){
+							Arbiter.layerCount = 1;
+							Arbiter.insertProjectsLayer(serverInfo.serverId, serverName, layernickname, serverInfo.layers[layernickname], true);
+						}							
+
 					}
 													 
 					window.history.back();
@@ -2956,7 +3147,8 @@ var Arbiter = {
 			variablesDatabase: null,
 			dataDatabase: null,
 			serverList: {},
-			deletedServers: {}
+			deletedServers: {},
+			baseLayerInfo: null
 		};
 	},
 						  
@@ -3340,6 +3532,7 @@ var Arbiter = {
  	}
 	 */
 	AddLayer: function(meta) {
+		alert("AddLayer");
 		console.log("meta", meta);
 		var protocol = null;
 		var newLayers = [];

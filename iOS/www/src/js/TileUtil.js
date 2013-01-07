@@ -4,8 +4,18 @@ debug: false,
 debugProgress: false,
 cacheTilesTest1Couter: 0,
 counterCacheInProgressMax: 5,
-
-
+formatSuffixMap: {
+    "image/png": "png",
+    "image/png8": "png",
+    "image/png24": "png",
+    "image/png32": "png",
+    "png": "png",
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "jpeg": "jpg",
+    "jpg": "jpg",
+    "image/gif": "gif"
+},
 		
 dumpFiles: function() {
 	console.log("---- TileUtil.dumpFiles");
@@ -75,7 +85,7 @@ startCachingTiles: function(successCallback) {
 	}
 	
 	Arbiter.setMessageOverlay("Caching Tiles", "Queuing Request");
-	//alert("Queuing Request");
+	alert("Queuing Request");
 	
 	var layer = map.baseLayer;
 	
@@ -152,9 +162,19 @@ serviceCacheRequests: function(){
 		while (caching.requestQueue.length) {
 			newStart += 1;
 			
-			var xyz = caching.requestQueue.pop();
-
-			TileUtil.cacheTile(xyz);
+			var request = caching.requestQueue.pop();
+			//TODO: try to compute?
+			
+			/**
+			 * OSM.getURL because of getXYZ relies on getServerResolution and getServerZoom so unless we want to duplciate code, 
+			 * we need to set the map to that zoom  
+			 */
+			if (request.zoom != map.zoom) {
+				console.log("change zoom to: ", request.zoom, ", from: ", map.zoom);
+				map.zoomTo(request.zoom);
+			}
+			
+			TileUtil.cacheTile(request.bounds, request.zoom);
 			
 			if (caching.counterCacheInProgress + newStart === TileUtil.counterCacheInProgressMax){
 				break;
@@ -291,21 +311,34 @@ onUpdateCachingDownloadProgress: function(){
 },
 
 getURL: function(bounds) {
+	var xyz = TileUtil.getXYZ(bounds, map.baseLayer);
+	console.log("getURL.xyz:", xyz.x, xyz.y, xyz.z);
 	
-	var xyz = this.getXYZ(bounds);
-    var url = this.url;
-    if (OpenLayers.Util.isArray(url)) {
-        var s = '' + xyz.x + xyz.y + xyz.z;
-        url = this.selectUrl(s, url);
-    }
-    
-    var url = OpenLayers.String.format(url, xyz);
-    
+    var ext = TileUtil.getLayerFormatExtension(this);
     
     // use the info we have to derive were the tile would be stored on the device
-    var path = Arbiter.fileSystem.root.fullPath + "/" + "osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + url.substr(url.lastIndexOf("."));
+    var path = Arbiter.fileSystem.root.fullPath + "/" + "osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + "." + ext;
  	
  	return path;
+},
+
+getLayerFormatExtension: function(layer) {
+	var ext = "png"; 
+    
+    if (layer instanceof OpenLayers.Layer.OSM) {
+    	ext = "png";
+    } else if (layer instanceof OpenLayers.Layer.WMS) {
+		ext = TileUtil.formatSuffixMap[layer.params.FORMAT]; 
+    } else if (layer instanceof OpenLayers.Layer.WMTS) {
+		ext = TileUtil.formatSuffixMap[layer.format];
+    } else if (layer instanceof OpenLayers.Layer.TMS) {
+		ext = layer.type;
+    } else {
+    	console.log();
+    	Arbiter.warning("unknown layer type asssuming extension of " + ext);
+    }
+    
+    return ext;
 },
 
 QueueCacheRequests: function(bounds) {
@@ -355,9 +388,14 @@ QueueCacheRequestsForZoom: function(layer, bounds, zoomLevel) {
 		for (var col = 0; col < minCols; col++) {
 			var tileBoundsLeft = tileoffsetlon;
 			var tileBoundsTop = tileoffsetlat + tilelat;
+			var tileBoundsRight = tileoffsetlon + tilelon;
+			var tileBoundsBottom = tileoffsetlat;
 			
 			tileoffsetlon += tilelon;
 			tileoffsetx += layer.tileSize.w;
+			
+			/*
+            var tileBounds = new OpenLayers.Bounds(tileBoundsLeft, tileBoundsBottom, tileBoundsRight, tileBoundsTop);
 			
 			var x = Math.round((tileBoundsLeft - layer.maxExtent.left) / (resolution * layer.tileSize.w));
 			var y = Math.round((layer.maxExtent.top - tileBoundsTop) / (resolution * layer.tileSize.h));
@@ -369,6 +407,11 @@ QueueCacheRequestsForZoom: function(layer, bounds, zoomLevel) {
 		 	}
 			
 		 	caching.requestQueue.push(xyz);
+		 	*/
+
+			var tileBounds = new OpenLayers.Bounds(tileBoundsLeft, tileBoundsBottom, tileBoundsRight, tileBoundsTop);
+			//TODO: try using best fit zoom for bounds instead of storing...should work 
+		 	caching.requestQueue.push({ bounds: tileBounds, zoom: zoomLevel });
 		}
 
 		tileoffsetlat -= tilelat;
@@ -376,20 +419,49 @@ QueueCacheRequestsForZoom: function(layer, bounds, zoomLevel) {
 	}
 },
 
-cacheTile: function(xyz){
+/**
+ * Method: getXYZ
+ * Calculates x, y and z for the given bounds. We need this to know where to store a tile regardless of it coming from an XYZ layer, WMTS, WMS, etc layer type
+ * alternitavely can store all files in a flat directory but guessing that performance might be come an issue with several projects with thousands of tiles each
+ */
+getXYZ: function(bounds, layer /*, zoom*/) {
+	// unfortunately have to rely on map's zoom... 
+	
+    //var res = map.getResolutionForZoom(map.zoom)
+	var res = layer.getServerResolution();
+    var x = Math.round((bounds.left - layer.maxExtent.left) /
+        (res * layer.tileSize.w));
+    var y = Math.round((layer.maxExtent.top - bounds.top) /
+        (res * layer.tileSize.h));
+    
+    //var z = zoom();
+    var z = layer.getServerZoom();
+
+    if (layer.wrapDateLine) {
+        var limit = Math.pow(2, z);
+        x = ((x % limit) + limit) % limit;
+    }
+
+    return {'x': x, 'y': y, 'z': z};
+},
+
+cacheTile: function(bounds, zoom){
 	
     if (TileUtil.debug) {
-    	console.log("--- TileUtil.cacheTile, tile: ", xyz);
+    	console.log("--- TileUtil.cacheTile, bounds & zoom: ", bounds, zoom);
     }
+    	
+    var xyz = TileUtil.getXYZ(bounds, caching.layer);
+	console.log("cacheTile 's xyz:", xyz.x, xyz.y, xyz.z);
+    //alert("printed tile xyz. " + xyz);    
+
+ 
+    // call teh original getURL not ours!
+    var url = caching.layer.getURL_Original(bounds);
+    console.log("url: ", url);
     
-    var url = caching.layer.url;
-    
-    if (OpenLayers.Util.isArray(url)) {
-        var s = '' + xyz.x + xyz.y + xyz.z;
-        url = caching.layer.selectUrl(s, url);
-    }
-    
-    url = OpenLayers.String.format(url, xyz);    
+
+    //alert("printed url");
 	 		
 	// track that we are planning to and have essentially starting to cache this tile.
 	// once we save the file or the attempt fails for ANY reason, we'll decrement the counter.
@@ -398,6 +470,7 @@ cacheTile: function(xyz){
 
 	// have we cached the tile already? 
 	Arbiter.globalDatabase.transaction(function(tx){
+
 		//---- have we cached the tile already?
 		//TODO: bring everythign back for now for debugging we only need url though!
 		var selectTileSql = "SELECT * FROM tiles WHERE url=?;";
@@ -407,6 +480,7 @@ cacheTile: function(xyz){
 		}
 		
 		tx.executeSql(selectTileSql, [url], function(tx, res){
+
 			
 			if (TileUtil.debug) {
 				console.log("getURL.res.rows.length: " + res.rows.length);
@@ -474,8 +548,8 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 		console.log("---- TileUtil.saveTile. tileset: " + tileset + ", z: " + z + ", x: " + x + ", y: " + y + ", url: " + fileUrl);
 	}
 
-	var extention = fileUrl.substr(fileUrl.lastIndexOf("."));
-	//console.log("---- TileUtil.saveTile.extention: " + extention);
+	var ext = TileUtil.getLayerFormatExtension(caching.layer);
+	//console.log("---- TileUtil.saveTile.ext: " + ext);
 	
 	Arbiter.fileSystem.root.getDirectory(tileset, {create: true}, 
 		function(tilesetDirEntry){
@@ -486,12 +560,13 @@ saveTile: function(fileUrl, tileset, z, x, y, successCallback, errorCallback) {
 					zDirEntry.getDirectory("" + x, {create: true}, 
 						function(xDirEntry){
 							//console.log("---- xDirEntry: " + xDirEntry.fullPath);
-							var filePath = xDirEntry.fullPath + "/" + y + extention; 
+							var filePath = xDirEntry.fullPath + "/" + y + "." + ext; 
 							
 							//console.log("==== will store file at: " + filePath);
 					
 							var fileTransfer = new FileTransfer();
-							var uri = encodeURI(fileUrl);
+							//var uri = encodeURI(fileUrl);
+							var uri = fileUrl;
 					
 							fileTransfer.download(
 								uri,
