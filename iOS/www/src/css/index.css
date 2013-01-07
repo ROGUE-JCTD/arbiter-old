@@ -105,8 +105,8 @@ html, body {
 #editorTab {
 	position:absolute;
 	z-index:1005;
-	right:0px;
-	top:11px;
+	left:0px;
+	bottom:64px;
 	width:32px;
 	height:32px;
 	background-color:rgba(0, 60, 136, 0.496094);
@@ -127,8 +127,8 @@ html, body {
 #attributeTab {
 	position:absolute;
 	z-index:1005;
-	right:0px;
-	top:44px;
+	left:0px;
+	bottom:100px;
 	width:32px;
 	height:32px;
 	background-color:rgba(136, 60, 0, 0.496094);

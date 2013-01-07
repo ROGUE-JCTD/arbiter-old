@@ -1564,37 +1564,27 @@ var Arbiter = {
 
 	OpenEditorMenu: function() {
 		editorTabOpen = true;
+        
+        if(attributeTab === true) {
+            Arbiter.CloseAttributesMenu();
+        }
+        
 		$("#idEditorMenu").animate({ "left": "72px" }, 50);
-		var width;
-		
-		if(Arbiter.isOrientationPortrait()) {
-			width = screen.width - 72;
-		} else {
-			width = screen.height - 72;
-		}
-		$("#editorTab").animate({ "right": width }, 50);
-		$("#attributeTab").animate({ "opacity": "0.0" }, 0);
 	},
 	
 	CloseEditorMenu:function() {
 		editorTabOpen = false;
 		$("#idEditorMenu").animate({ "left": "100%" }, 50);
-		$("#editorTab").animate({ "right": "0px" }, 50);
-		$("#attributeTab").animate({ "opacity": "1.0" }, 0);
 	},
 	
 	OpenAttributesMenu: function() {
 		attributeTab = true;
+        
+        if(editorTabOpen === true) {
+            Arbiter.CloseEditorMenu();
+        }
+        
 		$("#idAttributeMenu").animate({ "left": "72px" }, 50);
-		var width;
-		
-		if(Arbiter.isOrientationPortrait()) {
-			width = screen.width - 72;
-		} else {
-			width = screen.height - 72;
-		}
-		$("#attributeTab").animate({ "right": width }, 50);
-		$("#editorTab").animate({ "opacity": "0.0" }, 0);
 		
 		Arbiter.PopulatePopup();
 	},
@@ -1602,8 +1592,6 @@ var Arbiter = {
 	CloseAttributesMenu: function() {
 		attributeTab = false;
 		$("#idAttributeMenu").animate({ "left": "100%" }, 50);
-		$("#attributeTab").animate({ "right": "0px" }, 50);
-		$("#editorTab").animate({ "opacity": "1.0" }, 0);
 	},
 	
 	showMessageOverlay: function(title, message) {
