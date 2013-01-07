@@ -1416,14 +1416,16 @@ var Arbiter = {
 			
 	    	//TODO: use png not jpg
 			layer = new OpenLayers.Layer.WMS("baseLayer", serverInfo.url + "/wms", {
-				layers : layerName, //"TD1-BaseMap-Group",
-				transparent : false,
-				isBaseLayer : true,
-				visibility : true
+				layers: layerName, //"TD1-BaseMap-Group",
+				noMagic: true, // dont switch between file format type automagically based on transparent ture/false
+				transparent: false,
+				isBaseLayer: true,
+				visibility: true
 			});
 		}
 		
 		if (useCache){
+			layer.getURL_Original = layer.getURL;
 			layer.getURL = TileUtil.getURL;
 		}
 		
