@@ -522,6 +522,7 @@ var Arbiter = {
 				for(var layerKey in serverList[serverKey].layers){
 					var layer = serverList[serverKey].layers[layerKey];
 					
+					// only add layers that have a feature type
 					if (layer.featureType){					
 						Arbiter.layersSettingsList.append(layerKey, {
 							"servername": serverKey,
@@ -535,16 +536,12 @@ var Arbiter = {
 			// Populate list of built in base layers and any wms layer
 			jqBaseLayerSelect.selectmenu();
 			
-			//Add all the servers to the list
+			//Add all layers to the basemap select as a layer group, or a layer with features can be used as basemap
 			for(var serverKey in serverList){
 				for(var layerKey in serverList[serverKey].layers){
-					
 					var layer = serverList[serverKey].layers[layerKey];
-					
-					if (!layer.featureType){
-						var option = '<option value="' + layerKey + '" servername="' + serverKey + '" layernickname="' + layerKey + '">' + layerKey + '</option>';
-						jqBaseLayerSelect.append(option);
-					}
+					var option = '<option value="' + layerKey + '" servername="' + serverKey + '" layernickname="' + layerKey + '">' + layerKey + '</option>';
+					jqBaseLayerSelect.append(option);
 				}
 			}
 			
@@ -855,11 +852,14 @@ var Arbiter = {
     	console.log("insertProjectsLayer", layer);
     	Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertLayerSql, 
     			[serverId, layerName, layer.featureType, layer.featureNS, layer.typeName], function(tx, res){
+    		
     		console.log("insertProjectsLayer success");
-    		if (layer.featureType) {
+
+    		if (Arbiter.isVectorLayer(serverName, layerName, layer.featureType)) {
 	    		Arbiter.insertIntoGeometryColumnTable(layer);
 	    		Arbiter.createFeatureTable(serverName, layer, layerName, projectIsOpen);
     		}
+    		
     	}, function(e){ console.log("insertLayerSql error: " + e); });
     },
     
@@ -878,6 +878,21 @@ var Arbiter = {
     	var insertUsageSql = "INSERT INTO server_usage (project_id, server_id) VALUES (?, ?);";
 		
 		Cordova.transaction(Arbiter.globalDatabase,insertUsageSql, [projectId, serverId], success);
+    },
+    
+    isVectorLayer: function(serverName, layerName, featureType){
+		if (!featureType)
+			return false;
+		
+		// dont track geometry data if the layer is the current baselayer
+		//TODO: when we switch to another base layer, this one should become a typical geometry layer
+		if (Arbiter.currentProject.baseLayerInfo && 
+			layerName === Arbiter.currentProject.baseLayerInfo.layernickname &&
+			serverName === Arbiter.currentProject.baseLayerInfo.servername) {
+			return false;  	
+		}
+		
+		return true;
     },
     
     // gets called once we have collected all the information about the new project
@@ -901,24 +916,16 @@ var Arbiter = {
 					//var layerCount = Arbiter.getAssociativeArraySize(layerList);
 		    		//Arbiter.layerCount += layerCount;
 					
-					var addedLayers = 0;
+					//var addedLayers = 0;
 					
 		    		for(var layerKey in layerList){
 		    			var layer = layerList[layerKey];
-		    			
-		    			// only add if it has feature type as otherwise it is a layer usable as base layer
-		    			if (layer.featureType) {
-		    				addedLayers++;
-		    			}
-		    			
+		    			Arbiter.layerCount++;
 	    				Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
 		    			
 		    		}
-		    		Arbiter.layerCount += addedLayers;
+		    		//Arbiter.layerCount += addedLayers;
 		    		
-					console.log("~~ CORDOVA TRANSACTION ERROR LINE 822 ~~");
-					console.log("ProjectID: " + projectId);
-					console.log("ServerID: " + serverId);
 		    		Arbiter.insertServerUsage(projectId, serverId, function(tx, res){
 						console.log("insert server usage success");
 					});
@@ -1953,15 +1960,15 @@ var Arbiter = {
 	readLayers: function(serverList){
 		var layers;
 		console.log("readLayers " + Arbiter.radioNumber + ": " + serverList);
-		for(var x in serverList){
-			layers = serverList[x].layers;
+		for(var serverKey in serverList){
+			layers = serverList[serverKey].layers;
 			
 			for(var layerKey in layers){
     			var layer = layers[layerKey];
     			
     			// only add if it has feature type as otherwise it is a layer usable as base layer
-    			if (layer.featureType) {
-    				Arbiter.readLayer(serverList[x], layers[layerKey], x, layerKey, false);
+    			if (Arbiter.isVectorLayer(serverKey, layerKey, layer.featureType)) {
+    				Arbiter.readLayer(serverList[serverKey], layers[layerKey], serverKey, layerKey, false);
     			}
 			}
 		}
@@ -2670,7 +2677,7 @@ var Arbiter = {
 						var layernickname = jqLayerNickname.val();
 						//serverId, layerName, layer.featureType, layer.featureNS, layer.typeName
 						serverInfo.layers[layernickname] = {
-							featureType: "", // no feature type means wms?
+							featureType: "", // no featureType means it is not a wfs layer perhaps a layer group... can be used for base layer. 
 							featureNS: "",
 							typeName: typeName,
 							srsName: selectedOption.attr('layersrs')
