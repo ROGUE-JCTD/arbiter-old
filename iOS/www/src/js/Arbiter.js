@@ -2950,7 +2950,7 @@ var Arbiter = {
 		console.log("StackTrace: \n" + trace);
 		
 		if (Arbiter.debugAlertOnError) {
-			alert("ERORR: " + argsStr + "\n" + trace);
+			Arbiter.debugAlertOnError = confirm("Error: " + argsStr + "\n" + trace + "\nClick okay to close or cancel to ignore future errors");
 		}		
 	},
 	
@@ -2981,7 +2981,7 @@ var Arbiter = {
 		console.log("StackTrace: \n" + trace);
 		
 		if (Arbiter.debugAlertOnWarning) {
-			alert("Just WARNING: " + argsStr + "\n" + trace);
+			Arbiter.debugAlertOnWarning = confirm("Warning: " + argsStr + "\n" + trace  + "\nClick okay to close or cancel to ignore future warnings");
 		}		
 	},
 	

@@ -312,13 +312,10 @@ onUpdateCachingDownloadProgress: function(){
 
 getURL: function(bounds) {
 	var xyz = TileUtil.getXYZ(bounds, map.baseLayer);
-	console.log("getURL.xyz:", xyz.x, xyz.y, xyz.z);
-	
     var ext = TileUtil.getLayerFormatExtension(this);
     
     // use the info we have to derive were the tile would be stored on the device
     var path = Arbiter.fileSystem.root.fullPath + "/" + "osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + "." + ext;
- 	
  	return path;
 },
 
@@ -458,7 +455,10 @@ cacheTile: function(bounds, zoom){
  
     // call teh original getURL not ours!
     var url = caching.layer.getURL_Original(bounds);
-    console.log("url: ", url);
+
+    if (TileUtil.debug) {
+    	console.log("cacheTile.url: ", url);
+    }
     
 
     //alert("printed url");
