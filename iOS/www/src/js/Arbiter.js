@@ -1237,7 +1237,6 @@ var Arbiter = {
 			var statement = "SELECT * FROM tileIds;";
 			// if the TileIds table is empty, cache tiles.
 			Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [], function(tx, res) {
-				alert("checking if tiles have been chacehd already or not");
 				if (res.rows.length === 0){
 					TileUtil.cacheTiles();
 				} else {
@@ -3551,7 +3550,7 @@ var Arbiter = {
  	}
 	 */
 	AddLayer: function(meta) {
-		alert("AddLayer");
+		console.log("---- AddLayer. meta: ", meta);
 		console.log("meta", meta);
 		var protocol = null;
 		var newLayers = [];

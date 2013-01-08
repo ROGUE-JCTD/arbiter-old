@@ -85,10 +85,8 @@ startCachingTiles: function(successCallback) {
 	}
 	
 	Arbiter.setMessageOverlay("Caching Tiles", "Queuing Request");
-	alert("Queuing Request");
 	
 	var layer = map.baseLayer;
-	
 
 	caching = {
 		// extent before we start caching	
@@ -106,9 +104,9 @@ startCachingTiles: function(successCallback) {
 		requestQueue: [] 
 	};
 
+	caching.counterMax = TileUtil.queueCacheRequests(caching.extent);
+
 	map.zoomToExtent(caching.extent, true);
-	
-	TileUtil.QueueCacheRequests(caching.extent);
 	
 	Arbiter.setMessageOverlay("Caching Tiles", "Will Download " + caching.counterMax + " Tiles");
 	TileUtil.serviceCacheRequests();
@@ -192,6 +190,24 @@ cacheTiles: function(successCallback, errorCallback){
 	
 	Arbiter.showMessageOverlay("Caching Tiles");
 
+	//-- make sure user wants to clear cache and then download tiles after 
+	//   telling them how many tiles will be downloaded 
+	var count = TileUtil.queueCacheRequests(Arbiter.currentProject.aoi, true /* only count the tiles do not queue yet */);
+	var okay = confirm("Clear cache and download " + count + " tiles?");
+	
+	if (!okay) {
+		console.log("-- cache cancelled by user");
+		Arbiter.hideMessageOverlay();
+		
+		if (successCallback){
+			successCallback();
+		}
+		
+		return;
+	}
+	
+	
+	//-- continue with clearing cache and then re downloading tiles 
 	TileUtil.clearCache("osm", function(){
 		
 		if (TileUtil.cacheTilesTest1Couter > 0) {
@@ -338,18 +354,26 @@ getLayerFormatExtension: function(layer) {
     return ext;
 },
 
-QueueCacheRequests: function(bounds) {
+queueCacheRequests: function(bounds, onlyCountTile) {
 
-	for (var i=1; i < caching.layer.numZoomLevels; i++) {
-		TileUtil.QueueCacheRequestsForZoom(caching.layer, bounds, i);
-	}
+	// store current zoom since the function will change zoom level
+	var currentZoom = map.zoom;
 	
-	caching.counterMax = caching.requestQueue.length;
-	alert("Will cache: " + caching.counterMax);
+	var count = 0;
+	for (var i=1; i < map.baseLayer.numZoomLevels; i++) {
+		count += TileUtil.queueCacheRequestsForZoom(map.baseLayer, bounds, i, onlyCountTile);
+	}
+
+	// restore zoom
+	map.zoomTo(currentZoom);
+
+	return count;
 },
 
 
-QueueCacheRequestsForZoom: function(layer, bounds, zoomLevel) {
+queueCacheRequestsForZoom: function(layer, bounds, zoomLevel, onlyCountTile) {
+	
+	var count = 0;
 	
 	//TODO: would like to not have to change map zoom. find out what is needed to 
 	//      keep computation valid without having to do this
@@ -391,29 +415,20 @@ QueueCacheRequestsForZoom: function(layer, bounds, zoomLevel) {
 			tileoffsetlon += tilelon;
 			tileoffsetx += layer.tileSize.w;
 			
-			/*
-            var tileBounds = new OpenLayers.Bounds(tileBoundsLeft, tileBoundsBottom, tileBoundsRight, tileBoundsTop);
+			count++;
 			
-			var x = Math.round((tileBoundsLeft - layer.maxExtent.left) / (resolution * layer.tileSize.w));
-			var y = Math.round((layer.maxExtent.top - tileBoundsTop) / (resolution * layer.tileSize.h));
-	        		
-			var xyz = {
-		 		x: x,
-		 		y: y,
-		 		z: zoomLevel
-		 	}
-			
-		 	caching.requestQueue.push(xyz);
-		 	*/
-
-			var tileBounds = new OpenLayers.Bounds(tileBoundsLeft, tileBoundsBottom, tileBoundsRight, tileBoundsTop);
-			//TODO: try using best fit zoom for bounds instead of storing...should work 
-		 	caching.requestQueue.push({ bounds: tileBounds, zoom: zoomLevel });
+			if (!onlyCountTile){
+				var tileBounds = new OpenLayers.Bounds(tileBoundsLeft, tileBoundsBottom, tileBoundsRight, tileBoundsTop);
+				//TODO: try using best fit zoom for bounds instead of storing...should work 
+			 	caching.requestQueue.push({ bounds: tileBounds, zoom: zoomLevel });
+			}
 		}
 
 		tileoffsetlat -= tilelat;
 		tileoffsety += layer.tileSize.h;
 	}
+	
+	return count;
 },
 
 /**
