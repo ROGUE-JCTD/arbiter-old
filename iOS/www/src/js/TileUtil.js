@@ -112,9 +112,6 @@ startCachingTiles: function(successCallback) {
 	
 	Arbiter.setMessageOverlay("Caching Tiles", "Will Download " + caching.counterMax + " Tiles");
 	TileUtil.serviceCacheRequests();
-
-	// we're done - go back to the view user had before they started caching
-    map.zoomToExtent(caching.extentOriginal, true);
 },
 
 
@@ -140,6 +137,9 @@ cachingComplete: function(){
 	}
 	
     var callback = caching.successCallback;
+    
+	// we're done - go back to the view user had before they started caching
+    map.zoomToExtent(caching.extentOriginal, true);
     
     // keep for debugging
     cachingLast = caching;

@@ -535,6 +535,7 @@ var Arbiter = {
 			
 			// Populate list of built in base layers and any wms layer
 			jqBaseLayerSelect.selectmenu();
+			jqBaseLayerSelect.html('<option value="openstreetmap.org" servername="openstreetmap.org" layernickname="">OpenStreetMap.org</option>');
 			
 			//Add all layers to the basemap select as a layer group, or a layer with features can be used as basemap
 			for(var serverKey in serverList){
