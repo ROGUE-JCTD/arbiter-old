@@ -2201,46 +2201,47 @@ var Arbiter = {
 		if(!username){
 			args.jqusername.addClass('invalid-field');
 			valid = false;
-		}else
-			args.jqusername.removeClass('invalid-field');
-		
-		if(!password){
-			args.jqpassword.addClass('invalid-field');
-			valid = false;
 		}else {
-			args.jqpassword.removeClass('invalid-field');
-		}
+			args.jqusername.removeClass('invalid-field');
+        }
 			
 		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers;", [], function(tx, res){
 			var serverName = "";
-					
-			for(var i = 0; i < res.rows.length; i++){
-				serverName = res.rows.item(i).name;
-				if(nickname == serverName) {
-					args.jqnickname.addClass('invalid-field');
-					args.jqnickname.val("");
-					args.jqnickname.attr("placeholder", 'Server "' + nickname + '"already exists! *');
-					valid = false;
-				}
-			}
+                            
+            if(!nickname){
+                args.jqnickname.addClass('invalid-field');
+                args.jqnickname.val("");
+                args.jqnickname.attr("placeholder", "Please enter a Nickname. *");
+                valid = false;
+            }else{
+                args.jqnickname.removeClass('invalid-field');
+            }
+                            
+            if(args.newServerName == true) {
+                for(var i = 0; i < res.rows.length; i++){
+                    serverName = res.rows.item(i).name;
+                    if(nickname == serverName) {
+                        args.jqnickname.addClass('invalid-field');
+                        args.jqnickname.val("");
+                        args.jqnickname.attr("placeholder", 'Server "' + nickname + '"already exists! *');
+                        valid = false;
+                    }
+                }
+            }
+                            
+            if(!url){
+                args.jqurl.addClass('invalid-field');
+                valid = false;
+            }else {
+                args.jqurl.removeClass('invalid-field');
+            }
+                            
+            if(valid == true) {
+                //Arbiter.showMessageOverlay();
+                Arbiter.authenticateServer(args);
+                //Arbiter.hideMessageOverlay();
+            }
 		}, Arbiter.error);
-		
-		if(!nickname){
-			args.jqnickname.addClass('invalid-field');
-			args.jqnickname.val("");
-			args.jqnickname.attr("placeholder", "Please enter a Nickname. *");
-			valid = false;
-		}else{
-			args.jqnickname.removeClass('invalid-field');
-		}
-		
-		if(!url){
-			args.jqurl.addClass('invalid-field');
-			valid = false;
-		}else
-			args.jqurl.removeClass('invalid-field');
-		
-		return valid;
 	},
 	
 	//This should be checking the JSESSIONID cookie instead, but it doesn't seem like
@@ -2278,14 +2279,26 @@ var Arbiter = {
 		var username = args.jqusername.val();
 		var password = args.jqpassword.val();
 		var url = args.jqurl.val();
-		
-		$.post(url + "/j_spring_security_check", {username: username, password: password}, function(results, textStatus, jqXHR){
-			Arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
-		}).error(function(err){ //seems to require request to the server before it actually can find it
-			$.post(url + "/j_spring_security_check", {username: username, password: password}, function(results, textStatus, jqXHR){
-				Arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
-			});
-		});
+        
+        $.ajax({
+            type: "POST", 
+            url: url + "/j_spring_security_check", 
+            data: {username: username, password: password},
+            timeout: 20000,
+            error: function(jqXHR, textStatus, errorThrown) {
+               if(textStatus == "timeout") {
+                    alert("Failed to connect\nServer not responding");
+               } else {
+                    alert("Could not find server\nEnsure URL was entered correctly and server is online");
+               }
+            },
+            success: function(data, textStatus, jqXHR) {
+                Arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
+            },
+            complete: function() {
+                //alert("post completed");
+            }
+        })
 	},
 	
 	
@@ -2315,7 +2328,8 @@ var Arbiter = {
 			jqusername: jqNewUsername,
 			jqpassword: jqNewPassword,
 			jqurl: jqNewServerURL,
-			jqnickname: jqNewNickname
+			jqnickname: jqNewNickname,
+            newServerName: true
 		};
 
 		jqAddServerButton.removeClass('ui-btn-active');
@@ -2359,10 +2373,8 @@ var Arbiter = {
 			}, Arbiter.error);
 		};
 		
-		if(Arbiter.validateAddServerFields(args)){
-			Arbiter.authenticateServer(args);
-		}
-	},
+		Arbiter.validateAddServerFields(args);
+    },
 	
 	restExistingServersCheckboxes: function() {
 		$('.existingServer-checkbox').each(function(index) {
@@ -2406,9 +2418,14 @@ var Arbiter = {
 			jqusername: jqEditUsername,
 			jqpassword: jqEditPassword,
 			jqurl: jqEditServerURL,
-			jqnickname: jqEditNickname
+			jqnickname: jqEditNickname,
+            newServerName: false
 		};
 		jqEditServerButton.removeClass('ui-btn-active');
+        
+        if(args.jqnickname.val() != jqEditServerButton.attr('server-name')) {
+            args.newServerName = true;
+        }
 		
 		args.func = function(){
 			var username = jqEditUsername.val();
@@ -2445,9 +2462,7 @@ var Arbiter = {
 
 		};
 		
-		if(Arbiter.validateAddServerFields(args)){
-			Arbiter.authenticateServer(args);
-		}
+		Arbiter.validateAddServerFields(args);
 	},
 	
 	onClick_DeleteServer: function(itemInfo, deleteRow){
