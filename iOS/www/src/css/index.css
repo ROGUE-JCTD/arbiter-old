@@ -9,7 +9,12 @@ html, body {
 }
 
 .ui-page {
-    -webkit-backface-visibility: hidden;
+    -webkit-backface-visibility: hidden !important;
+}
+
+.ui-mobile-viewport-transitioning,
+.ui-mobile-viewport-transitioning .ui-page {
+    overflow: visible;
 }
 
 #idWelcomePage {

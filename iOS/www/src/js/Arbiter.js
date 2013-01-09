@@ -3782,7 +3782,7 @@ var Arbiter = {
 	},
 	
 	changePage_Pop: function(_div) {
-		$.mobile.changePage(_div /*, {transition: "pop"}*/);
+		$.mobile.changePage(_div, {transition: "fade"});
 	},
 	
 	getOrientation: function() {

@@ -3,7 +3,7 @@ var TileUtil = {
 debug: false,
 debugProgress: false,
 cacheTilesTest1Couter: 0,
-counterCacheInProgressMax: 5,
+counterCacheInProgressMax: 2,
 formatSuffixMap: {
     "image/png": "png",
     "image/png8": "png",
