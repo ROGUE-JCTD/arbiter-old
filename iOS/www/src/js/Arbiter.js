@@ -2284,11 +2284,21 @@ var Arbiter = {
             type: "POST", 
             url: url + "/j_spring_security_check", 
             data: {username: username, password: password},
-            timeout: 20000,
+            timeout: 5000,
             error: function(jqXHR, textStatus, errorThrown) {
-               if(textStatus == "timeout") {
+               if(errorThrown == "timeout") {
                     alert("Failed to connect\nServer not responding");
-               } else {
+               }
+               if(errorThrown == "Not Found") {
+                    $.ajax({type: "POST", url: url + "/j_spring_security_check", data: {username: username, password: password},
+                        timeout: 5000, success: function(data, textStatus, jqXHR) {
+                           Arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);},
+                           error: function(jqXHR, textStatus, errorThrown) {
+                                alert("Could not find server");
+                           }
+                    });
+               }
+               else {
                     alert("Could not find server\nEnsure URL was entered correctly and server is online");
                }
             },
@@ -2890,6 +2900,10 @@ var Arbiter = {
 						return 0;
 					});
 					
+					
+					var layersInUse = $('#idLayerSettingsList .list-item');
+					var inUse = false;
+						
 					for(var i = 0;i < layerList.length;i++){
 						layer = layerList[i];
 						
@@ -2901,8 +2915,19 @@ var Arbiter = {
 							}
 						}
 						
-						options +=  '<option layersrs="' + layersrs + '" value="' + 
-							layer.name + '">' + layer.title + '</option>';
+						inUse = false;
+						for(var k = 0; k < layersInUse.length; ++k) {
+							//alert("layerTypeName= "+$(layersInUse[k]).attr('layertypename')+"layerName= "+layer.name);
+							if($(layersInUse[k]).attr('layertypename') == layer.name) {
+								inUse = true;
+								break;
+							}
+						}
+						
+						if(inUse == false) {
+							options +=  '<option layersrs="' + layersrs + '" value="' +
+								layer.name + '">' + layer.title + '</option>';
+						}
 					}
 							
 					jqLayerSelect.html(options).selectmenu('refresh', true);
