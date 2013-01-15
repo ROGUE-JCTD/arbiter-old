@@ -116,7 +116,7 @@ var Arbiter = {
 	
 	debugAlertOnWarning: true,
 	
-	debugCallstack: false,	
+	debugCallstack: true,	
 	
 	fileSystem: null,
 	

@@ -30,4 +30,11 @@ public class Arbiter extends DroidGap
         super.onCreate(savedInstanceState);
         super.loadUrl("file:///android_asset/www/src/index.html");
     }
+    
+    @Override
+    public void onLowMemory(){
+    	System.out.print("onLowMemory Called. Call System.gc();");
+    	System.gc();
+    	super.onLowMemory();
+    }
 }

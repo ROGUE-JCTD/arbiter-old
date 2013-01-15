@@ -316,6 +316,67 @@ testTilesTableIsEmpty: function(_success, _error){
 testPngTileCount: function(){
 },
 
+downloadTile: function(_url, _numTimes, _success, _error) {
+	//http://b.tile.openstreetmap.org/15/5199/12123.png
+
+		//Save file to the device.	
+		var addTileCallbackTest = function(){
+			var saveTileSuccessTest = function(paramURL, paramPath){
+				console.log("Saved tile " + _url, paramURL, paramPath);
+				
+				//Delete the file from the device
+				var successDelete = function(){
+					console.log("Tile deleted!");
+					
+					if(_success) { 
+						_success(_numTimes);
+					}
+				};
+				
+				var errorDelete = function() {
+					console.log("Tile not deleted!");
+					
+					if(_error) {
+						_error();
+					}
+				};
+				
+				TileUtil.removeTileFromDevice(paramPath, 1000, successDelete, errorDelete);
+			};
+				
+			var saveTileErrorTest = function(){
+				console.log("Could not save tile " + _url);
+				
+				if(_error) {
+					_error();
+				}
+			};
+				
+			TileUtil.saveTile(_url, "osm", "15", "5199", "12123", "png", saveTileSuccessTest, saveTileErrorTest);
+		};
+		
+		//Update databases
+		TileUtil.addTile(_url, "osm", "15", "5199", "12123", "png", addTileCallbackTest, 1, 1000);	
+},
+
+testTileDownload: function(_url, _numTimes) {
+
+	var tileDownloadSuccess = function(numTimes) {
+		console.log("Tile " + _url + " downloaded and removed!");
+		
+		var timesToRun = (numTimes - 1);
+		if(timesToRun > 0) {
+			TileUtil.testTileDownload(_url, timesToRun);
+		}
+	};
+	
+	var tileDownloadError = function() {
+		console.log("Tile " + _url + " failed to download.");
+	};
+
+	TileUtil.downloadTile(_url, _numTimes, tileDownloadSuccess, tileDownloadError);
+},
+
 onUpdateCachingDownloadProgress: function(){
 	var percent = Math.round(caching.counterDownloaded/caching.counterMax * 100);
 	
