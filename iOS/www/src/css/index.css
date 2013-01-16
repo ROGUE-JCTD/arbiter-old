@@ -50,6 +50,16 @@ html, body {
 	background  : rgba(84,84,84,255);
 }
 
+#idLanguagePageListContainer {
+	overflow: scroll;
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+	padding: 2% 2%;
+	position: absolute;
+	left: 2%;
+	right: 2%;
+}
+
 #idLanguageList {
 	
 }

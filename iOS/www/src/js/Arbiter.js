@@ -2944,7 +2944,7 @@ var Arbiter = {
 	
 	//This function loops through all the languages that are supported and populates
 	// the list on #idLanguagePage with the options.
-	onClick_LanguageSubmit: function(_div) {
+	onClick_LanguageSubmit: function(_div, welcome) {
 		console.log("onClick(): " + _div.id);
 		var language = _div.id;
 		
@@ -2955,7 +2955,11 @@ var Arbiter = {
 		
 		console.log("Language selected: " + CurrentLanguage.name);
 		Arbiter.UpdateLocale();
-		Arbiter.changePage_Pop(div_ProjectsPage);
+		
+		if(welcome)
+			Arbiter.changePage_Pop(div_ProjectsPage);
+		else
+			Arbiter.changePage_Pop(div_ArbiterSettingsPage);
 	},
 	
 	UpdateLocale: function() {
