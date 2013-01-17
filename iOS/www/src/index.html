@@ -256,7 +256,7 @@
 		<div data-role="page" class="Page" id='idAreaOfInterestPage' data-theme="a">
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-				<a data-role="button" href="#idLayersPage" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<a data-role="button" onclick="Arbiter.onClick_AOIBack()" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
 				<h1 data-localize="page.area">Area of Interest</h1>
 			</div>
 			
@@ -275,7 +275,7 @@
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
-						<li><a onClick="Arbiter.onSetAreaOfInterest()"><div data-localize="footer.finish">Finish</div></a></li>
+						<li><a id="idAOIFooter" onClick="Arbiter.onSetAreaOfInterest()"><div data-localize="footer.finish">Finish</div></a></li>
 					</ul>
 				</div>
 			</div>

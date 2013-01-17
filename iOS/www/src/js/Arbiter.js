@@ -1369,7 +1369,7 @@ var Arbiter = {
     },
     
     onSetAreaOfInterest: function() {
-    	
+    	$('#idAOIFooter').removeClass('ui-btn-active');
     	// if creaing a new project, aoi will be null
     	if (Arbiter.currentProject && Arbiter.currentProject.aoi === null){
         	Arbiter.onCreateProject();
@@ -1663,6 +1663,14 @@ var Arbiter = {
 			
 			projectDeleteButtons.css('display', 'none');
 			editButton.text('Edit');
+		}
+	},
+	
+	onClick_AOIBack: function() {
+		if(awayFromMap) {
+			Arbiter.changePage_Pop(div_ProjectSettingsPage);
+		} else {
+			Arbiter.changePage_Pop(div_LayersPage);
 		}
 	},
 	
