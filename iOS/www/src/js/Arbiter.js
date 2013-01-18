@@ -390,9 +390,9 @@ var Arbiter = {
 		});
 		
 		// make point radius larger so it is easier to select point features
-		OpenLayers.Feature.Vector.style.default.pointRadius = 12;
-		OpenLayers.Feature.Vector.style.select.pointRadius = 12;
-		OpenLayers.Feature.Vector.style.temporary.pointRadius = 12;		
+		OpenLayers.Feature.Vector.style.default.pointRadius = 18;
+		OpenLayers.Feature.Vector.style.select.pointRadius = 18;
+		OpenLayers.Feature.Vector.style.temporary.pointRadius = 18;		
 		
 		
 		
