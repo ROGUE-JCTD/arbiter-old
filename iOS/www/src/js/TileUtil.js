@@ -481,10 +481,9 @@ queueCacheRequestsForZoom: function(layer, bounds, zoomLevel, onlyCountTile) {
 			tileoffsetlon += tilelon;
 			tileoffsetx += layer.tileSize.w;
 			
-			var tileBounds = new OpenLayers.Bounds(tileBoundsLeft, tileBoundsBottom, tileBoundsRight, tileBoundsTop);
-			
 			count++;
 			if (!onlyCountTile){
+				var tileBounds = new OpenLayers.Bounds(tileBoundsLeft, tileBoundsBottom, tileBoundsRight, tileBoundsTop);
 				//TODO: try using best fit zoom for bounds instead of storing...should work 
 			 	caching.requestQueue.push({ bounds: tileBounds, zoom: zoomLevel });
 			}
