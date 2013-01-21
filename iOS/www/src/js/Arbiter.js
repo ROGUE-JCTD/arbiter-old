@@ -1571,12 +1571,13 @@ var Arbiter = {
 			Arbiter.OpenAttributesMenu();
 		} else {
 			Arbiter.CloseAttributesMenu();
-			
+			/*
 			if(attributeTab) {
 				if(selectedFeature) {
 					Arbiter.newWFSLayer.unselected(selectedFeature);
 				}
 			}
+			*/
 		}
 	},
 
@@ -2785,6 +2786,7 @@ var Arbiter = {
 		var postData = '<wfs:GetFeature service="WFS" version="1.0.0" outputFormat="GML2" ' +
 		'xmlns:wfs="http://www.opengis.net/wfs" ' +
 		'xmlns:ogc="http://www.opengis.net/ogc" xmlns:gml="http://www.opengis.net/gml" ' +
+		'date="' + (new Date().getTime()) + '" ' +
 		'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wfs ' +
 		'http://schemas.opengis.net/wfs/1.0.0/WFS-basic.xsd"> ' +
 		'<wfs:Query typeName="' + featureType + '">' +
@@ -2820,41 +2822,42 @@ var Arbiter = {
 					
 				//vectorLayer.destroyFeatures();
 												  
-					console.log("pragma transaction table name: " + f_table_name);
-					Cordova.transaction(Arbiter.currentProject.dataDatabase, "PRAGMA table_info (" + f_table_name + ");", [], function(tx, res){
-						var dtAttributes = [];
-						var i;
-						var value;
-						
-						//get the columns that are type dateTime
-						console.log("number of columns: " + res.rows.length);
-						for(i = 0; i < res.rows.length;i++){
-							if(res.rows.item(i).type == "dateTime")
-								dtAttributes.push(res.rows.item(i).name);
+				console.log("pragma transaction table name: " + f_table_name);
+				Cordova.transaction(Arbiter.currentProject.dataDatabase, "PRAGMA table_info (" + f_table_name + ");", [], function(tx, res){
+					var dtAttributes = [];
+					var i;
+					var value;
+					
+					//get the columns that are type dateTime
+					console.log("number of columns: " + res.rows.length);
+					for(i = 0; i < res.rows.length;i++){
+						if(res.rows.item(i).type == "dateTime")
+							dtAttributes.push(res.rows.item(i).name);
+					}
+					
+					//GeoServer doesn't include the 'Z' when storing the dateTime, so add it manually
+					console.log("dtAttributes: ", dtAttributes);
+					for(i = 0; i < features.length;i++){
+						for(var j = 0; j < dtAttributes.length;j++){
+							value = features[i].attributes[dtAttributes[j]];
+							console.log("dt value: " + value);
+							if(value && value.substr(value.length - 1) != 'Z')
+								features[i].attributes[dtAttributes[j]] += 'Z';
 						}
-						
-						//GeoServer doesn't include the 'Z' when storing the dateTime, so add it manually
-						console.log("dtAttributes: ", dtAttributes);
-						for(i = 0; i < features.length;i++){
-							for(var j = 0; j < dtAttributes.length;j++){
-								value = features[i].attributes[dtAttributes[j]];
-								console.log("dt value: " + value);
-								if(value && value.substr(value.length - 1) != 'Z')
-									features[i].attributes[dtAttributes[j]] += 'Z';
-							}
-						}
-						
-						console.log("pullFeatures: ", features);
-						Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false, addProjectCallback, layernickname);
-						
-					}, Arbiter.error);
+					}
+					
+					console.log("pullFeatures: ", features);
+					//alert('pulled features');
+					Arbiter.insertFeaturesIntoTable(features, f_table_name, geomName, srs, false, addProjectCallback, layernickname);
+					
+				}, Arbiter.error);
 			},
 			failure: function(response){
-				console.log('something went wrong');
+				Arbiter.error('pullFeatures failed');
 			}
 		});	
 	},
-	
+		
 	enableLayerSelectAndNickname: function(){
 		jqLayerSelect.parent().removeClass('ui-disabled').removeAttr('aria-disabled');
 		jqLayerSelect.removeAttr('aria-disabled disabled').removeClass('mobile-selectmenu-disabled ui-state-disabled');
@@ -3298,11 +3301,13 @@ var Arbiter = {
 		
 		for(var i = 0; i < features.length; i++){
 			var feature = features[i];
-			Arbiter.tableInsertion(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, features.length);
+			Arbiter.insertFeature(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, features.length);
 		}
 	},
 	
-	tableInsertion: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, featuresLength){
+	insertFeature: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, featuresLength){
+		console.log('insertFeature: layername: ', layername, 'feature: ', feature, 'f_table_name: ', f_table_name, 'geomName: ', geomName, 'isEdit: ', isEdit );
+		
 		var selectSql;
 		var selectParams;
 							  
@@ -3641,68 +3646,79 @@ var Arbiter = {
 			newLayers.push(newWMSLayer);
 			
 			strategies[0].events.register("success", '', function(event) {
-
-				console.log("save success: ", event);
-				// Update the wmsLayer with the save
+				var wfsLayer = event.object.layer;
+				console.log("layer startegy success event: ", event);
+				//var pull = confirm('layer save succeeded. pull?');
+				
+				
+				
+				// Update the wmsLayer to reflect latest data
 				newWMSLayer.mergeNewParams({
 					'ver' : Math.random()
 				// override browser caching
 				});
-
 				newWMSLayer.redraw(true);
 
-				Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM dirty_table;", []);
+				
+				//if (!pull) {
+				//	alert('not pulling');
+				//	return;
+				//}
 
-				var url = server.url;
-				var username = server.username;
-				var password = server.password;
-				var typeName = serverLayer.typeName;
-				var geomName = serverLayer.geomName;
-				var featureType = serverLayer.featureType;
-				var srsName = serverLayer.srsName;
+				var pullFeatures = function(){
+					var url = server.url;
+					var username = server.username;
+					var password = server.password;
+					var typeName = serverLayer.typeName;
+					var geomName = serverLayer.geomName;
+					var featureType = serverLayer.featureType;
+					var srsName = serverLayer.srsName;
 
-				if(Arbiter.deletingLayersInfo){
-					/*Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
-							server.username, server.password, function(featureCount){
-								console.log("deleteLayerCallback: " + featureIncrement);
-								featureIncrement++;
-								if(featureIncrement >= featureCount){
-									console.log("featureIncrement: " + featureIncrement);
-									Arbiter.deleteLayerCount--;
-									if(Arbiter.deleteLayerCount == 0){
-										if(Arbiter.deletingLayersInfo.layername){
-											Arbiter.deleteServer();
-											console.log("delete count = 0, now delete the damn server already!");
+					if(Arbiter.deletingLayersInfo){
+						alert('should not hit this.');
+						/*Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
+								server.username, server.password, function(featureCount){
+									console.log("deleteLayerCallback: " + featureIncrement);
+									featureIncrement++;
+									if(featureIncrement >= featureCount){
+										console.log("featureIncrement: " + featureIncrement);
+										Arbiter.deleteLayerCount--;
+										if(Arbiter.deleteLayerCount == 0){
+											if(Arbiter.deletingLayersInfo.layername){
+												Arbiter.deleteServer();
+												console.log("delete count = 0, now delete the damn server already!");
+											}else{
+												console.log("must be deleting a single layer!");
+											}
+											
+											Arbiter.deletingLayersInfo = null;
 										}else{
-											console.log("must be deleting a single layer!");
-										}
-										
-										Arbiter.deletingLayersInfo = null;
+											console.log("deleteLayerCount: " + Arbiter.deleteLayerCount);
+										 }
 									}else{
-										console.log("deleteLayerCount: " + Arbiter.deleteLayerCount);
-									 }
-								}else{
-									console.log("featureIncrement: " + featureIncrement);
-								}
-							}, meta.nickname);*/
-					
-					//Arbiter.deleteLayerCount++;
-					Arbiter.deleteLayer(meta.serverName, meta.nickname);
-				}else{
-					Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM " + featureType, [], function(tx, res) {
-						// pull everything down
-								  
-						newWFSLayer.destroyFeatures();
-						console.log("pull after delete");
-						console.log("pullFeatures after delete: " + serverLayer.typeName + serverLayer.geomName + serverLayer.featureType + serverLayer.srsName
-								+ server.url + server.username + server.password);
-					
-						Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
-							server.username, server.password, null, meta.nickname);
-					}, function(e){
-							console.log("save delete failure:", e);
-					});
-				}
+										console.log("featureIncrement: " + featureIncrement);
+									}
+								}, meta.nickname);*/
+						
+						//Arbiter.deleteLayerCount++;
+						Arbiter.deleteLayer(meta.serverName, meta.nickname);
+					}else{
+						Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM " + featureType, [], function(tx, res) {
+							// pull everything down
+							wfsLayer.destroyFeatures();
+							console.log("pull after delete");
+							console.log("pullFeatures after delete: " + serverLayer.typeName + serverLayer.geomName + serverLayer.featureType + serverLayer.srsName
+									+ server.url + server.username + server.password);
+						
+							Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
+								server.username, server.password, null, meta.nickname);
+						}, function(e){
+								Arbiter.error("layer save delete failed:", e);
+						});
+					}
+				};
+
+				Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM dirty_table;", [], pullFeatures);
 			});
 		}
 		
