@@ -390,9 +390,9 @@ var Arbiter = {
 		});
 		
 		// make point radius larger so it is easier to select point features
-		OpenLayers.Feature.Vector.style.default.pointRadius = 12;
-		OpenLayers.Feature.Vector.style.select.pointRadius = 12;
-		OpenLayers.Feature.Vector.style.temporary.pointRadius = 12;		
+		OpenLayers.Feature.Vector.style.default.pointRadius = 18;
+		OpenLayers.Feature.Vector.style.select.pointRadius = 18;
+		OpenLayers.Feature.Vector.style.temporary.pointRadius = 18;		
 		
 		
 		
@@ -1371,7 +1371,7 @@ var Arbiter = {
     },
     
     onSetAreaOfInterest: function() {
-    	
+    	$('#idAOIFooter').removeClass('ui-btn-active');
     	// if creaing a new project, aoi will be null
     	if (Arbiter.currentProject && Arbiter.currentProject.aoi === null){
         	Arbiter.onCreateProject();
@@ -1665,6 +1665,14 @@ var Arbiter = {
 			
 			projectDeleteButtons.css('display', 'none');
 			editButton.text('Edit');
+		}
+	},
+	
+	onClick_AOIBack: function() {
+		if(awayFromMap) {
+			Arbiter.changePage_Pop(div_ProjectSettingsPage);
+		} else {
+			Arbiter.changePage_Pop(div_LayersPage);
 		}
 	},
 	
@@ -2946,7 +2954,7 @@ var Arbiter = {
 	
 	//This function loops through all the languages that are supported and populates
 	// the list on #idLanguagePage with the options.
-	onClick_LanguageSubmit: function(_div) {
+	onClick_LanguageSubmit: function(_div, welcome) {
 		console.log("onClick(): " + _div.id);
 		var language = _div.id;
 		
@@ -2957,7 +2965,11 @@ var Arbiter = {
 		
 		console.log("Language selected: " + CurrentLanguage.name);
 		Arbiter.UpdateLocale();
-		Arbiter.changePage_Pop(div_ProjectsPage);
+		
+		if(welcome)
+			Arbiter.changePage_Pop(div_ProjectsPage);
+		else
+			Arbiter.changePage_Pop(div_ArbiterSettingsPage);
 	},
 	
 	UpdateLocale: function() {

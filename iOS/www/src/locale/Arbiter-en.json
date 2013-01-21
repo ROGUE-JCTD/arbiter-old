@@ -12,7 +12,8 @@
 		"newLayer": "New Layer",
 		"editLayer": "Edit Layer",
 		"saveLayer": "Save Layer",
-		"area": "Area of Interest"
+		"area": "Area of Interest",
+		"language": "Language"
 	},
 	"button" : {
 		"back": "Back",

@@ -513,9 +513,7 @@ queueCacheRequestsForZoom: function(layer, bounds, zoomLevel, onlyCountTile) {
     var resolutionForZoom = map.getResolutionForZoom(zoomLevel);
     var extentWidth = (bounds.right - bounds.left) / resolutionForZoom;
     var extentHeight = (bounds.top - bounds.bottom) / resolutionForZoom;
-	var minCols = extentWidth / layer.tileSize.w;
-	var minRows = extentHeight / layer.tileSize.h;
-	
+
 	var origin = layer.getTileOrigin();
 	var resolution = layer.getServerResolution();
 
@@ -523,10 +521,17 @@ queueCacheRequestsForZoom: function(layer, bounds, zoomLevel, onlyCountTile) {
 
 	var tileoffsetx = Math.round(tileLayout.tileoffsetx); 
 	var tileoffsety = Math.round(tileLayout.tileoffsety);
-
+	
 	var tileoffsetlon = tileLayout.tileoffsetlon;
 	var tileoffsetlat = tileLayout.tileoffsetlat;
+	//console.log("tileoffsetx: ", tileoffsetx, ", tileoffsety: ", tileoffsety, ", tileoffsetlon: ", tileoffsetlon, ", tileoffsetlat: ", tileoffsetlat);
 
+	//NOTE: this is a correction over what openlayers does to catch a bug and include the tiles in the edge cases. 
+	var minCols = (Math.abs(tileoffsetx) + extentWidth) / layer.tileSize.w;
+	var minRows = (Math.abs(tileoffsety) + extentHeight) / layer.tileSize.h;
+	//console.log("-- zoomLevel: ", zoomLevel, ", minCols: ", minCols, ", minRows: ", minRows, ", extentWidth: ", extentWidth, ", extentHeight: ", extentHeight, ", layer.tileSize.w: ", layer.tileSize.w, ", layer.tileSize.h: ", layer.tileSize.h);
+
+	
 	var tilelon = tileLayout.tilelon;
 	var tilelat = tileLayout.tilelat;
 
@@ -547,7 +552,6 @@ queueCacheRequestsForZoom: function(layer, bounds, zoomLevel, onlyCountTile) {
 			tileoffsetx += layer.tileSize.w;
 			
 			count++;
-			
 			if (!onlyCountTile){
 				var tileBounds = new OpenLayers.Bounds(tileBoundsLeft, tileBoundsBottom, tileBoundsRight, tileBoundsTop);
 				//TODO: try using best fit zoom for bounds instead of storing...should work 

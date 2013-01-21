@@ -67,17 +67,17 @@
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
 				<h1 data-localize="page.welcome">Welcome</h1>
 			</div>
-			<!-- /Header -->
-						
+			
+			<!-- Content -->
 			<div id="idLogo">
 				<img src="img/tempLogo.png" alt="Arbiter" width="180" height="180"/>
 			</div>
 			
 			<div id='idLanguageListContainer'>
 				<div data-role="controlgroup" id='idLanguageList' data-mini="true">
-					<a data-role="button" id="ENGLISH" onClick="Arbiter.onClick_LanguageSubmit(this)">Use English as the main language.</a>
-					<a data-role="button" id="SPANISH" onClick="Arbiter.onClick_LanguageSubmit(this)">Utilice el español como idioma principal.</a>
-					<a data-role="button" id="PORTUGUESE" onClick="Arbiter.onClick_LanguageSubmit(this)">Uso português como língua principal.</a>
+					<a data-role="button" id="ENGLISH" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Use English as the main language.</a>
+					<a data-role="button" id="SPANISH" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Utilice el español como idioma principal.</a>
+					<a data-role="button" id="PORTUGUESE" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Uso português como língua principal.</a>
 				</div>
 			</div>
 		</div>
@@ -208,7 +208,7 @@
 		<div data-role="page" class="Page" id='idLayersPage' data-theme="a">
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-				<a data-role="button" href="#idServersPage" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<a data-role="button" href="#idProjectSettingsPage" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
 				<h1 data-localize="page.layers">Layers</h1>
 				<a onClick="Arbiter.onClick_EditLayers()" class="ui-btn-right" data-icon="info" data-localize="button.edit">Edit</a>
 			</div>
@@ -256,7 +256,7 @@
 		<div data-role="page" class="Page" id='idAreaOfInterestPage' data-theme="a">
 			<!-- Header -->
 			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
-				<a data-role="button" href="#idLayersPage" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<a data-role="button" onclick="Arbiter.onClick_AOIBack()" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
 				<h1 data-localize="page.area">Area of Interest</h1>
 			</div>
 			
@@ -275,7 +275,7 @@
 			<div data-role="footer" class="PageFooter" id="idPageFooter" data-position="fixed">
 				<div data-role="navbar" data-iconpos="top">
 					<ul>
-						<li><a onClick="Arbiter.onSetAreaOfInterest()"><div data-localize="footer.finish">Finish</div></a></li>
+						<li><a id="idAOIFooter" onClick="Arbiter.onSetAreaOfInterest()"><div data-localize="footer.finish">Finish</div></a></li>
 					</ul>
 				</div>
 			</div>
@@ -358,7 +358,7 @@
 			
 			<!-- Content -->
 			<div data-role="content" class="ArbiterSettingsPageContent" id='idArbiterSettingsPageContent'>
-				<a href="#idWelcomePage"><input type="submit" value="Choose Language" data-mini="true"></a>
+				<a href="#idLanguagePage"><input type="submit" value="Choose Language" data-mini="true"></a>
 			</div>
 			
 			<!-- Footer -->
@@ -583,6 +583,28 @@
 					<ul>
 						<li><a id="addLayerSubmit" onClick="Arbiter.submitLayer()"><div data-localize="footer.save">Save</div></a></li>
 					</ul>
+				</div>
+			</div>
+		</div>
+		
+		<!--
+		 // =======================
+		 //		 Language Page
+		 // =======================
+		 -->
+		<div data-role="page" class="Page" id='idLanguagePage' data-theme="a">
+			<!-- Header -->
+			<div data-role="header" class="PageHeader" id="idPageHeader" data-position="fixed">
+				<a data-role="button" href="#idArbiterSettingsPage" class="ui-btn-left" data-icon="back" data-localize="button.back">Back</a>
+				<h1 data-localize="page.language">Language</h1>
+			</div>
+			
+			<!-- Content -->
+			<div id='idLanguagePageListContainer'>
+				<div data-role="controlgroup" id='idLanguageList' data-mini="true">
+					<a data-role="button" id="ENGLISH" onClick="Arbiter.onClick_LanguageSubmit(this, false)">Use English as the main language.</a>
+					<a data-role="button" id="SPANISH" onClick="Arbiter.onClick_LanguageSubmit(this, false)">Utilice el español como idioma principal.</a>
+					<a data-role="button" id="PORTUGUESE" onClick="Arbiter.onClick_LanguageSubmit(this, false)">Uso português como língua principal.</a>
 				</div>
 			</div>
 		</div>
