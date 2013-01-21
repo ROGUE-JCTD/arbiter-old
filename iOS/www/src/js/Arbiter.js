@@ -731,7 +731,9 @@ var Arbiter = {
 		
 		jqSyncUpdates.taphold(function(){
 			// re-cache tiles and when done, perform normal sync to take care of vector data
-			TileUtil.cacheTiles(function(){ jqSyncUpdates.click(); });
+			if(Arbiter.isOnline) {
+				TileUtil.cacheTiles(function(){ jqSyncUpdates.click(); });
+			}
 		});
 				
 		jqEditorTab.click(function(event){

@@ -4,6 +4,8 @@ debug: false,
 debugProgress: false,
 cacheTilesTest1Couter: 0,
 counterCacheInProgressMax: 2,
+androidClearWebCacheAfter: 15,
+
 formatSuffixMap: {
     "image/png": "png",
     "image/png8": "png",
@@ -360,7 +362,66 @@ downloadTile: function(_url, _numTimes, _success, _error) {
 },
 
 testTileDownload: function(_url, _numTimes) {
+	
+	//Get the baseLayer to cache
+	var layer = map.baseLayer;
 
+	//Create a caching variable to store information
+	caching = {
+		// extent before we start caching	
+		extentOriginal: map.getExtent(),
+		// extent that we should use as starting point of caching
+		extent: Arbiter.currentProject.aoi,
+		startZoom: map.getZoomForExtent(Arbiter.currentProject.aoi, true),
+		layer: layer,
+		counterDownloaded: 0,
+		counterDownloadFailed: 0,
+		counterCacheInProgress: 0,
+		counterCacheInProgressWaitAttempt: 0,
+		counterMax: -1,
+		successCallback: function() { console.log("test caching completed!"); }, 
+		requestQueue: [] 
+	};
+
+	//queueCacheRequest
+	caching.counterMax = TileUtil.queueCacheRequests(caching.extent);
+
+	//Zoom the map
+	map.zoomToExtent(caching.extent, true);
+	
+	//
+	console.log("Cache requests queued!");
+	console.log(caching);
+	
+	if (caching.counterCacheInProgress < TileUtil.counterCacheInProgressMax){
+		var newStart = 0;
+		
+		while (caching.requestQueue.length) {
+			newStart += 1;
+			
+			var request = caching.requestQueue.pop();
+			console.log("New request: ", request);
+			//TODO: try to compute?
+			
+			/**
+			 * OSM.getURL because of getXYZ relies on getServerResolution and getServerZoom so unless we want to duplciate code, 
+			 * we need to set the map to that zoom  
+			 */
+			if (request.zoom != map.zoom) {
+				console.log("change zoom to: ", request.zoom, ", from: ", map.zoom);
+				map.zoomTo(request.zoom);
+			}
+			
+			console.log(" -- cacheTile");
+			TileUtil.cacheTile(request.bounds, request.zoom);
+			
+			if (caching.counterCacheInProgress + newStart === TileUtil.counterCacheInProgressMax){
+				console.log(" ---- break");
+				break;
+			}
+		}
+	}
+	
 	var tileDownloadSuccess = function(numTimes) {
 		console.log("Tile " + _url + " downloaded and removed!");
 		
@@ -374,12 +435,21 @@ testTileDownload: function(_url, _numTimes) {
 		console.log("Tile " + _url + " failed to download.");
 	};
 
-	TileUtil.downloadTile(_url, _numTimes, tileDownloadSuccess, tileDownloadError);
+	//TileUtil.downloadTile(_url, _numTimes, tileDownloadSuccess, tileDownloadError);
 },
 
 onUpdateCachingDownloadProgress: function(){
+
+	//Android crash fix
+	if(navigator.app != undefined) {
+		//Every 15 (default) tiles clear the web cache
+		if((caching.counterDownloaded % TileUtil.androidClearWebCacheAfter) === 0 || caching.counterDownloaded === caching.counterMax) {
+			console.log(" ~~~" + caching.counterDownloaded + " tiles downloaded. Clearing Web Cache!");
+			navigator.app.clearCache();
+		}
+	}
+
 	var percent = Math.round(caching.counterDownloaded/caching.counterMax * 100);
-	
 	Arbiter.setMessageOverlay("Caching Tiles", "Downloaded " + percent + "%");
 
 	if (TileUtil.debugProgress) {
