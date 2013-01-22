@@ -2269,14 +2269,17 @@ var Arbiter = {
 	 *		func //either insert or update
 	 * }
 	 */
-	checkCacheControl: function(cacheControl, args){
-		 // Not authenticated
-		if(cacheControl && (cacheControl.indexOf("must-revalidate") != -1)){
+	checkCacheControl: function(_responseText, args){
+		console.log("checkCacheControl");
+		console.log(_responseText);
+		 //Authenticated
+		if(_responseText && (_responseText.indexOf("<title>GeoServer: Welcome</title>") !== -1)){
+			console.log("And suddenly it's Christmas!");
+			args.func.call(Arbiter);
+		}else{ //not authenticated
 			args.jqusername.addClass('invalid-field');
 			args.jqpassword.addClass('invalid-field');
 			args.jqpassword.val("");
-		}else{ //authenticated
-			args.func.call(Arbiter);	
 		}
 	},
 	
@@ -2306,10 +2309,11 @@ var Arbiter = {
                if(errorThrown == "Not Found") {
                     $.ajax({type: "POST", url: url + "/j_spring_security_check", data: {username: username, password: password},
                         timeout: 5000, success: function(data, textStatus, jqXHR) {
-                           Arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);},
-                           error: function(jqXHR, textStatus, errorThrown) {
-                                alert("Could not find server");
-                           }
+                        	console.log(jqXHR);
+                           	Arbiter.checkCacheControl(jqXHR.responseText, args);},
+                           	error: function(jqXHR, textStatus, errorThrown) {
+                            	alert("Could not find server");
+                           	}
                     });
                }
                else {
@@ -2317,7 +2321,8 @@ var Arbiter = {
                }
             },
             success: function(data, textStatus, jqXHR) {
-                Arbiter.checkCacheControl(jqXHR.getResponseHeader("cache-control"), args);
+            	console.log(jqXHR);
+                Arbiter.checkCacheControl(jqXHR.responseText, args);
             },
             complete: function() {
                 //alert("post completed");
