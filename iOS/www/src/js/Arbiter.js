@@ -38,7 +38,6 @@ var describeFeatureTypeReader;
 var metadataTable = "layermeta";
 var modifiedTable = "dirtytable";
 
-var selectControl;
 var selectedFeature;
 var oldSelectedFID;
 
@@ -1245,6 +1244,9 @@ var Arbiter = {
 					console.log("---->> tile have been cached already. not re-caching");
 				}
 			}, function(e){ console.log("Error reading tileIds - " + e); });
+			
+			//open the editor tab. a hack to avoid the jumping feature bug
+			$("#editorTab").click();
     	}
 	},
 	
@@ -3810,6 +3812,8 @@ var Arbiter = {
 		});
 
 		var addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer, OpenLayers.Handler.Point);
+		var selectControl = new OpenLayers.Control.SelectFeature( newWFSLayer, OpenLayers.Handler.Point);
+		
 		addFeatureControl.events.register("featureadded", null, function(event) {
 			if(poiInBounds == false) {
 				return false;
@@ -3824,7 +3828,16 @@ var Arbiter = {
 			console.log("new feature", event.feature);
 			
 			Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
+			
+			selectControl.select(event.feature);
+			
+			console.log("opening tab");
+			jqAddFeature.click();
+			Arbiter.ToggleAttributeMenu();
 		});
+		
+		map.addControl(selectControl);
+		selectControl.activate();
 		
 		map.addControl(addFeatureControl);
 
