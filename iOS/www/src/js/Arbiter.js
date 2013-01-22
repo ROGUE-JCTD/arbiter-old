@@ -108,6 +108,7 @@ var CurrentLanguage = LanguageType.ENGLISH;
 
 var awayFromMap = false;
 var editorTabOpen = false;
+var attributeTab = false;
 
 var Arbiter = { 
 	
@@ -3525,6 +3526,8 @@ var Arbiter = {
 				}
 				var protocol = selectedFeature.layer.protocol;
 				Arbiter.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
+				
+				Arbiter.ToggleAttributeMenu();
 			}else{
 				$("#saveAttributesFailed").fadeIn(1000, function(){
 					$(this).fadeOut(3000);
