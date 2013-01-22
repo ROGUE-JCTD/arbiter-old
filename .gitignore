@@ -1,38 +1,24 @@
-###########################
-# built application files #
-###########################
+# built application files
 *.ap_
 
-########################
-# files for the dex VM #
-########################
+# files for the dex VM
 *.dex
 
-####################
-# Java class files #
-####################
+# Java class files
 *.class
 
-###################
-# generated files #
-###################
+# generated files
 bin/
 gen/
 
-############################################
-# Local configuration file (sdk path, etc) #
-############################################
+# Local configuration file (sdk path, etc)
 local.properties
 
-#########################
-# Eclipse project files #
-#########################
+# Eclipse project files
 .classpath
 .project
 
-#############
-# IOS files #
-#############
+# IOS files
 .DS_Store
 *.swp
 *~.nib
@@ -48,17 +34,3 @@ build/
 *.mode2v3
 
 xcuserdata
-
-########################
-# Keep out icons local #
-########################
-Android/res/drawable-hdpi/icon.png
-Android/res/drawable-ldpi/icon.png
-Android/res/drawable-mdpi/icon.png
-Android/res/drawable-xhdpi/icon.png
-Android/res/drawable/icon.png
-iOS/Arbiter/Resources/icons/icon.png
-iOS/Arbiter/Resources/icons/icon@2x.png
-iOS/Arbiter/Resources/icons/icon-72.png
-iOS/Arbiter/Resources/icons/icon-72@2x.png
-iOS/www/src/img/logo.png

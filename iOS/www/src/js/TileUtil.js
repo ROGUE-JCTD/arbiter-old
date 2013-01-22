@@ -4,7 +4,7 @@ debug: false,
 debugProgress: false,
 cacheTilesTest1Couter: 0,
 counterCacheInProgressMax: 2,
-androidClearWebCacheAfter: 20,
+androidClearWebCacheAfter: 15,
 
 formatSuffixMap: {
     "image/png": "png",
@@ -171,7 +171,7 @@ serviceCacheRequests: function(){
 			 */
 			if (request.zoom != map.zoom) {
 				console.log("change zoom to: ", request.zoom, ", from: ", map.zoom);
-				//map.zoomTo(request.zoom);
+				map.zoomTo(request.zoom);
 			}
 			
 			TileUtil.cacheTile(request.bounds, request.zoom);
@@ -508,7 +508,7 @@ queueCacheRequestsForZoom: function(layer, bounds, zoomLevel, onlyCountTile) {
 	
 	//TODO: would like to not have to change map zoom. find out what is needed to 
 	//      keep computation valid without having to do this
-	//map.zoomTo(zoomLevel);
+	map.zoomTo(zoomLevel);
 		
     var resolutionForZoom = map.getResolutionForZoom(zoomLevel);
     var extentWidth = (bounds.right - bounds.left) / resolutionForZoom;
