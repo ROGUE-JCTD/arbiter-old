@@ -3591,11 +3591,7 @@ var Arbiter = {
 			}
 			
 			$("ul#attribute-list").empty().append(li).listview("refresh");
-			$("#attributeMenuContent").append('<div id="saveAttributesSucceeded" style="display:none;">' +
-											  	'<span style="color:green;font-size:24px;">&#x2713;</span>' +
-												'<span style="color:green;">Save Succeeded</span>' +
-											  '</div>' +
-											'<div id="saveAttributesFailed" style="display:none;">' +
+			$("#attributeMenuContent").append('<div id="saveAttributesFailed" style="display:none;">' +
 											  	'<span style="color:red;font-size:24px;">&#x2716;</span>' +
 												'<span style="color:red;">Save Failed</span>' +
 											'</div>');
