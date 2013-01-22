@@ -169,10 +169,10 @@ serviceCacheRequests: function(){
 			 * OSM.getURL because of getXYZ relies on getServerResolution and getServerZoom so unless we want to duplciate code, 
 			 * we need to set the map to that zoom  
 			 */
-			if (request.zoom != map.zoom) {
-				console.log("change zoom to: ", request.zoom, ", from: ", map.zoom);
-				map.zoomTo(request.zoom);
-			}
+//			if (request.zoom != map.zoom) {
+//				console.log("change zoom to: ", request.zoom, ", from: ", map.zoom);
+//				map.zoomTo(request.zoom);
+//			}
 			
 			TileUtil.cacheTile(request.bounds, request.zoom);
 			
@@ -495,9 +495,6 @@ queueCacheRequests: function(bounds, onlyCountTile) {
 		count += TileUtil.queueCacheRequestsForZoom(map.baseLayer, bounds, i, onlyCountTile);
 	}
 
-	// restore zoom
-	map.zoomTo(currentZoom);
-
 	return count;
 },
 
@@ -505,17 +502,13 @@ queueCacheRequests: function(bounds, onlyCountTile) {
 queueCacheRequestsForZoom: function(layer, bounds, zoomLevel, onlyCountTile) {
 	
 	var count = 0;
-	
-	//TODO: would like to not have to change map zoom. find out what is needed to 
-	//      keep computation valid without having to do this
-	map.zoomTo(zoomLevel);
 		
     var resolutionForZoom = map.getResolutionForZoom(zoomLevel);
     var extentWidth = (bounds.right - bounds.left) / resolutionForZoom;
     var extentHeight = (bounds.top - bounds.bottom) / resolutionForZoom;
 
 	var origin = layer.getTileOrigin();
-	var resolution = layer.getServerResolution();
+	var resolution = layer.getServerResolution(resolutionForZoom);
 
 	var tileLayout = layer.calculateGridLayout(bounds, origin, resolution);
 
@@ -571,19 +564,35 @@ queueCacheRequestsForZoom: function(layer, bounds, zoomLevel, onlyCountTile) {
  * Calculates x, y and z for the given bounds. We need this to know where to store a tile regardless of it coming from an XYZ layer, WMTS, WMS, etc layer type
  * alternitavely can store all files in a flat directory but guessing that performance might be come an issue with several projects with thousands of tiles each
  */
-getXYZ: function(bounds, layer /*, zoom*/) {
+getXYZ: function(bounds, layer, zoom) {
 	// unfortunately have to rely on map's zoom... 
 	
-    //var res = map.getResolutionForZoom(map.zoom)
-	var res = layer.getServerResolution();
+	var resolutionForZoom = map.getResolutionForZoom(zoom);
+	
+	var res = layer.getServerResolution(resolutionForZoom);
     var x = Math.round((bounds.left - layer.maxExtent.left) /
         (res * layer.tileSize.w));
     var y = Math.round((layer.maxExtent.top - bounds.top) /
         (res * layer.tileSize.h));
     
-    //var z = zoom();
-    var z = layer.getServerZoom();
-
+    //NOTE: not using layer.getServerZoom because it realies on 
+    //      maps current zoom level which we are trying to avoid setting while caching
+    //      to reduce how often android crashes. 
+    // var z = layer.getServerZoom();
+    
+    var z = -1;
+    
+    if (layer.serverResolutions){
+		z = OpenLayers.Util.indexOf(layer.serverResolutions, res);
+	} else {
+		z = map.getZoomForResolution(res) + (layer.zoomOffset || 0);
+	}
+    
+	if (z===-1){
+		Arbiter.error('TileUtil.getXYZ, z === -1');
+	}
+	
+	
     if (layer.wrapDateLine) {
         var limit = Math.pow(2, z);
         x = ((x % limit) + limit) % limit;
@@ -592,19 +601,36 @@ getXYZ: function(bounds, layer /*, zoom*/) {
     return {'x': x, 'y': y, 'z': z};
 },
 
+
+getURLForXYZLayerOnly: function (layer, xyz) {
+    var url = layer.url;
+    if (OpenLayers.Util.isArray(url)) {
+        var s = '' + xyz.x + xyz.y + xyz.z;
+        url = layer.selectUrl(s, url);
+    }
+    
+    return OpenLayers.String.format(url, xyz);
+},
+
 cacheTile: function(bounds, zoom){
 	
     if (TileUtil.debug) {
     	console.log("--- TileUtil.cacheTile, bounds & zoom: ", bounds, zoom);
     }
     	
-    var xyz = TileUtil.getXYZ(bounds, caching.layer);
+    var xyz = TileUtil.getXYZ(bounds, caching.layer, zoom);
 	console.log("cacheTile 's xyz:", xyz.x, xyz.y, xyz.z);
-    //alert("printed tile xyz. " + xyz);    
+    //alert("printed tile xyz. " + xyz);
+	
+	var url = '';
 
- 
-    // call teh original getURL not ours!
-    var url = caching.layer.getURL_Original(bounds);
+	// If the layer is an OSM (or XYZ) layer, don't call its getURL because it elies on the current 
+	// zoom level of the map which we avoid settings since it results in more crashes on android
+	if (caching.layer instanceof OpenLayers.Layer.XYZ) {
+		url = TileUtil.getURLForXYZLayerOnly(caching.layer, xyz);
+	} else {
+		url = caching.layer.getURL_Original(bounds);
+	}
 
     if (TileUtil.debug) {
     	console.log("cacheTile.url: ", url);

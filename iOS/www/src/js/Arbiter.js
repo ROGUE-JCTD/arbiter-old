@@ -2788,6 +2788,9 @@ var Arbiter = {
 		var postData = '<wfs:GetFeature service="WFS" version="1.0.0" outputFormat="GML2" ' +
 		'xmlns:wfs="http://www.opengis.net/wfs" ' +
 		'xmlns:ogc="http://www.opengis.net/ogc" xmlns:gml="http://www.opengis.net/gml" ' +
+		// TODO
+		//NOTE: this data param is a hack to force the browser on ios 6.0 vs older versions to beleive it is a completely new request and so it doesn't repond to this getfeature
+		//      with something it had previously cached. 
 		'date="' + (new Date().getTime()) + '" ' +
 		'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wfs ' +
 		'http://schemas.opengis.net/wfs/1.0.0/WFS-basic.xsd"> ' +
@@ -3653,7 +3656,8 @@ var Arbiter = {
 				//var pull = confirm('layer save succeeded. pull?');
 				
 				
-				
+				//TODO: NOTE: if we happen to get the same random number, it will break. 
+				//      try new Data().getTime() like we are doing for wfs
 				// Update the wmsLayer to reflect latest data
 				newWMSLayer.mergeNewParams({
 					'ver' : Math.random()
