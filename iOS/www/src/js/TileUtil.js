@@ -449,6 +449,7 @@ testTileDownload: function(_url, _numTimes) {
 
 onUpdateCachingDownloadProgress: function(){
 
+	/*
 	//Android crash fix
 	if(navigator.app != undefined) {
 		//Every 15 (default) tiles clear the web cache
@@ -457,6 +458,7 @@ onUpdateCachingDownloadProgress: function(){
 			navigator.app.clearCache();
 		}
 	}
+	*/
 
 	var percent = Math.round(caching.counterDownloaded/caching.counterMax * 100);
 	Arbiter.setMessageOverlay("Caching Tiles", "Downloaded " + percent + "%");
