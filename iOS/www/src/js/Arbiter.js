@@ -2270,14 +2270,31 @@ var Arbiter = {
 	 *		func //either insert or update
 	 * }
 	 */
-	checkCacheControl: function(_responseText, args){
-		console.log("checkCacheControl");
-		console.log(_responseText);
+	checkCacheControl: function(_jqXHR, args){
+		console.log("checkCacheControl()");
+	
+		var loggedIn = false;
+		var responseText = _jqXHR.responseText;
+		var cacheControl = _jqXHR.getResponseHeader("cache-control");
+	
 		 //Authenticated
-		if(_responseText && (_responseText.indexOf("<title>GeoServer: Welcome</title>") !== -1)){
-			console.log("And suddenly it's Christmas!");
+		if(responseText.indexOf("<title>GeoServer: Welcome</title>") !== -1) {
+			loggedIn = true;
+		} else {
+			if(!cacheControl) {
+					loggedIn = true;
+			} else {
+				if(cacheControl.indexOf("must-revalidate") === -1) {
+					loggedIn = true;
+				}
+			}
+		}
+		
+		if(loggedIn) {
+			console.log("And suddenly it was Christmas!");
 			args.func.call(Arbiter);
-		}else{ //not authenticated
+		} else {
+			console.log("failed Christmas... ");
 			args.jqusername.addClass('invalid-field');
 			args.jqpassword.addClass('invalid-field');
 			args.jqpassword.val("");
@@ -2310,8 +2327,7 @@ var Arbiter = {
                if(errorThrown == "Not Found") {
                     $.ajax({type: "POST", url: url + "/j_spring_security_check", data: {username: username, password: password},
                         timeout: 5000, success: function(data, textStatus, jqXHR) {
-                        	console.log(jqXHR);
-                           	Arbiter.checkCacheControl(jqXHR.responseText, args);},
+                           	Arbiter.checkCacheControl(jqXHR, args);},
                            	error: function(jqXHR, textStatus, errorThrown) {
                             	alert("Could not find server");
                            	}
@@ -2322,8 +2338,7 @@ var Arbiter = {
                }
             },
             success: function(data, textStatus, jqXHR) {
-            	console.log(jqXHR);
-                Arbiter.checkCacheControl(jqXHR.responseText, args);
+                Arbiter.checkCacheControl(jqXHR, args);
             },
             complete: function() {
                 //alert("post completed");
