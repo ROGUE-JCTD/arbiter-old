@@ -3752,9 +3752,13 @@ var Arbiter = {
 		var newWFSLayer = new OpenLayers.Layer.Vector(meta.nickname + "-wfs", {
 			strategies : strategies,
 			projection : new OpenLayers.Projection(meta.srsName),
-			protocol : protocol,
-			styleMap: styleMap
+			protocol : protocol
 		});		
+		
+		if (serverLayer.geometryType === "Point") {
+			alert('setting stylemap for: ' + meta.nickname);
+			newWFSLayer.styleMap = styleMap;			
+		}
 
 		newWFSLayer.attributeTypes = {};
 		
@@ -3806,17 +3810,18 @@ var Arbiter = {
 			}
 		});
 		
-		var poiInBounds;
+		var featureInBounds;
 		newWFSLayer.events.register("beforefeatureadded", null, function(event) {
 			//if in bounds
-			if(Arbiter.currentProject.aoi.contains(event.feature.geometry.x, event.feature.geometry.y)) {
-				poiInBounds = true;
+			//			if(Arbiter.currentProject.aoi.contains(event.feature.geometry.x, event.feature.geometry.y)) {
+			if(Arbiter.currentProject.aoi.intersectsBounds(event.feature.geometry.getBounds())) {
+				featureInBounds = true;
 				return true;
 			}
 				
 			//if out of bounds
-			console.log('Feature is out of bounds');
-			poiInBounds = false;
+			console.log('Feature is out of bounds:', event.feature);
+			featureInBounds = false;
 			return false;
 		});
 
@@ -3824,7 +3829,7 @@ var Arbiter = {
 		var selectControl = new OpenLayers.Control.SelectFeature( newWFSLayer, OpenLayers.Handler.Point);
 		
 		addFeatureControl.events.register("featureadded", null, function(event) {
-			if(poiInBounds == false) {
+			if(featureInBounds == false) {
 				return false;
 			}
 			// populate the features attributes object
