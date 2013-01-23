@@ -93,6 +93,7 @@ startCachingTiles: function(successCallback) {
 	caching = {
 		// extent before we start caching	
 		extentOriginal: map.getExtent(),
+		zoomOriginal: map.zoom,
 		// extent that we should use as starting point of caching
 		extent: Arbiter.currentProject.aoi,
 		startZoom: map.getZoomForExtent(Arbiter.currentProject.aoi, true),
@@ -138,7 +139,15 @@ cachingComplete: function(){
 	
     var callback = caching.successCallback;
     
+    
+    // force the map to zoom to a different zoom level than we are about to go to so that it
+    // 'refreshes' the map and pulls the tiles to display
+    if (map.zoom === caching.zoomOriginal){
+    	map.zoomTo((map.zoom + 1) < map.options.numZoomLevels ? map.zoom + 1: map.zoom - 1);
+    }
+    
 	// we're done - go back to the view user had before they started caching
+    //map.zoomTo();
     map.zoomToExtent(caching.extentOriginal, true);
     
     // keep for debugging
@@ -491,7 +500,7 @@ queueCacheRequests: function(bounds, onlyCountTile) {
 	var currentZoom = map.zoom;
 	
 	var count = 0;
-	for (var i=1; i < map.baseLayer.numZoomLevels; i++) {
+	for (var i=0; i < map.baseLayer.numZoomLevels; i++) {
 		count += TileUtil.queueCacheRequestsForZoom(map.baseLayer, bounds, i, onlyCountTile);
 	}
 

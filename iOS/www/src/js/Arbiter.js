@@ -1187,7 +1187,7 @@ var Arbiter = {
 				projection: WGS84_Google_Mercator,
 				displayProjection: WGS84,
 				theme: null,
-				numZoomLevels: 18,
+				numZoomLevels: 19,
 				layers: [baseLayer],
 				controls: [
 				new OpenLayers.Control.Attribution(),
@@ -1265,7 +1265,7 @@ var Arbiter = {
 			projection: new OpenLayers.Projection("EPSG:900913"),
 			displayProjection: new OpenLayers.Projection("EPSG:4326"),
 			theme: null,
-			numZoomLevels: 18,
+			numZoomLevels: 19,
 			layers: [aoi_baseLayer],
 			controls: [
 				new OpenLayers.Control.Attribution(),
@@ -1443,7 +1443,8 @@ var Arbiter = {
 				noMagic: true, // dont switch between file format type automagically based on transparent ture/false
 				transparent: false,
 				isBaseLayer: true,
-				visibility: true
+				visibility: true,
+				format: "image/png"
 			});
 		}
 		
