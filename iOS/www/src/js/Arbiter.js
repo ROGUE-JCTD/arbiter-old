@@ -161,7 +161,7 @@ var Arbiter = {
 		//HACK: online event doesn't fire in Cordova 2.2.0
 		// - work around to see if we are online
 		if(Cordova.checkConnection()){Arbiter.onOnline();} else { Arbiter.onOffline();}
-		setInterval(function(){if(Cordova.checkConnection()){Arbiter.onOnline();} else { Arbiter.onOffline();}}, 30000);
+		setInterval(function(){if(Cordova.checkConnection()){Arbiter.onOnline();} else { Arbiter.onOffline();}}, 15000);
 		
 		//Save divs for later
 		div_MapPage 		= $('#idMapPage');
@@ -1232,9 +1232,6 @@ var Arbiter = {
 				Arbiter.currentProject.activeLayer = $("input[type=radio]:checked")[0].getAttribute('id');
 				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 			});
-			
-				
-			Arbiter.setSyncColor();
 			
 			var statement = "SELECT * FROM tileIds;";
 			// if the TileIds table is empty, cache tiles.
@@ -3938,19 +3935,13 @@ var Arbiter = {
 	
 	onOnline: function() {
 		console.log("Arbiter: Online");
-		if(!Arbiter.isOnline){
-			Arbiter.isOnline = true;
-		}
-		
+		Arbiter.isOnline = true;	
 		Arbiter.setSyncColor();
 	},
 	
 	onOffline: function() {
 		console.log("Arbiter: Offline");
-		if(Arbiter.isOnline){
-			Arbiter.isOnline = false;
-		}
-		
+		Arbiter.isOnline = false;
 		Arbiter.setSyncColor();
 	},
 	
