@@ -820,7 +820,7 @@ var Arbiter = {
 				attributeSql += " not null";
 		}
 		
-		var createFeatureTableSql = "CREATE TABLE IF NOT EXISTS " + layer.featureType +
+		var createFeatureTableSql = "CREATE TABLE IF NOT EXISTS '" + layer.featureType + "'" +
 			" (" + attributeSql + ");";
 		
 		Cordova.transaction(Arbiter.currentProject.dataDatabase, createFeatureTableSql, [], function(tx, res) {
@@ -2004,7 +2004,7 @@ var Arbiter = {
 				geomName = res.rows.item(0).f_geometry_column;
 
 				// get the attributes of the layer
-				var tableSelectSql = "PRAGMA table_info (" + f_table_name + ");";
+				var tableSelectSql = "PRAGMA table_info ('" + f_table_name + "');";
 
 				serverLayer.geomName = geomName;
 				serverLayer.srsName = res.rows.item(0).srid;
@@ -2070,7 +2070,7 @@ var Arbiter = {
 		var f_table_name = feature.layer.protocol.featureType;
 		if(feature.fid == undefined || feature.fid == ''){
 			feature.layer.destroyFeatures([ feature ]);
-			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM " + f_table_name + " WHERE id=?;", [feature.rowid], function(tx, res){
+			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM '" + f_table_name + "' WHERE id=?;", [feature.rowid], function(tx, res){
 				console.log("local feature successfully deleted");
 				//Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 			});
@@ -2100,7 +2100,7 @@ var Arbiter = {
 			var layer = server.layers[layername];
 			//TODO: check all statements for end ;
 			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM geometry_columns WHERE f_table_name=?", [layer.featureType], function(tx, res){
-				Cordova.transaction(Arbiter.currentProject.dataDatabase, "DROP TABLE " + layer.featureType + ";", [], function(tx, res){
+				Cordova.transaction(Arbiter.currentProject.dataDatabase, "DROP TABLE '" + layer.featureType + "';", [], function(tx, res){
 					console.log("before_delete: success! " + servername + ", " + layername);
 					
 					//TODO: why is destroy not working?
@@ -2853,7 +2853,7 @@ var Arbiter = {
 				//vectorLayer.destroyFeatures();
 												  
 				console.log("pragma transaction table name: " + f_table_name);
-				Cordova.transaction(Arbiter.currentProject.dataDatabase, "PRAGMA table_info (" + f_table_name + ");", [], function(tx, res){
+				Cordova.transaction(Arbiter.currentProject.dataDatabase, "PRAGMA table_info ('" + f_table_name + "');", [], function(tx, res){
 					var dtAttributes = [];
 					var i;
 					var value;
@@ -3170,7 +3170,7 @@ var Arbiter = {
 	readLayerFromDb: function(tableName, layerName, geomName, srsName){
 		var layer = map.getLayersByName(layerName + "-wfs")[0];
 		console.log("readLayerFromDb: " + tableName + ", " + layerName + ", " + geomName + ", " + srsName);
-			Cordova.transaction(Arbiter.currentProject.dataDatabase, "SELECT * FROM " + tableName + ";", [], function(tx, res){
+			Cordova.transaction(Arbiter.currentProject.dataDatabase, "SELECT * FROM '" + tableName + "';", [], function(tx, res){
 				for(var i = 0; i < res.rows.length;i++){
 					var row = res.rows.item(i);
 						  
@@ -3263,8 +3263,8 @@ var Arbiter = {
 	 * srsName: srs for the layer
 	 */
 	getSql: function(table, feature, geomName, isEdit, srsName){
-		var insertSql = "INSERT INTO " + table;
-		var updateSql = "UPDATE " + table + " SET ";
+		var insertSql = "INSERT INTO '" + table + "'";
+		var updateSql = "UPDATE '" + table + "' SET ";
 		
 		var names = "(";
 		var values = "(";
@@ -3345,10 +3345,10 @@ var Arbiter = {
 							  
 		if(feature.fid || feature.rowid){
 			if(feature.fid){
-				selectSql = "SELECT * FROM " + f_table_name + " WHERE fid=?";
+				selectSql = "SELECT * FROM '" + f_table_name + "' WHERE fid=?";
 				selectParams = [feature.fid];
 			}else{
-				selectSql = "SELECT * FROM " + f_table_name + " WHERE id=?";
+				selectSql = "SELECT * FROM '" + f_table_name + "' WHERE id=?";
 				selectParams = [feature.rowid];
 			}
 							  
