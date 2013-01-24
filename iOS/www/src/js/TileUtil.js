@@ -1172,6 +1172,25 @@ dumpTableRows: function(database, tableName){
 	});
 },
 
+
+dumpTableAttributes: function(database, tableName){
+	console.log("---- TileUtil.dumpTableAttributes");
+
+	// get the attributes of the layer
+	var sql = "PRAGMA table_info (" + tableName + ");";
+
+	Cordova.transaction(Arbiter.currentProject.dataDatabase, sql, [], function(tx, res) {
+		var str = 'attribute count: ' + res.rows.length + '\n';
+		for (var i=0; i<res.rows.length; i++) {
+			var attr = res.rows.item(i);
+			str += 'name: ' + attr.name + ', type: ' + attr.type + ', notnull: ' + attr.notnull + '\n';
+		}
+		
+		console.log(str);
+		
+	}, Arbiter.error);
+},
+
 rowsToString: function(rows) {
 	var rowsStr = "rows.length: " + rows.length + "\n";
 	for(var i = 0; i < rows.length; i++){
