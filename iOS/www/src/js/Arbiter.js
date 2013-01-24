@@ -1247,7 +1247,7 @@ var Arbiter = {
 			}, function(e){ console.log("Error reading tileIds - " + e); });
 			
 			//open the editor tab. a hack to avoid the jumping feature bug
-			$("#editorTab").click();
+			Arbiter.ToggleEditorMenu();
     	}
 	},
 	
@@ -1577,13 +1577,6 @@ var Arbiter = {
 			Arbiter.OpenAttributesMenu();
 		} else {
 			Arbiter.CloseAttributesMenu();
-			/*
-			if(attributeTab) {
-				if(selectedFeature) {
-					Arbiter.newWFSLayer.unselected(selectedFeature);
-				}
-			}
-			*/
 		}
 	},
 
@@ -1960,6 +1953,7 @@ var Arbiter = {
 		li += "<label for='radio-choice-" + Arbiter.radioNumber + "'>";
 		li += serverName + " / " + layerName;
 		li += "</label>";
+		
 		Arbiter.radioNumber++;
 		 
 		//add the data from local storage
@@ -1987,6 +1981,7 @@ var Arbiter = {
     			}
 			}
 		}
+		Arbiter.radioNumber = 1;
 	},
 	
 	setLayerAttributeInfo: function(serverList, layername, f_table_name){
@@ -3552,7 +3547,8 @@ var Arbiter = {
 				var protocol = selectedFeature.layer.protocol;
 				Arbiter.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
 				
-				Arbiter.ToggleAttributeMenu();
+				//this should go back in when the feature selection bug is fixed
+				//Arbiter.ToggleAttributeMenu();
 			}else{
 				$("#saveAttributesFailed").fadeIn(1000, function(){
 					$(this).fadeOut(3000);
