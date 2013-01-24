@@ -815,7 +815,7 @@ var Arbiter = {
     	var attributeSql = "id integer primary key, fid text, " + layer.geomName + " text not null";
 		
 		for(var i = 0; i < layer.attributes.length; i++){
-			attributeSql += ", " + layer.attributes[i] + " " + layer.attributeTypes[i].type;
+			attributeSql += ", '" + layer.attributes[i] + "' " + layer.attributeTypes[i].type;
 			if(layer.attributeTypes[i].notnull)
 				attributeSql += " not null";
 		}
@@ -869,10 +869,10 @@ var Arbiter = {
     insertProjectsServer: function(serverId, serverName, success){
     	console.log("insertProjectsServer: " + serverId + ", " + serverName, success);
     	
-    	var insertServerSql = "INSERT INTO servers (server_id) VALUES (" + serverId + ");";
+    	var insertServerSql = "INSERT INTO servers (server_id) VALUES (?);";
     	console.log(insertServerSql);
     	
-    	Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertServerSql, [], function(tx, res){
+    	Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertServerSql, [serverId], function(tx, res){
     		success(serverId, serverName);
     	}, Arbiter.error);
     },
@@ -942,7 +942,7 @@ var Arbiter = {
 			console.log("Add project " + Arbiter.squote(Arbiter.currentProject.name) + " to projects table...");
 		
 			//Add the project name to the projects table in globle.db
-			Cordova.transaction(Arbiter.globalDatabase, "INSERT INTO projects (name) VALUES (" + Arbiter.squote(Arbiter.currentProject.name) + ");", [], function(tx, res){
+			Cordova.transaction(Arbiter.globalDatabase, "INSERT INTO projects (name) VALUES (?);", [Arbiter.currentProject.name], function(tx, res){
 			
 				Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 				Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
@@ -1992,9 +1992,9 @@ var Arbiter = {
 	setLayerAttributeInfo: function(serverList, layername, f_table_name){
 		console.log("layername: " + layername + ", f_table_name: " + f_table_name, serverList);
 		// get the geometry name, type, and srs of the layer
-		var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name='" + f_table_name + "';";
+		var geomColumnsSql = "SELECT * FROM geometry_columns where f_table_name=?;";
 
-		Cordova.transaction(Arbiter.currentProject.dataDatabase, geomColumnsSql, [], function(tx, res) {
+		Cordova.transaction(Arbiter.currentProject.dataDatabase, geomColumnsSql, [f_table_name], function(tx, res) {
 			var geomName;
 			//var server = Arbiter.currentProject.serverList[serverName];
 			var serverLayer = serverList.layers[layername];
@@ -2098,8 +2098,9 @@ var Arbiter = {
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM layers WHERE layername=?;", [layername], function(tx, res){
 			var server = Arbiter.currentProject.serverList[servername];
 			var layer = server.layers[layername];
+			//TODO: check all statements for end ;
 			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM geometry_columns WHERE f_table_name=?", [layer.featureType], function(tx, res){
-				Cordova.transaction(Arbiter.currentProject.dataDatabase, "DROP TABLE " + layer.featureType, [], function(tx, res){
+				Cordova.transaction(Arbiter.currentProject.dataDatabase, "DROP TABLE " + layer.featureType + ";", [], function(tx, res){
 					console.log("before_delete: success! " + servername + ", " + layername);
 					
 					//TODO: why is destroy not working?
@@ -2270,14 +2271,31 @@ var Arbiter = {
 	 *		func //either insert or update
 	 * }
 	 */
-	checkCacheControl: function(_responseText, args){
-		console.log("checkCacheControl");
-		console.log(_responseText);
+	checkCacheControl: function(_jqXHR, args){
+		console.log("checkCacheControl()");
+	
+		var loggedIn = false;
+		var responseText = _jqXHR.responseText;
+		var cacheControl = _jqXHR.getResponseHeader("cache-control");
+	
 		 //Authenticated
-		if(_responseText && (_responseText.indexOf("<title>GeoServer: Welcome</title>") !== -1)){
-			console.log("And suddenly it's Christmas!");
+		if(responseText.indexOf("<title>GeoServer: Welcome</title>") !== -1) {
+			loggedIn = true;
+		} else {
+			if(!cacheControl) {
+					loggedIn = true;
+			} else {
+				if(cacheControl.indexOf("must-revalidate") === -1) {
+					loggedIn = true;
+				}
+			}
+		}
+		
+		if(loggedIn) {
+			console.log("And suddenly it was Christmas!");
 			args.func.call(Arbiter);
-		}else{ //not authenticated
+		} else {
+			console.log("failed Christmas... ");
 			args.jqusername.addClass('invalid-field');
 			args.jqpassword.addClass('invalid-field');
 			args.jqpassword.val("");
@@ -2310,8 +2328,7 @@ var Arbiter = {
                if(errorThrown == "Not Found") {
                     $.ajax({type: "POST", url: url + "/j_spring_security_check", data: {username: username, password: password},
                         timeout: 5000, success: function(data, textStatus, jqXHR) {
-                        	console.log(jqXHR);
-                           	Arbiter.checkCacheControl(jqXHR.responseText, args);},
+                           	Arbiter.checkCacheControl(jqXHR, args);},
                            	error: function(jqXHR, textStatus, errorThrown) {
                             	alert("Could not find server");
                            	}
@@ -2322,8 +2339,7 @@ var Arbiter = {
                }
             },
             success: function(data, textStatus, jqXHR) {
-            	console.log(jqXHR);
-                Arbiter.checkCacheControl(jqXHR.responseText, args);
+                Arbiter.checkCacheControl(jqXHR, args);
             },
             complete: function() {
                 //alert("post completed");
@@ -3154,7 +3170,7 @@ var Arbiter = {
 	readLayerFromDb: function(tableName, layerName, geomName, srsName){
 		var layer = map.getLayersByName(layerName + "-wfs")[0];
 		console.log("readLayerFromDb: " + tableName + ", " + layerName + ", " + geomName + ", " + srsName);
-			Cordova.transaction(Arbiter.currentProject.dataDatabase, "SELECT * FROM " + tableName, [], function(tx, res){
+			Cordova.transaction(Arbiter.currentProject.dataDatabase, "SELECT * FROM " + tableName + ";", [], function(tx, res){
 				for(var i = 0; i < res.rows.length;i++){
 					var row = res.rows.item(i);
 						  
@@ -3179,7 +3195,7 @@ var Arbiter = {
 				}
 						  
 				//after the transaction is complete, check to see which features are dirty
-					Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM dirty_table where f_table_name='" + tableName + "';", [], function(tx, res){
+					Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM dirty_table where f_table_name=?;", [tableName], function(tx, res){
 						for(var i = 0; i < res.rows.length;i++){
 							var feature = layer.getFeatureByFid(res.rows.item(i).fid);
 							feature.modified = true;
@@ -3716,7 +3732,7 @@ var Arbiter = {
 						//Arbiter.deleteLayerCount++;
 						Arbiter.deleteLayer(meta.serverName, meta.nickname);
 					}else{
-						Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM " + featureType, [], function(tx, res) {
+						Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM '" + featureType + "';", [], function(tx, res) {
 							// pull everything down
 							wfsLayer.destroyFeatures();
 							console.log("pull after delete");
@@ -3752,9 +3768,13 @@ var Arbiter = {
 		var newWFSLayer = new OpenLayers.Layer.Vector(meta.nickname + "-wfs", {
 			strategies : strategies,
 			projection : new OpenLayers.Projection(meta.srsName),
-			protocol : protocol,
-			styleMap: styleMap
+			protocol : protocol
 		});		
+		
+		if (serverLayer.geometryType === "Point") {
+			alert('setting stylemap for: ' + meta.nickname);
+			newWFSLayer.styleMap = styleMap;			
+		}
 
 		newWFSLayer.attributeTypes = {};
 		
@@ -3806,17 +3826,18 @@ var Arbiter = {
 			}
 		});
 		
-		var poiInBounds;
+		var featureInBounds;
 		newWFSLayer.events.register("beforefeatureadded", null, function(event) {
 			//if in bounds
-			if(Arbiter.currentProject.aoi.contains(event.feature.geometry.x, event.feature.geometry.y)) {
-				poiInBounds = true;
+			//			if(Arbiter.currentProject.aoi.contains(event.feature.geometry.x, event.feature.geometry.y)) {
+			if(Arbiter.currentProject.aoi.intersectsBounds(event.feature.geometry.getBounds())) {
+				featureInBounds = true;
 				return true;
 			}
 				
 			//if out of bounds
-			console.log('Feature is out of bounds');
-			poiInBounds = false;
+			console.log('Feature is out of bounds:', event.feature);
+			featureInBounds = false;
 			return false;
 		});
 
@@ -3824,7 +3845,7 @@ var Arbiter = {
 		var selectControl = new OpenLayers.Control.SelectFeature( newWFSLayer, OpenLayers.Handler.Point);
 		
 		addFeatureControl.events.register("featureadded", null, function(event) {
-			if(poiInBounds == false) {
+			if(featureInBounds == false) {
 				return false;
 			}
 			// populate the features attributes object
