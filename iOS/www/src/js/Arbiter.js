@@ -2801,8 +2801,11 @@ var Arbiter = {
 	
 	//override: Bool, should override
 	pullFeatures: function(featureType, geomName, f_table_name, srs, serverUrl, username, password, addProjectCallback, layernickname){
-		console.log("pullFeatures: " + featureType + "," + geomName + "," + f_table_name + "," + srs + "," + serverUrl + "," + username + "," + password + "," + layernickname);
+		console.log("pullFeatures: ", featureType, geomName, f_table_name, srs, serverUrl, username, password, layernickname);
 		var layerNativeSRS = new OpenLayers.Projection(srs);
+		var srsNumberStr = srs.substring(srs.indexOf(":") + 1);
+		
+		console.log('native srs: ', layerNativeSRS, ', srs: ', srs, ', srsNumberStr: ', srsNumberStr);
 		console.log("aoi: " + Arbiter.currentProject.aoi);
 		var currentBounds = Arbiter.currentProject.aoi.clone().transform(WGS84_Google_Mercator, layerNativeSRS);
 		
@@ -2819,7 +2822,7 @@ var Arbiter = {
 		'<ogc:Filter>' +
 		'<ogc:BBOX>' +
 		'<ogc:PropertyName>' + geomName + '</ogc:PropertyName>' +
-		'<gml:Box srsName="http://www.opengis.net/gml/srs/epsg.xml#4326">' +
+		'<gml:Box srsName="http://www.opengis.net/gml/srs/epsg.xml#' + srsNumberStr + '">' +
 		'<gml:coordinates>' + currentBounds.left + ',' + currentBounds.bottom +
 		' ' + currentBounds.right + ',' + currentBounds.top + '</gml:coordinates>' +
 		'</gml:Box>' +
@@ -3306,8 +3309,7 @@ var Arbiter = {
 	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback, layername){
 		console.log("insertFeaturesIntoTable: ", features);
 		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
-		
-		alert("layer features.length: " + features.length);
+		console.log("layer features.length: " + features.length);
 		
 		//Arbiter.tempDeleteCountFeatures = 0;
 		
@@ -3674,13 +3676,9 @@ var Arbiter = {
 			
 			strategies[0].events.register("success", '', function(event) {
 				
-				alert('1');
-				
 				var wfsLayer = event.object.layer;
 				console.log("layer startegy success event: ", event);
-				//var pull = confirm('layer save succeeded. pull?');
-				alert('2');
-				
+				//var pull = confirm('layer save succeeded. pull?');				
 				
 				//TODO: NOTE: if we happen to get the same random number, it will break. 
 				//      try new Data().getTime() like we are doing for wfs
@@ -3739,9 +3737,8 @@ var Arbiter = {
 							// pull everything down
 							wfsLayer.destroyFeatures();
 							console.log("pull after delete");
-							console.log("pullFeatures after delete: " + serverLayer.typeName + serverLayer.geomName + serverLayer.featureType + serverLayer.srsName
-									+ server.url + server.username + server.password);
-						
+							console.log("pullFeatures after delete: ", serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url, server.username, server.password);
+
 							Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
 								server.username, server.password, null, meta.nickname);
 						}, function(e){
