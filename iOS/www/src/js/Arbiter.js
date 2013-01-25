@@ -161,7 +161,7 @@ var Arbiter = {
 		//HACK: online event doesn't fire in Cordova 2.2.0
 		// - work around to see if we are online
 		if(Cordova.checkConnection()){Arbiter.onOnline();} else { Arbiter.onOffline();}
-		setInterval(function(){if(Cordova.checkConnection()){Arbiter.onOnline();} else { Arbiter.onOffline();}}, 30000);
+		setInterval(function(){if(Cordova.checkConnection()){Arbiter.onOnline();} else { Arbiter.onOffline();}}, 15000);
 		
 		//Save divs for later
 		div_MapPage 		= $('#idMapPage');
@@ -1237,9 +1237,6 @@ var Arbiter = {
 				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 			});
 			
-				
-			Arbiter.setSyncColor();
-			
 			var statement = "SELECT * FROM tileIds;";
 			// if the TileIds table is empty, cache tiles.
 			Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [], function(tx, res) {
@@ -1251,7 +1248,7 @@ var Arbiter = {
 			}, function(e){ console.log("Error reading tileIds - " + e); });
 			
 			//open the editor tab. a hack to avoid the jumping feature bug
-			$("#editorTab").click();
+			Arbiter.ToggleEditorMenu();
     	}
 	},
 	
@@ -1581,13 +1578,6 @@ var Arbiter = {
 			Arbiter.OpenAttributesMenu();
 		} else {
 			Arbiter.CloseAttributesMenu();
-			/*
-			if(attributeTab) {
-				if(selectedFeature) {
-					Arbiter.newWFSLayer.unselected(selectedFeature);
-				}
-			}
-			*/
 		}
 	},
 
@@ -1964,6 +1954,7 @@ var Arbiter = {
 		li += "<label for='radio-choice-" + Arbiter.radioNumber + "'>";
 		li += serverName + " / " + layerName;
 		li += "</label>";
+		
 		Arbiter.radioNumber++;
 		 
 		//add the data from local storage
@@ -1991,6 +1982,7 @@ var Arbiter = {
     			}
 			}
 		}
+		Arbiter.radioNumber = 1;
 	},
 	
 	setLayerAttributeInfo: function(serverList, layername, f_table_name){
@@ -3558,7 +3550,8 @@ var Arbiter = {
 				var protocol = selectedFeature.layer.protocol;
 				Arbiter.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
 				
-				Arbiter.ToggleAttributeMenu();
+				//this should go back in when the feature selection bug is fixed
+				//Arbiter.ToggleAttributeMenu();
 			}else{
 				$("#saveAttributesFailed").fadeIn(1000, function(){
 					$(this).fadeOut(3000);
@@ -3969,19 +3962,13 @@ var Arbiter = {
 	
 	onOnline: function() {
 		console.log("Arbiter: Online");
-		if(!Arbiter.isOnline){
-			Arbiter.isOnline = true;
-		}
-		
+		Arbiter.isOnline = true;	
 		Arbiter.setSyncColor();
 	},
 	
 	onOffline: function() {
 		console.log("Arbiter: Offline");
-		if(Arbiter.isOnline){
-			Arbiter.isOnline = false;
-		}
-		
+		Arbiter.isOnline = false;
 		Arbiter.setSyncColor();
 	},
 	

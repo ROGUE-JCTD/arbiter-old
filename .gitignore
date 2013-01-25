@@ -52,13 +52,13 @@ xcuserdata
 ########################
 # Keep out icons local #
 ########################
-Android/res/drawable-hdpi/icon.png
-Android/res/drawable-ldpi/icon.png
-Android/res/drawable-mdpi/icon.png
-Android/res/drawable-xhdpi/icon.png
-Android/res/drawable/icon.png
-iOS/Arbiter/Resources/icons/icon.png
-iOS/Arbiter/Resources/icons/icon@2x.png
-iOS/Arbiter/Resources/icons/icon-72.png
-iOS/Arbiter/Resources/icons/icon-72@2x.png
-iOS/www/src/img/logo.png
+/Android/res/drawable-hdpi/icon.png
+/Android/res/drawable-ldpi/icon.png
+/Android/res/drawable-mdpi/icon.png
+/Android/res/drawable-xhdpi/icon.png
+/Android/res/drawable/icon.png
+/iOS/Arbiter/Resources/icons/icon.png
+/iOS/Arbiter/Resources/icons/icon@2x.png
+/iOS/Arbiter/Resources/icons/icon-72.png
+/iOS/Arbiter/Resources/icons/icon-72@2x.png
+/iOS/www/src/img/logo.png
