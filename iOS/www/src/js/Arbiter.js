@@ -390,9 +390,9 @@ var Arbiter = {
 		});
 		
 		// make point radius larger so it is easier to select point features
-		OpenLayers.Feature.Vector.style.default.pointRadius = 18;
-		OpenLayers.Feature.Vector.style.select.pointRadius = 18;
-		OpenLayers.Feature.Vector.style.temporary.pointRadius = 18;		
+//		OpenLayers.Feature.Vector.style.default.pointRadius = 18;
+//		OpenLayers.Feature.Vector.style.select.pointRadius = 18;
+//		OpenLayers.Feature.Vector.style.temporary.pointRadius = 18;		
 		
 		
 		
@@ -721,8 +721,12 @@ var Arbiter = {
 					    	layers[i].strategies.length &&
 					    	layers[i].strategies[0] &&
 					    	layers[i].strategies[0].save){
+
+							console.log('---- saving layer: ',  layers[i]);
 						
 							layers[i].strategies[0].save();
+						} else {
+							console.log('---- NOT saving layer: ', layers[i]);
 						}
 					}
 				}
@@ -3311,6 +3315,8 @@ var Arbiter = {
 		console.log("insertFeaturesIntoTable: ", features);
 		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
 		
+		alert("layer features.length: " + features.length);
+		
 		//Arbiter.tempDeleteCountFeatures = 0;
 		
 		if(!features.length){
@@ -3674,9 +3680,13 @@ var Arbiter = {
 			newLayers.push(newWMSLayer);
 			
 			strategies[0].events.register("success", '', function(event) {
+				
+				alert('1');
+				
 				var wfsLayer = event.object.layer;
 				console.log("layer startegy success event: ", event);
 				//var pull = confirm('layer save succeeded. pull?');
+				alert('2');
 				
 				
 				//TODO: NOTE: if we happen to get the same random number, it will break. 
@@ -3754,27 +3764,42 @@ var Arbiter = {
 		//TODO: not used?
 		var tableName = meta.featureType;
 				
-		var defaultStyleTable = OpenLayers.Util.applyDefaults({
-				fillColor: meta.color,
-				strokeColor: meta.color
-			},
-			OpenLayers.Feature.Vector.style["default"]);
-		
-		var styleMap = new OpenLayers.StyleMap({
-			'default': new OpenLayers.Style(defaultStyleTable),
-			'selected': new OpenLayers.Style(OpenLayers.Feature.Vector.style["selected"])
-		});
-
 		var newWFSLayer = new OpenLayers.Layer.Vector(meta.nickname + "-wfs", {
 			strategies : strategies,
 			projection : new OpenLayers.Projection(meta.srsName),
 			protocol : protocol
-		});		
+		});	
+		
+		//---- set the style based on if it is a point or not
+		var defaultStyleTable = OpenLayers.Util.applyDefaults(
+				{
+					fillColor: meta.color,
+					strokeColor: meta.color
+				},
+				OpenLayers.Feature.Vector.style["default"]
+			);
+		
+		var selectStyleTable = OpenLayers.Util.applyDefaults({},
+				OpenLayers.Feature.Vector.style["select"]
+			);
+
 		
 		if (serverLayer.geometryType === "Point") {
-			alert('setting stylemap for: ' + meta.nickname);
-			newWFSLayer.styleMap = styleMap;			
+			defaultStyleTable.pointRadius = 18;
+			selectStyleTable.pointRadius = 18;
+		} else {
+			defaultStyleTable.pointRadius = 1;
+			selectStyleTable.pointRadius = 1;
 		}
+
+		var styleMap = new OpenLayers.StyleMap({
+			'default': new OpenLayers.Style(defaultStyleTable),
+			'select': new OpenLayers.Style(selectStyleTable)
+		});
+
+		newWFSLayer.styleMap = styleMap;
+		
+		
 
 		newWFSLayer.attributeTypes = {};
 		
