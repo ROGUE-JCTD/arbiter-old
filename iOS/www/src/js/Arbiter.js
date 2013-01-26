@@ -2747,7 +2747,8 @@ var Arbiter = {
 						}							
 
 					}
-													 
+					
+					jqLayerNickname.val("");
 					window.history.back();
 				}
 			});
@@ -2790,7 +2791,7 @@ var Arbiter = {
 						
 			// wait for the layer list to make it back from the server, then try to select the layer
 			// when teh layer page opens we might still be waiting for server's response 
-			Arbiter.addLayersOnServerToLayerDropdown(_serverName, function(){
+			Arbiter.addLayersOnServerToLayerDropdown(_serverName, _layerNickName, function(){
 				jqLayerSelect.val(_layerTypeName);
 				jqLayerSelect.selectmenu('refresh', true);
 			})
@@ -2912,7 +2913,7 @@ var Arbiter = {
 		}
 	},
 	
-	addLayersOnServerToLayerDropdown: function(serverName, successCallback){
+	addLayersOnServerToLayerDropdown: function(serverName, existingLayerName, successCallback){
 		console.log('addLayersOnServerToLayerDropdown');
 		
 		// initialize the select element as in some situation it might not have already been initialized
@@ -2957,14 +2958,13 @@ var Arbiter = {
 						
 						inUse = false;
 						for(var k = 0; k < layersInUse.length; ++k) {
-							//alert("layerTypeName= "+$(layersInUse[k]).attr('layertypename')+"layerName= "+layer.name);
 							if($(layersInUse[k]).attr('layertypename') == layer.name) {
 								inUse = true;
 								break;
 							}
 						}
 						
-						if(inUse == false) {
+						if(inUse == false || layer.title == existingLayerName) {
 							options +=  '<option layersrs="' + layersrs + '" value="' +
 								layer.name + '">' + layer.title + '</option>';
 						}
