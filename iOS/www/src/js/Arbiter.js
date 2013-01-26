@@ -3278,19 +3278,21 @@ var Arbiter = {
 		
 		var clonedFeature = feature.clone();
 		
-		if(isEdit)
+		if(isEdit) {
 			clonedFeature.geometry.transform(WGS84_Google_Mercator, new OpenLayers.Projection(srsName));
+		}
+		
 		var geometry = wktFormatter.write(clonedFeature);
 		
-		names += geomName + ",";
+		names += Arbiter.squote(geomName) + ",";
 		values += "?,";
-		updateSql += geomName + "=?,";
+		updateSql += Arbiter.squote(geomName) + "=?,";
 		params.push(geometry);
 		
 		for(var x in feature.attributes){
-			names += x + ",";
+			names += Arbiter.squote(x) + ",";
 			values += "?,";
-			updateSql += x + "=?,";
+			updateSql += Arbiter.squote(x) + "=?,";
 			params.push(feature.attributes[x]);
 		}
 		
@@ -3529,19 +3531,27 @@ var Arbiter = {
 							  
 			if(valid){
 				console.log(selectedFeature);
-				var value;
+
 				// Set the attributes of the feature from the form
-				//this needs to be done before the call to insertFeaturesIntoTable because
-				//insertFeaturesIntoTable uses the feature.attributes for getting the values
-				for(var x in selectedFeature.attributes){
-					value = $("#textinput-" + x).val();
-					if(selectedFeature.layer.attributeTypes[x].type == "time"){ 
-					   	console.log(value);
+				// this needs to be done before the call to insertFeaturesIntoTable because
+				// insertFeaturesIntoTable uses the feature.attributes for getting the values
+				
+				var attrValue = '';
+				  
+				for(var type in selectedFeature.layer.attributeTypes){ 					
+					console.log('type: ', type);
+					
+					attrValue = $("#textinput-" + type).val();
+					
+					if(type === "time"){ 
+					   	console.log(attrValue);
 						//if seconds aren't there, add them
-					   	if(value.replace(/[^:]/g, "").length < 2)
-							value += ":00";
+					   	if(attrValue.replace(/[^:]/g, "").length < 2) {
+					   		attrValue += ":00";
+					   	}
 					}
-					selectedFeature.attributes[x] = Arbiter.decodeChars(value);
+
+					selectedFeature.attributes[type] = Arbiter.decodeChars(attrValue);
 				}
 							  
 				// If the feature isn't already supposed to be added, the state and modified must be set
@@ -3596,21 +3606,29 @@ var Arbiter = {
 	},
 	
 	PopulatePopup: function() {
-		console.log("Populate Popup");
+		console.log("Populate Popup, feature: ", selectedFeature);
 		console.log(selectedFeature);
 		if(selectedFeature){
 			var li = "";
-			var type= '';
+			var attrValue = '';
 							  
-			for(var attr in selectedFeature.attributes){
-					type = Arbiter.getInputType(selectedFeature.layer.attributeTypes[attr].type);
-					li += "<li style='padding:5px; border-radius: 4px;'><div>";
-					li += "<label for='textinput-" + attr + "'>";
-					li += attr;
-					li += "</label>";
-					li += "<input name='' id='textinput-" + attr + "' placeholder='" + type.placeholder + "' value='";
-					li += Arbiter.encodeChars(selectedFeature.attributes[attr]);
-					li += "' type='" + type.type + "'></div></li>";
+			for(var type in selectedFeature.layer.attributeTypes){ 
+				
+				console.log('type: ', type);
+				
+				var typeInfo = Arbiter.getInputType(type);
+			
+				if (selectedFeature.attributes[type]) {
+					attrValue = selectedFeature.attributes[type];
+				}
+				
+				li += "<li style='padding:5px; border-radius: 4px;'><div>";
+				li += "<label for='textinput-" + type + "'>";
+				li += type;
+				li += "</label>";
+				li += "<input name='' id='textinput-" + type + "' placeholder='" + typeInfo.placeholder + "' value='";
+				li += Arbiter.encodeChars(attrValue);
+				li += "' type='" + typeInfo.type + "'></div></li>";
 			}
 			
 			$("ul#attribute-list").empty().append(li).listview("refresh");
