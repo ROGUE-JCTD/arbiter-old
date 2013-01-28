@@ -3530,18 +3530,18 @@ var Arbiter = {
 			var valid = Arbiter.validateAttributes(selectedFeature);
 							  
 			if(valid){
-				console.log(selectedFeature);
+				console.log('validated feature: ', selectedFeature);
 
 				// Set the attributes of the feature from the form
 				// this needs to be done before the call to insertFeaturesIntoTable because
 				// insertFeaturesIntoTable uses the feature.attributes for getting the values
 				
-				var attrValue = '';
-				  
 				for(var type in selectedFeature.layer.attributeTypes){ 					
 					console.log('type: ', type);
 					
-					attrValue = $("#textinput-" + type).val();
+					var attrValue = $(Arbiter.idToJQuerySelectorSafe("textinput-" + type)).val();
+					
+					console.log('======== attrValue: ', attrValue, ', type: ', type);
 					
 					if(type === "time"){ 
 					   	console.log(attrValue);
@@ -3553,6 +3553,8 @@ var Arbiter = {
 
 					selectedFeature.attributes[type] = Arbiter.decodeChars(attrValue);
 				}
+				
+				console.log('======== updated feature: ', selectedFeature);
 							  
 				// If the feature isn't already supposed to be added, the state and modified must be set
 				if(!selectedFeature.state){
@@ -3573,6 +3575,11 @@ var Arbiter = {
 		
 		//$.mobile.changePage("#idMapPage", {transition: "slide", reverse: true});
 		Arbiter.changePage_Pop('#idMapPage');
+	},
+	
+	// escapes . and : in the id name which makes jq selector not work as expected.
+	idToJQuerySelectorSafe: function(id) { 
+	   return '#' + id.replace(/(:|\.)/g,'\\$1');
 	},
 	
 	getInputType: function(type){
