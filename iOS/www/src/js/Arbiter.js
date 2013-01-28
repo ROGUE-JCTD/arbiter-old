@@ -3550,8 +3550,12 @@ var Arbiter = {
 					   		attrValue += ":00";
 					   	}
 					}
-
-					selectedFeature.attributes[type] = Arbiter.decodeChars(attrValue);
+					
+					if (attrValue === ''){
+						delete selectedFeature.attributes[type];
+					} else {
+						selectedFeature.attributes[type] = Arbiter.decodeChars(attrValue);
+					}
 				}
 				
 				console.log('======== updated feature: ', selectedFeature);
@@ -3627,6 +3631,8 @@ var Arbiter = {
 			
 				if (selectedFeature.attributes[type]) {
 					attrValue = selectedFeature.attributes[type];
+				} else {
+					attrValue = '';
 				}
 				
 				li += "<li style='padding:5px; border-radius: 4px;'><div>";
