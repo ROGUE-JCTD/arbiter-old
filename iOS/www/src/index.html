@@ -75,9 +75,9 @@
 			
 			<div id='idLanguageListContainer'>
 				<div data-role="controlgroup" id='idLanguageList' data-mini="true">
-					<a data-role="button" id="ENGLISH" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Use English as the main language.</a>
-					<a data-role="button" id="SPANISH" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Utilice el español como idioma principal.</a>
-					<a data-role="button" id="PORTUGUESE" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Uso português como língua principal.</a>
+					<a data-role="button" id="ENGLISH" onClick="Arbiter.onClick_LanguageSubmit(this, true)">English</a>
+					<a data-role="button" id="SPANISH" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Español</a>
+					<a data-role="button" id="PORTUGUESE" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Português</a>
 				</div>
 			</div>
 		</div>
@@ -310,11 +310,11 @@
 				</div>
 				
 				<div id="idAttributeMenu" style="position:absolute;z-index:2000;">
-					<div data-role="content" id="attributeMenuContent" style="padding: 5px">
+					<div data-role="content" id="attributeMenuContent">
 						<ul id="attribute-list" data-role="listview" data-mini="true" style="padding:20px;"></ul>
-						<input type="submit" value="Save" data-mini="true" onClick="Arbiter.SubmitAttributes()">
-						<!--<input type="submit" value="Cancel" data-mini="true" onClick="Arbiter.ToggleAttributeMenu()">-->
 					</div>
+					<!--<input type="submit" value="Cancel" data-mini="true" onClick="Arbiter.ToggleAttributeMenu()">-->
+					<input id="idAttrSave" type="submit" value="Save" data-mini="true" onClick="Arbiter.SubmitAttributes()">
 				</div>
 				
 				<div id="idWorkingOverlay" style="position:absolute;z-index:2000;">
@@ -603,9 +603,9 @@
 			<!-- Content -->
 			<div id='idLanguagePageListContainer'>
 				<div data-role="controlgroup" id='idLanguageList' data-mini="true">
-					<a data-role="button" id="ENGLISH" onClick="Arbiter.onClick_LanguageSubmit(this, false)">Use English as the main language.</a>
-					<a data-role="button" id="SPANISH" onClick="Arbiter.onClick_LanguageSubmit(this, false)">Utilice el español como idioma principal.</a>
-					<a data-role="button" id="PORTUGUESE" onClick="Arbiter.onClick_LanguageSubmit(this, false)">Uso português como língua principal.</a>
+					<a data-role="button" id="ENGLISH" onClick="Arbiter.onClick_LanguageSubmit(this, false)">English</a>
+					<a data-role="button" id="SPANISH" onClick="Arbiter.onClick_LanguageSubmit(this, false)">Español</a>
+					<a data-role="button" id="PORTUGUESE" onClick="Arbiter.onClick_LanguageSubmit(this, false)">Português</a>
 				</div>
 			</div>
 		</div>
