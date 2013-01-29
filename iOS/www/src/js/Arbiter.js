@@ -997,28 +997,24 @@ var Arbiter = {
 						if(res.rows.length){
 							var projectId = res.rows.item(0).id;
 							
-							Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM server_usage WHERE project_id=?", [projectId],
-							function(tx, res){
-								console.log("deletion success: " + projectId);
+							Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM server_usage WHERE project_id=?", [projectId], function(tx, res){
+								Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM projects WHERE id=?", [projectId], function(tx, res){
+									console.log("deletion success: " + projectId);
+								}, function(e){
+									Arbiter.error("deletion failed. projectId: ", projectId);
+								});
 							}, function(e){
-								console.log("deletion failure: " + projectId);
-							});
-															   
-							Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM projects WHERE id=?", [projectId],
-							function(tx, res){
-								console.log("deletion success: " + projectId);
-							}, function(e){
-								console.log("deletion failure: " + projectId);
+								Arbiter.error("deletion failed. projectId: ", projectId);
 							});
 						}
 					});
 
 				}, function(){
-					console.log(projectName + " project deletion failed");					  
+					Arbiter.error("deletion failed. project name: ", projectName);
 				});									 
 			});
 		};
-				
+		
 		// clear tiles related to this db, then perform otehr operations
 		TileUtil.clearCache("osm", op, vDb);
 	},
