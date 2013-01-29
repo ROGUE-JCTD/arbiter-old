@@ -3309,9 +3309,9 @@ var Arbiter = {
 	},
 	
 	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback, layername){
-		console.log("insertFeaturesIntoTable: ", features);
-		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
-		console.log("layer features.length: " + features.length);
+//		console.log("insertFeaturesIntoTable: ", features);
+//		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
+//		console.log("layer features.length: " + features.length);
 		
 		//Arbiter.tempDeleteCountFeatures = 0;
 		
@@ -3338,7 +3338,7 @@ var Arbiter = {
 	},
 	
 	insertFeature: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, featuresLength){
-		console.log('insertFeature: layername: ', layername, 'feature: ', feature, 'f_table_name: ', f_table_name, 'geomName: ', geomName, 'isEdit: ', isEdit );
+//		console.log('insertFeature: layername: ', layername, 'feature: ', feature, 'f_table_name: ', f_table_name, 'geomName: ', geomName, 'isEdit: ', isEdit );
 		
 		var selectSql;
 		var selectParams;
@@ -3354,20 +3354,20 @@ var Arbiter = {
 				selectParams = [feature.rowid];
 			}
 							  
-			console.log(selectSql);
-			console.log(selectParams);
+//			console.log(selectSql);
+//			console.log(selectParams);
 							  
 			Cordova.transaction(Arbiter.currentProject.dataDatabase, selectSql, selectParams, function(tx, res){
 				//console.log(updateList);
 				//If this exists, then its an update, else its an insert
 				if(res.rows.length){
-					console.log("UPDATE", res.rows.item(0));
+//					console.log("UPDATE", res.rows.item(0));
 					var updateSql = sqlObject.updateSql.substring(0, sqlObject.updateSql.length - 1) + " WHERE id=?";
-					console.log("update sql: " + updateSql, sqlObject);
+//					console.log("update sql: " + updateSql, sqlObject);
 					sqlObject.params.push(res.rows.item(0).id);
 												  
 					Cordova.transaction(Arbiter.currentProject.dataDatabase, updateSql, sqlObject.params, function(tx, res){
-						console.log("update success");
+//						console.log("update success");
 						$("#saveAttributesSucceeded").fadeIn(1000, function(){
 							$(this).fadeOut(3000);
 						});
@@ -3376,7 +3376,7 @@ var Arbiter = {
 							//Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 							 var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid, state) VALUES (?,?,?);";
 																	  
-							console.log(insertDirtySql);
+//							console.log(insertDirtySql);
 							Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertDirtySql, [f_table_name, feature.fid, 1], function(tx, res){
 								console.log("insert dirty success");
 							}, function(e){
@@ -3385,48 +3385,48 @@ var Arbiter = {
 							//}, Arbiter.errorSql, function(){});
 						}
 					}, function(e){
-						console.log("update err: ", e);
+						Arbiter.error("failed to save feature: ", e);
 						$("#saveAttributesFailed").fadeIn(1000, function(){
 							$(this).fadeOut(3000);
 						});
 					});
 				}else{
-					console.log('new insert');
+//					console.log('new insert');
 					Cordova.transaction(Arbiter.currentProject.dataDatabase, sqlObject.insertSql, sqlObject.params, function(tx, res){
-						console.log("insert success");
-						console.log(sqlObject.insertSql);
-						console.log(sqlObject.params);
+//						console.log("insert success");
+//						console.log(sqlObject.insertSql);
+//						console.log(sqlObject.params);
 						if(isEdit){
-							console.log('isEdit: ' + res.insertId);
+	//						console.log('isEdit: ' + res.insertId);
 							if(res.insertId) //hack because insertId is returned as null for the first insert...
 								feature.rowid = res.insertId;
 							else
 								feature.rowid = 1;
 						}else{ // from sync
-							console.log("syncing: " + layername + ", ", map);
+//							console.log("syncing: " + layername + ", ", map);
 							if(layername && map){
 								var vectorLayer = map.getLayersByName(layername + "-wfs");
 								if(vectorLayer.length){
-									console.log("insert sync:", feature);
+	//								console.log("insert sync:", feature);
 									feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
 									vectorLayer[0].addFeatures([feature]);
-									console.log("DEBUGGING: " + Arbiter.currentProject.activeLayer + ", " + layername, selectedFeature, feature, Arbiter.currentProject);
+//									console.log("DEBUGGING: " + Arbiter.currentProject.activeLayer + ", " + layername, selectedFeature, feature, Arbiter.currentProject);
 									if(oldSelectedFID && feature && feature.fid){
-										console.log("selectedFeature: " + oldSelectedFID);
-										console.log("feature: ", feature);
+//										console.log("selectedFeature: " + oldSelectedFID);
+//										console.log("feature: ", feature);
 										if(oldSelectedFID == feature.fid){ //means layer == activeLayer
-											console.log("the fids are equal");
+//											console.log("the fids are equal");
 											selectedFeature = feature;
 											if(layername == Arbiter.currentProject.activeLayer){ // it should be the activeLayer
-												console.log("the layer is the activeLayer", Arbiter.currentProject.modifyControls);
+//												console.log("the layer is the activeLayer", Arbiter.currentProject.modifyControls);
 												if(Arbiter.currentProject.modifyControls[layername]){
-													console.log("the modify control exists:", Arbiter.currentProject.modifyControls[layername]);
+//													console.log("the modify control exists:", Arbiter.currentProject.modifyControls[layername]);
 													Arbiter.currentProject.modifyControls[layername].modifyControl.selectFeature(feature);
 												}
 											}
 										}
 									}	
-									console.log("insert sync end:", feature);
+//									console.log("insert sync end:", feature);
 								}
 							}
 							
@@ -3442,31 +3442,31 @@ var Arbiter = {
 						if(addProjectCallback)
 							addProjectCallback(featuresLength);
 					}, function(e){
-						console.log("insert err: ", e);
+						Arbiter.error("error inserting new feature: ", e);
 					});
 				}
 			}, function(e){
 				console.log("select err: ", e);
 			});
 		}else{
-			console.log('new insert no id');
-			console.log(sqlObject);
+//			console.log('new insert no id');
+//			console.log(sqlObject);
 			/*var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
 			propertyValues + ");";
 							   
 			console.log(insertSql);*/
-			console.log(sqlObject);
+//			console.log(sqlObject);
 			Cordova.transaction(Arbiter.currentProject.dataDatabase, sqlObject.insertSql, sqlObject.params, function(tx, res){
-				console.log("insert no id success");
+//				console.log("insert no id success");
 					if(isEdit){
-						console.log('isEdit: ' + res.insertId);
+//						console.log('isEdit: ' + res.insertId);
 						if(res.insertId) //hack because insertid is returned as 1 for the first insert...
 							feature.rowid = res.insertId;
 						else
 							feature.rowid = 1;
 					}
 				}, function(e){
-					console.log("insert err: ", e);
+					Arbiter.error("error inserting feature: ", e);
 				}
 			);
 		}
@@ -3706,6 +3706,7 @@ var Arbiter = {
 			newLayers.push(newWMSLayer);
 			
 			strategies[0].events.register("success", '', function(event) {
+				console.log("layer startegy save success");
 				
 				var wfsLayer = event.object.layer;
 				console.log("layer startegy success event: ", event);
@@ -3781,6 +3782,11 @@ var Arbiter = {
 				Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM dirty_table;", [], pullFeatures);
 			});
 		}
+		
+		strategies[0].events.register("fail", '', function(event) {
+			console.log('layer save failed. event: ', event);
+			Arbiter.error('Layer save failed. event: ', event);
+		});
 		
 		//TODO: not used?
 		var tableName = meta.featureType;
