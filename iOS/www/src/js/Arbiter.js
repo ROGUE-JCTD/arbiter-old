@@ -1,3 +1,18 @@
+/* ============================ *
+ *   	    Catch Script Errors
+ * ============================ */
+
+function windowError(message, url, line) {
+    
+    var msg = 	"A script error has been detected. Please re-start your session as this error might cause more issues. " +
+				"Taking note of steps that led to this error can help us resolve this issue." +
+				"\n\nMessage: " + (message? message: "") + "\nUrl: " + (url? url: "") + "\nLine: " + (line? line: "");
+
+    console.log(msg);
+    alert(msg);
+}
+window.onerror=windowError;
+
 
 /* ============================ *
  *   	    Projections
@@ -514,7 +529,7 @@ var Arbiter = {
 		$('#idLayersPage').live('pagebeforeshow', function(){
 			Arbiter.layersSettingsList.clearList();
 			var serverList = Arbiter.currentProject.serverList;
-			
+						
 			/*/////////////////////////////////////
 			 * 	Populate the list of layers
 			 */////////////////////////////////////
@@ -545,7 +560,7 @@ var Arbiter = {
 					jqBaseLayerSelect.append(option);
 				}
 			}
-			
+
 			var selected = "openstreetmap.org";
 			
 			if (Arbiter.currentProject.baseLayerInfo) {
@@ -1001,16 +1016,16 @@ var Arbiter = {
 								Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM projects WHERE id=?", [projectId], function(tx, res){
 									console.log("deletion success: " + projectId);
 								}, function(e){
-									Arbiter.error("deletion failed. projectId: ", projectId);
+									Arbiter.error("error removing project: ", projectName);
 								});
 							}, function(e){
-								Arbiter.error("deletion failed. projectId: ", projectId);
+								Arbiter.error("error removing project: ", projectName);
 							});
 						}
 					});
 
 				}, function(){
-					Arbiter.error("deletion failed. project name: ", projectName);
+					Arbiter.error("error removing project: ", projectName);
 				});									 
 			});
 		};
