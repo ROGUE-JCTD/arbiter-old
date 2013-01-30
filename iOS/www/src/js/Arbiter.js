@@ -2980,7 +2980,9 @@ var Arbiter = {
 						
 						inUse = false;
 						for(var k = 0; k < layersInUse.length; ++k) {
-							if($(layersInUse[k]).attr('layertypename') == layer.name) {
+							if( layer.name === $(layersInUse[k]).attr('layertypename') || 
+							    layer.name === Arbiter.currentProject.baseLayerInfo.layernickname ) {
+								
 								inUse = true;
 								break;
 							}
