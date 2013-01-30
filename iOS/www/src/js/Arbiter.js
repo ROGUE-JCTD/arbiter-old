@@ -1690,6 +1690,15 @@ var Arbiter = {
 		}
 	},
 	
+	gotoPageIfOnline: function(pageId){
+		if (Arbiter.isOnline) {
+			Arbiter.changePage_Pop(pageId);
+		} else {
+			alert('This functionality is only available when the device has network connectivity indicated by a green sync button on the lower left corner of the map');
+		}
+	},
+	
+	
 	addAOIToMap: function() {
 		
 		if (Arbiter.currentProject && Arbiter.currentProject.aoi && map) {
