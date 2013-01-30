@@ -3703,7 +3703,9 @@ var Arbiter = {
 					li += "<label for='textinput-" + type + "'>";
 					li += type;
 					li += "</label>";
-					li += "<input name='' id='textinput-" + type + "' placeholder='" + typeInfo.placeholder + "' value='";
+					li += "<input name='' ";
+					li += "autocorrect='off' autocapitalize='off' ";
+					li += "id='textinput-" + type + "' placeholder='" + typeInfo.placeholder + "' value='";
 					li += Arbiter.encodeChars(attrValue);
 					li += "' type='" + typeInfo.type + "'></div></li>";
 				}
