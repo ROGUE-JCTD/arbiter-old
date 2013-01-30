@@ -2742,7 +2742,14 @@ var Arbiter = {
 						}													 
 						
 					}else{
-						alert("Since this layer has no featureType associated with it, it will be added but can only be used as a baselayer");
+						var useAsBaseLayer = confirm("This layer has no featureType, but can be used as a baselayer. Set as baselayer?");
+						
+						if (useAsBaseLayer) {
+							Arbiter.currentProject.baseLayerInfo.servername = serverName;
+							Arbiter.currentProject.baseLayerInfo.layernickname = jqLayerNickname.val();
+							// save it
+							//Arbiter.setProjectProperty("baseLayerInfo", Arbiter.currentProject.baseLayerInfo);
+						}
 						
 						var selectedOption = jqLayerSelect.find('option:selected');
 
