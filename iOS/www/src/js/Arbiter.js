@@ -3765,14 +3765,14 @@ var Arbiter = {
 			});
 			
 			strategies.push(new OpenLayers.Strategy.Save());
-		/*	
+			
 			var newWMSLayer = new OpenLayers.Layer.WMS(meta.nickname + "-wms", meta.url + "/wms", {
 				layers : meta.typeName,
 				transparent : 'TRUE'
 			});
 			
 			newLayers.push(newWMSLayer);
-		*/	
+			
 			strategies[0].events.register("success", '', function(event) {
 				console.log("layer startegy save success");
 				
