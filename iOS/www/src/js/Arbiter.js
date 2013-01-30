@@ -1188,8 +1188,10 @@ var Arbiter = {
     	if (awayFromMap === true) {
     		console.log("---- onShowMap.awayFromMap");
     		awayFromMap = false;
-    		//Node: do not do anything
+    		
+    		//Node: do not do much
     	
+    		Arbiter.addOrRemoveWMSLayersForWFSLayers();
     	} else {
 	    	if (map){
 	    		Arbiter.error("map should not exist!");
@@ -1257,6 +1259,9 @@ var Arbiter = {
 					console.log("---->> tile have been cached already. not re-caching");
 				}
 			}, function(e){ console.log("Error reading tileIds - " + e); });
+			
+			
+			Arbiter.addOrRemoveWMSLayersForWFSLayers();
 			
 			//open the editor tab. a hack to avoid the jumping feature bug
 			Arbiter.ToggleEditorMenu();
@@ -1449,9 +1454,8 @@ var Arbiter = {
 		} else {
 			var serverInfo = Arbiter.currentProject.serverList[serverName];
 			
-	    	//TODO: use png not jpg
 			layer = new OpenLayers.Layer.WMS("baseLayer", serverInfo.url + "/wms", {
-				layers: layerName, //"TD1-BaseMap-Group",
+				layers: layerName,
 				noMagic: true, // dont switch between file format type automagically based on transparent ture/false
 				transparent: false,
 				isBaseLayer: true,
@@ -2738,7 +2742,7 @@ var Arbiter = {
 						}													 
 						
 					}else{
-						alert("layer will be added but can only be used as a base layer");
+						alert("Since this layer has no featureType associated with it, it will be added but can only be used as a baselayer");
 						
 						var selectedOption = jqLayerSelect.find('option:selected');
 
@@ -3759,14 +3763,14 @@ var Arbiter = {
 			});
 			
 			strategies.push(new OpenLayers.Strategy.Save());
-			
+		/*	
 			var newWMSLayer = new OpenLayers.Layer.WMS(meta.nickname + "-wms", meta.url + "/wms", {
 				layers : meta.typeName,
 				transparent : 'TRUE'
 			});
 			
 			newLayers.push(newWMSLayer);
-			
+		*/	
 			strategies[0].events.register("success", '', function(event) {
 				console.log("layer startegy save success");
 				
@@ -4003,6 +4007,66 @@ var Arbiter = {
 		}
 	},
 	
+	addOrRemoveWMSLayersForWFSLayers: function() {
+		
+		if (map) { 
+			var wfsLayers = map.getLayersByName(/.*-wfs/);
+			var wmsLayers = map.getLayersByName(/.*-wms/);
+			
+			console.log("checkAndCreateWMSLayersForWFSLayers, wfsLayers: ", wfsLayers, ", wmsLayers: ", wmsLayers);		
+			
+			if(Arbiter.isOnline) {
+	
+				for(var layerKey in wfsLayers) {
+					var layer = wfsLayers[layerKey];
+					var index = layer.name.indexOf('-wfs');
+					var layerNickname = layer.name.substring(0, index);
+					var wmsLayer = map.getLayersByName(layerNickname + '-wms');
+						
+					// if no corresponding wms layer
+					if (wmsLayer.length === 0) {
+						var url = layer.protocol.url.substring(0, layer.protocol.url.indexOf('/wfs'));
+						var newLayer = new OpenLayers.Layer.WMS(layerNickname + "-wms", url + "/wms", {
+							layers : layer.protocol.featureType,
+							transparent : 'TRUE'
+						});
+	
+						map.addLayer(newLayer);
+						console.log('adding new layer: ', newLayer);
+					} else {
+						// we already have the layer, make sure it is visible
+						wmsLayer[0].setVisibility(true);
+						console.log('setting layer to visible: ', layer);
+					}
+				}
+				
+			} else {
+				// not online, hide layers
+				for(var layerKey in wmsLayers) {
+					var layer = wmsLayers[layerKey];
+					layer.setVisibility(false);
+					console.log('setting layer to NOT visible: ', layer);
+				}
+			}
+				
+			for(var layerKey in wmsLayers) {
+				var layer = wmsLayers[layerKey];
+				var index = layer.name.indexOf('-wms');
+				var layerNickname = layer.name.substring(0, index);
+				var wfsLayer = map.getLayersByName(layerNickname + '-wfs');
+				
+				// if no corresponding wfs layer, remove it
+				if (wfsLayer.length === 0) {
+					map.removeLayer(wfsLayer[0]);
+					console.log('removing layer since does not have corresponding wfs');
+					Arbiter.warning('removing layer since does not have corresponding wfs');
+				}
+			}
+		}
+		
+		console.log('---- pairWMSLayersToWFSLayers, done');
+	},
+	
 	// Get the current bounds of the map for GET requests.
 	getCurrentExtent: function() {
 		return map.getExtent();
@@ -4060,12 +4124,16 @@ var Arbiter = {
 		console.log("Arbiter: Online");
 		Arbiter.isOnline = true;	
 		Arbiter.setSyncColor();
+		
+		Arbiter.addOrRemoveWMSLayersForWFSLayers();		
 	},
 	
 	onOffline: function() {
 		console.log("Arbiter: Offline");
 		Arbiter.isOnline = false;
 		Arbiter.setSyncColor();
+		
+		Arbiter.addOrRemoveWMSLayersForWFSLayers();		
 	},
 	
 	onBatteryCritical: function(info) {
