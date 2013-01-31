@@ -268,19 +268,19 @@ var Cordova = {
 	
 	onBatteryCritical: function(info) {
 		if(application) {
-			application.onBatteryCritical();
+			//application.onBatteryCritical();
 		}
 	},
 	
 	onBatteryLow: function(info) {
 		if(application) {
-			application.onBatteryLow();
+			//application.onBatteryLow();
 		}
 	},
 	
 	onBatteryStatus: function(info) {
 		if(application) {
-			application.onBatteryStatus();
+			//application.onBatteryStatus();
 		}
 	}
 };

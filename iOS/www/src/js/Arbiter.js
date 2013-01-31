@@ -556,9 +556,6 @@ var Arbiter = {
 				//Delete that layer.
 				Arbiter.deleteLayer(server, layerNickname);
 			}
-			
-			//Delete that layer.
-			Arbiter.deleteLayer(server, layerNickname);
 		});
 		
 		jqSaveButton.click(function(event){
@@ -4031,13 +4028,13 @@ var Arbiter = {
 			insertControl : addFeatureControl
 		};
 
-		var li = "<li><a id='layer-list-item'>" + meta.nickname + "</a></li>";
+		//var li = "<li><a id='layer-list-item'>" + meta.nickname + "</a></li>";
 		
-		try {
-			$("ul#layerList").append(li).listview("refresh");
-		} catch (err) {
-							  
-		}
+		//try {
+		//	$("ul#layerList").append(li).listview("refresh");
+		//} catch (err) {
+		//
+		//}
 	},
 	
 	addOrRemoveWMSLayersForWFSLayers: function() {
