@@ -1389,6 +1389,14 @@ var Arbiter = {
     		Arbiter.changePage_Pop(div_NewProjectPage);
     	}
     },
+	
+	onBackFromLayers: function() {
+    	if(awayFromMap === true){
+    		Arbiter.changePage_Pop(div_ProjectSettingsPage);
+		} else {
+    		Arbiter.changePage_Pop(div_ServersPage);
+		}
+	},
     
     onSetAreaOfInterest: function() {
     	$('#idAOIFooter').removeClass('ui-btn-active');
