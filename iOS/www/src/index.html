@@ -74,10 +74,10 @@
 			</div>
 			
 			<div id='idLanguageListContainer'>
-				<div data-role="controlgroup" id='idLanguageList' data-mini="true">
-					<a data-role="button" id="ENGLISH" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Use English as the main language.</a>
-					<a data-role="button" id="SPANISH" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Utilice el español como idioma principal.</a>
-					<a data-role="button" id="PORTUGUESE" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Uso português como língua principal.</a>
+				<div data-role="controlgroup" id='idLanguageList'>
+					<a data-role="button" id="ENGLISH" onClick="Arbiter.onClick_LanguageSubmit(this, true)">English</a>
+					<a data-role="button" id="SPANISH" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Español</a>
+					<a data-role="button" id="PORTUGUESE" onClick="Arbiter.onClick_LanguageSubmit(this, true)">Português</a>
 				</div>
 			</div>
 		</div>
@@ -213,16 +213,15 @@
 				<a onClick="Arbiter.onClick_EditLayers()" class="ui-btn-right" data-icon="info" data-localize="button.edit">Edit</a>
 			</div>
 			
-			<!-- Content --
-			<div data-role="content" class="LayersPageContent" id='idLayersPageContent'>
-				<ul data-role="listview" id='layer-list'>
-				</ul>
-			</div>
 			<!-- Content -->
 			<div data-role="content" class="LayerSettingsPageContent" id='idLayerSettingsPageContent'>
 				<a onClick="Arbiter.onAddLayerPage()" id="idLayerSettingsAddLayer"><input type="submit" value="Add a layer" data-mini="true"></a>
 				<div id="idLayerSettingsList"></div>
 				
+				<div id="idLayerListContainer">
+					<ul data-role="listview" id="layerList" data-id="dataID_layerList">
+					</ul>
+				</div>
 				
 				<div data-role="fieldcontain">
 					<label for="baselayerselect" style="text-align: center;">Choose base layer</label>
@@ -575,6 +574,10 @@
 				<div data-role="fieldcontain">
 					<label for="layernickname">Nickname</label>
 					<input type="text" autocorrect="off" autocapitalize="off" name="layernickname" id="layernickname" placeholder="Give layer a nickname *" data-localize="label.layerNickname"/>
+				</div>
+				
+				<div id="idDeleteLayer" data-role="fieldcontain">
+					<a id="idDeleteLayerButton" data-role="button" data-icon="delete">DELETE</a>
 				</div>
 			</div>
 			

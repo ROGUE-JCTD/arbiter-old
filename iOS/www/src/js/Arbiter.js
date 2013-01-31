@@ -416,60 +416,8 @@ var Arbiter = {
 						servername: itemInfo.servername,
 						layername: itemInfo.layername
 					};
-					
-				//	Arbiter.deleteLayerCount = Arbiter.getAssociativeArraySize(Arbiter.currentProject.serverList[itemInfo.servername].layers);
+
 					Arbiter.deleteLayerCount = 1;
-					/*Arbiter.tempDeleteLayerFromProject = function(){
-						console.log("tempDeleteLayerFromProject called!");
-							Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM layers WHERE layername=?;", [itemInfo.layername], function(tx, res){
-								var layer = Arbiter.currentProject.serverList[itemInfo.servername].layers[itemInfo.layername];
-								Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM geometry_columns WHERE f_table_name=?", [layer.featureType], function(tx, res){
-									Cordova.transaction(Arbiter.currentProject.dataDatabase, "DROP TABLE " + layer.featureType, [], function(tx, res){
-										console.log("before_delete: success!", itemInfo);
-										
-										//TODO: why is destroy not working?
-										var wfsLayer = map.getLayersByName(itemInfo.layername + '-wfs');
-										
-										console.log("before_delete: wfsLayer - ", wfsLayer);
-										if(wfsLayer.length){
-											map.removeLayer(wfsLayer[0]);
-											//wfsLayer[0].destroy();
-										}
-										
-										var wmsLayer = map.getLayersByName(itemInfo.layername + '-wms');
-										console.log("before_delete: wmsLayer - ", wmsLayer);
-										
-										if(wmsLayer.length){
-											map.removeLayer(wmsLayer[0]);
-											//wmsLayer[0].destroy();
-										}
-										
-										console.log("before remove layer from currentProject obj", itemInfo);
-										delete Arbiter.currentProject.serverList[itemInfo.servername].layers[itemInfo.layername];
-										
-										deleteRow();
-										
-										if(Arbiter.currentProject.activeLayer == itemInfo.layername){
-											Arbiter.currentProject.activeLayer = null;
-										}
-										
-										/*
-										 * Delete the controls for editing the layer
-										 /
-										var controls = Arbiter.currentProject.modifyControls[itemInfo.layername];
-										map.removeControl(controls.modifyControl);
-										map.removeControl(controls.insertControl);
-										controls.modifyControl.destroy();
-										controls.insertControl.destroy();
-										delete Arbiter.currentProject.modifyControls[itemInfo.layername];
-										
-										$('ul#editor-layer-list #' + itemInfo.layername).parent().remove();
-										
-										Arbiter.tempDeleteLayerFromProject = null;
-									})
-								});
-							}, Arbiter.error);
-					};*/
 					
 					jqSyncUpdates.click();
 				}
@@ -512,7 +460,9 @@ var Arbiter = {
 		});		
 		
 		$('#idLayersPage').live('pagebeforeshow', function(){
-			Arbiter.layersSettingsList.clearList();
+			//#NEWLIST
+			//Arbiter.layersSettingsList.clearList();
+			$("ul#layerList").empty();
 			var serverList = Arbiter.currentProject.serverList;
 			
 			/*/////////////////////////////////////
@@ -523,12 +473,26 @@ var Arbiter = {
 					var layer = serverList[serverKey].layers[layerKey];
 					
 					// only add layers that have a feature type
-					if (layer.featureType){					
-						Arbiter.layersSettingsList.append(layerKey, {
-							"servername": serverKey,
-							"layernickname": layerKey, 
-							"layertypename": serverList[serverKey].layers[layerKey].typeName
-						});
+					if (layer.featureType){
+						//#NEWLIST
+						//Arbiter.layersSettingsList.append(layerKey, {
+						//	"servername": serverKey,
+						//	"layernickname": layerKey,
+						//	"layertypename": serverList[serverKey].layers[layerKey].typeName
+						//});
+						
+						var serverName		= serverKey;
+						var LayerNickname	= layerKey;
+						var layerTypeName	= serverList[serverKey].layers[layerKey].typeName;
+						
+						//Create the layer button.
+						var li  = "<li data-li-id=\"" + LayerNickname + "\"><a data-role='button' onClick=\"Arbiter.onAddLayerPage(";
+							li += "'" + LayerNickname + "', ";
+							li += "'" + layerTypeName + "', ";
+							li += "'" + serverName + "'";
+							li += ")\">" + LayerNickname + "</a></li>";
+						
+						$("ul#layerList").append(li).listview("refresh");
 					}
 				}
 			}
@@ -555,6 +519,31 @@ var Arbiter = {
 			jqBaseLayerSelect.val(selected);
 			jqBaseLayerSelect.change();
 			jqBaseLayerSelect.selectmenu('refresh', true);
+		});
+		
+		$("#idDeleteLayerButton").click(function(event) {
+			//Server, LayerName
+			console.log("Delete layer!");
+			
+			//Get the server name from the page.
+			var server = $("#serverselect").val();
+			
+			//Get the layer nickname from the page.
+			var layerNickname = $("#layernickname").val();
+			
+			console.log("Deleting Layer: " + layerNickname + " from server " + server + "...");
+			
+			var ans = confirm("Are you sure you want to remove \"" + layerNickname + "\" from the project?");
+										
+			if(ans){
+				//jqSyncUpdates.click();
+				
+				//Delete that layer.
+				Arbiter.deleteLayer(server, layerNickname);
+			}
+			
+			//Delete that layer.
+			Arbiter.deleteLayer(server, layerNickname);
 		});
 		
 		jqSaveButton.click(function(event){
@@ -748,7 +737,7 @@ var Arbiter = {
 			Arbiter.ToggleAttributeMenu();
 		});
 				
-		$(".layer-list-item").click(function(event){
+		$("#layer-list-item").click(function(event){
 			Arbiter.populateAddLayerDialog($(this).text());
 		});
 		
@@ -2094,6 +2083,9 @@ var Arbiter = {
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM layers WHERE layername=?;", [layername], function(tx, res){
 			var server = Arbiter.currentProject.serverList[servername];
 			var layer = server.layers[layername];
+			
+			console.log("Layer: ", layer);
+			
 			//TODO: check all statements for end ;
 			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM geometry_columns WHERE f_table_name=?", [layer.featureType], function(tx, res){
 				Cordova.transaction(Arbiter.currentProject.dataDatabase, "DROP TABLE '" + layer.featureType + "';", [], function(tx, res){
@@ -2119,8 +2111,9 @@ var Arbiter = {
 					console.log("before remove layer from currentProject obj " + servername + ", " + layername);
 					delete Arbiter.currentProject.serverList[servername].layers[layername];
 					
-					//deleteRow();
-					Arbiter.layersSettingsList.deleteListItem("layername", layername);
+					//#NEWLIST
+					//Arbiter.layersSettingsList.deleteListItem("layername", layername);
+					//$("ul[data-id=dataID_layerList] > li").attr("[data-li-id=\"" + layername + "\"]").remove();
 					
 					console.log("after delete list item");
 					if(Arbiter.currentProject.activeLayer == layername){
@@ -2144,6 +2137,9 @@ var Arbiter = {
 					//Arbiter.tempDeleteLayerFromProject = null;
 					Arbiter.deleteLayerCount--;
 					
+					//#GOBACK
+					Arbiter.changePage_Pop(div_LayersPage);
+					
 					if(Arbiter.deleteLayerCount == 0){
 						console.log("layers all deleted - time to party!");
 						
@@ -2165,6 +2161,7 @@ var Arbiter = {
 						Arbiter.deletingLayersInfo = null;
 					}
 				})
+			
 			});
 		}, Arbiter.error);
 	},
@@ -2762,12 +2759,18 @@ var Arbiter = {
 		console.log("_serverName ", _serverName);
 		console.log("_layerNickName ", _layerNickName);
 		console.log("_layerTypeName ", _layerTypeName);
+		
+		//clear nickname just in case
+		jqLayerNickname.val("");
 
 		Arbiter.addServersToLayerDropdown();
 		
 		// if this is a new layer
+		//#TODO - check other things to make sure the layer is new.
 		if (!_layerNickName){
 			console.log("onAddLayerPage.Add layer");
+			
+			$("#idDeleteLayer").hide();
 			
 			// if we only have one server, select it
 			var severListKeys = Object.keys(Arbiter.currentProject.serverList);
@@ -2780,6 +2783,8 @@ var Arbiter = {
 		} else {
 			// if this is editing an existing layer
 			console.log("onAddLayerPage.Edit layer");
+			
+			$("#idDeleteLayer").show();
 
 			Arbiter.enableLayerSelectAndNickname();
 
@@ -3920,12 +3925,12 @@ var Arbiter = {
 			insertControl : addFeatureControl
 		};
 
-		var li = "<li><a href='#' class='layer-list-item'>" + meta.nickname + "</a></li>";
-
+		var li = "<li><a id='layer-list-item'>" + meta.nickname + "</a></li>";
+		
 		try {
-			$("ul#layer-list").append(li).listview("refresh");
+			$("ul#layerList").append(li).listview("refresh");
 		} catch (err) {
-
+							  
 		}
 	},
 	
