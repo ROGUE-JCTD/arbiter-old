@@ -1,3 +1,18 @@
+/* ============================ *
+ *   	    Catch Script Errors
+ * ============================ */
+
+function windowError(message, url, line) {
+    
+    var msg = 	"A script error has been detected. Please re-start your session as this error might cause more issues. " +
+				"Taking note of steps that led to this error can help us resolve this issue." +
+				"\n\nMessage: " + (message? message: "") + "\nUrl: " + (url? url: "") + "\nLine: " + (line? line: "");
+
+    console.log(msg);
+    alert(msg);
+}
+window.onerror=windowError;
+
 
 /* ============================ *
  *   	    Projections
@@ -464,7 +479,7 @@ var Arbiter = {
 			//Arbiter.layersSettingsList.clearList();
 			$("ul#layerList").empty();
 			var serverList = Arbiter.currentProject.serverList;
-			
+						
 			/*/////////////////////////////////////
 			 * 	Populate the list of layers
 			 */////////////////////////////////////
@@ -509,7 +524,7 @@ var Arbiter = {
 					jqBaseLayerSelect.append(option);
 				}
 			}
-			
+
 			var selected = "openstreetmap.org";
 			
 			if (Arbiter.currentProject.baseLayerInfo) {
@@ -986,28 +1001,24 @@ var Arbiter = {
 						if(res.rows.length){
 							var projectId = res.rows.item(0).id;
 							
-							Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM server_usage WHERE project_id=?", [projectId],
-							function(tx, res){
-								console.log("deletion success: " + projectId);
+							Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM server_usage WHERE project_id=?", [projectId], function(tx, res){
+								Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM projects WHERE id=?", [projectId], function(tx, res){
+									console.log("deletion success: " + projectId);
+								}, function(e){
+									Arbiter.error("error removing project: ", projectName);
+								});
 							}, function(e){
-								console.log("deletion failure: " + projectId);
-							});
-															   
-							Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM projects WHERE id=?", [projectId],
-							function(tx, res){
-								console.log("deletion success: " + projectId);
-							}, function(e){
-								console.log("deletion failure: " + projectId);
+								Arbiter.error("error removing project: ", projectName);
 							});
 						}
 					});
 
 				}, function(){
-					console.log(projectName + " project deletion failed");					  
+					Arbiter.error("error removing project: ", projectName);
 				});									 
 			});
 		};
-				
+		
 		// clear tiles related to this db, then perform otehr operations
 		TileUtil.clearCache("osm", op, vDb);
 	},
@@ -1166,8 +1177,10 @@ var Arbiter = {
     	if (awayFromMap === true) {
     		console.log("---- onShowMap.awayFromMap");
     		awayFromMap = false;
-    		//Node: do not do anything
+    		
+    		//Node: do not do much
     	
+    		Arbiter.addOrRemoveWMSLayersForWFSLayers();
     	} else {
 	    	if (map){
 	    		Arbiter.error("map should not exist!");
@@ -1235,6 +1248,9 @@ var Arbiter = {
 					console.log("---->> tile have been cached already. not re-caching");
 				}
 			}, function(e){ console.log("Error reading tileIds - " + e); });
+			
+			
+			Arbiter.addOrRemoveWMSLayersForWFSLayers();
 			
 			//open the editor tab. a hack to avoid the jumping feature bug
 			Arbiter.ToggleEditorMenu();
@@ -1362,6 +1378,14 @@ var Arbiter = {
     		Arbiter.changePage_Pop(div_NewProjectPage);
     	}
     },
+	
+	onBackFromLayers: function() {
+    	if(awayFromMap === true){
+    		Arbiter.changePage_Pop(div_ProjectSettingsPage);
+		} else {
+    		Arbiter.changePage_Pop(div_ServersPage);
+		}
+	},
     
     onSetAreaOfInterest: function() {
     	$('#idAOIFooter').removeClass('ui-btn-active');
@@ -1427,9 +1451,8 @@ var Arbiter = {
 		} else {
 			var serverInfo = Arbiter.currentProject.serverList[serverName];
 			
-	    	//TODO: use png not jpg
 			layer = new OpenLayers.Layer.WMS("baseLayer", serverInfo.url + "/wms", {
-				layers: layerName, //"TD1-BaseMap-Group",
+				layers: layerName,
 				noMagic: true, // dont switch between file format type automagically based on transparent ture/false
 				transparent: false,
 				isBaseLayer: true,
@@ -1663,6 +1686,15 @@ var Arbiter = {
 			Arbiter.changePage_Pop(div_LayersPage);
 		}
 	},
+	
+	gotoPageIfOnline: function(pageId){
+		if (Arbiter.isOnline) {
+			Arbiter.changePage_Pop(pageId);
+		} else {
+			alert('This functionality is only available when the device has network connectivity indicated by a green sync button on the lower left corner of the map');
+		}
+	},
+	
 	
 	addAOIToMap: function() {
 		
@@ -2724,7 +2756,14 @@ var Arbiter = {
 						}													 
 						
 					}else{
-						alert("layer will be added but can only be used as a base layer");
+						var useAsBaseLayer = confirm("This layer has no featureType, but can be used as a baselayer. Set as baselayer?");
+						
+						if (useAsBaseLayer) {
+							Arbiter.currentProject.baseLayerInfo.servername = serverName;
+							Arbiter.currentProject.baseLayerInfo.layernickname = jqLayerNickname.val();
+							// save it
+							//Arbiter.setProjectProperty("baseLayerInfo", Arbiter.currentProject.baseLayerInfo);
+						}
 						
 						var selectedOption = jqLayerSelect.find('option:selected');
 
@@ -2963,7 +3002,9 @@ var Arbiter = {
 						
 						inUse = false;
 						for(var k = 0; k < layersInUse.length; ++k) {
-							if($(layersInUse[k]).attr('layertypename') == layer.name) {
+							if( layer.name === $(layersInUse[k]).attr('layertypename') || 
+							    layer.name === Arbiter.currentProject.baseLayerInfo.layernickname ) {
+								
 								inUse = true;
 								break;
 							}
@@ -3314,9 +3355,9 @@ var Arbiter = {
 	},
 	
 	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback, layername){
-		console.log("insertFeaturesIntoTable: ", features);
-		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
-		console.log("layer features.length: " + features.length);
+//		console.log("insertFeaturesIntoTable: ", features);
+//		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
+//		console.log("layer features.length: " + features.length);
 		
 		//Arbiter.tempDeleteCountFeatures = 0;
 		
@@ -3343,7 +3384,7 @@ var Arbiter = {
 	},
 	
 	insertFeature: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, featuresLength){
-		console.log('insertFeature: layername: ', layername, 'feature: ', feature, 'f_table_name: ', f_table_name, 'geomName: ', geomName, 'isEdit: ', isEdit );
+//		console.log('insertFeature: layername: ', layername, 'feature: ', feature, 'f_table_name: ', f_table_name, 'geomName: ', geomName, 'isEdit: ', isEdit );
 		
 		var selectSql;
 		var selectParams;
@@ -3359,20 +3400,20 @@ var Arbiter = {
 				selectParams = [feature.rowid];
 			}
 							  
-			console.log(selectSql);
-			console.log(selectParams);
+//			console.log(selectSql);
+//			console.log(selectParams);
 							  
 			Cordova.transaction(Arbiter.currentProject.dataDatabase, selectSql, selectParams, function(tx, res){
 				//console.log(updateList);
 				//If this exists, then its an update, else its an insert
 				if(res.rows.length){
-					console.log("UPDATE", res.rows.item(0));
+//					console.log("UPDATE", res.rows.item(0));
 					var updateSql = sqlObject.updateSql.substring(0, sqlObject.updateSql.length - 1) + " WHERE id=?";
-					console.log("update sql: " + updateSql, sqlObject);
+//					console.log("update sql: " + updateSql, sqlObject);
 					sqlObject.params.push(res.rows.item(0).id);
 												  
 					Cordova.transaction(Arbiter.currentProject.dataDatabase, updateSql, sqlObject.params, function(tx, res){
-						console.log("update success");
+//						console.log("update success");
 						$("#saveAttributesSucceeded").fadeIn(1000, function(){
 							$(this).fadeOut(3000);
 						});
@@ -3381,7 +3422,7 @@ var Arbiter = {
 							//Arbiter.currentProject.variablesDatabase.transaction(function(tx){
 							 var insertDirtySql = "INSERT INTO dirty_table (f_table_name, fid, state) VALUES (?,?,?);";
 																	  
-							console.log(insertDirtySql);
+//							console.log(insertDirtySql);
 							Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertDirtySql, [f_table_name, feature.fid, 1], function(tx, res){
 								console.log("insert dirty success");
 							}, function(e){
@@ -3390,48 +3431,48 @@ var Arbiter = {
 							//}, Arbiter.errorSql, function(){});
 						}
 					}, function(e){
-						console.log("update err: ", e);
+						Arbiter.error("failed to save feature: ", e);
 						$("#saveAttributesFailed").fadeIn(1000, function(){
 							$(this).fadeOut(3000);
 						});
 					});
 				}else{
-					console.log('new insert');
+//					console.log('new insert');
 					Cordova.transaction(Arbiter.currentProject.dataDatabase, sqlObject.insertSql, sqlObject.params, function(tx, res){
-						console.log("insert success");
-						console.log(sqlObject.insertSql);
-						console.log(sqlObject.params);
+//						console.log("insert success");
+//						console.log(sqlObject.insertSql);
+//						console.log(sqlObject.params);
 						if(isEdit){
-							console.log('isEdit: ' + res.insertId);
+	//						console.log('isEdit: ' + res.insertId);
 							if(res.insertId) //hack because insertId is returned as null for the first insert...
 								feature.rowid = res.insertId;
 							else
 								feature.rowid = 1;
 						}else{ // from sync
-							console.log("syncing: " + layername + ", ", map);
+//							console.log("syncing: " + layername + ", ", map);
 							if(layername && map){
 								var vectorLayer = map.getLayersByName(layername + "-wfs");
 								if(vectorLayer.length){
-									console.log("insert sync:", feature);
+	//								console.log("insert sync:", feature);
 									feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
 									vectorLayer[0].addFeatures([feature]);
-									console.log("DEBUGGING: " + Arbiter.currentProject.activeLayer + ", " + layername, selectedFeature, feature, Arbiter.currentProject);
+//									console.log("DEBUGGING: " + Arbiter.currentProject.activeLayer + ", " + layername, selectedFeature, feature, Arbiter.currentProject);
 									if(oldSelectedFID && feature && feature.fid){
-										console.log("selectedFeature: " + oldSelectedFID);
-										console.log("feature: ", feature);
+//										console.log("selectedFeature: " + oldSelectedFID);
+//										console.log("feature: ", feature);
 										if(oldSelectedFID == feature.fid){ //means layer == activeLayer
-											console.log("the fids are equal");
+//											console.log("the fids are equal");
 											selectedFeature = feature;
 											if(layername == Arbiter.currentProject.activeLayer){ // it should be the activeLayer
-												console.log("the layer is the activeLayer", Arbiter.currentProject.modifyControls);
+//												console.log("the layer is the activeLayer", Arbiter.currentProject.modifyControls);
 												if(Arbiter.currentProject.modifyControls[layername]){
-													console.log("the modify control exists:", Arbiter.currentProject.modifyControls[layername]);
+//													console.log("the modify control exists:", Arbiter.currentProject.modifyControls[layername]);
 													Arbiter.currentProject.modifyControls[layername].modifyControl.selectFeature(feature);
 												}
 											}
 										}
 									}	
-									console.log("insert sync end:", feature);
+//									console.log("insert sync end:", feature);
 								}
 							}
 							
@@ -3447,31 +3488,31 @@ var Arbiter = {
 						if(addProjectCallback)
 							addProjectCallback(featuresLength);
 					}, function(e){
-						console.log("insert err: ", e);
+						Arbiter.error("error inserting new feature: ", e);
 					});
 				}
 			}, function(e){
 				console.log("select err: ", e);
 			});
 		}else{
-			console.log('new insert no id');
-			console.log(sqlObject);
+//			console.log('new insert no id');
+//			console.log(sqlObject);
 			/*var insertSql = "INSERT INTO " + f_table_name + " (" + propertiesList + ") VALUES (" +
 			propertyValues + ");";
 							   
 			console.log(insertSql);*/
-			console.log(sqlObject);
+//			console.log(sqlObject);
 			Cordova.transaction(Arbiter.currentProject.dataDatabase, sqlObject.insertSql, sqlObject.params, function(tx, res){
-				console.log("insert no id success");
+//				console.log("insert no id success");
 					if(isEdit){
-						console.log('isEdit: ' + res.insertId);
+//						console.log('isEdit: ' + res.insertId);
 						if(res.insertId) //hack because insertid is returned as 1 for the first insert...
 							feature.rowid = res.insertId;
 						else
 							feature.rowid = 1;
 					}
 				}, function(e){
-					console.log("insert err: ", e);
+					Arbiter.error("error inserting feature: ", e);
 				}
 			);
 		}
@@ -3544,7 +3585,12 @@ var Arbiter = {
 				for(var type in selectedFeature.layer.attributeTypes){ 					
 					console.log('type: ', type);
 					
-					var attrValue = $(Arbiter.idToJQuerySelectorSafe("textinput-" + type)).val();
+					var attrValue;
+					if(type == "health_facility") {
+						attrValue = $("#hospitalTypeSelect").val();
+					} else {
+						attrValue = $(Arbiter.idToJQuerySelectorSafe("textinput-" + type)).val();
+					}
 					
 					console.log('======== attrValue: ', attrValue, ', type: ', type);
 					
@@ -3555,8 +3601,12 @@ var Arbiter = {
 					   		attrValue += ":00";
 					   	}
 					}
-
-					selectedFeature.attributes[type] = Arbiter.decodeChars(attrValue);
+					
+					if (attrValue === ''){
+						delete selectedFeature.attributes[type];
+					} else {
+						selectedFeature.attributes[type] = Arbiter.decodeChars(attrValue);
+					}
 				}
 				
 				console.log('======== updated feature: ', selectedFeature);
@@ -3632,18 +3682,68 @@ var Arbiter = {
 			
 				if (selectedFeature.attributes[type]) {
 					attrValue = selectedFeature.attributes[type];
+				} else {
+					attrValue = '';
 				}
 				
-				li += "<li style='padding:5px; border-radius: 4px;'><div>";
-				li += "<label for='textinput-" + type + "'>";
-				li += type;
-				li += "</label>";
-				li += "<input name='' id='textinput-" + type + "' placeholder='" + typeInfo.placeholder + "' value='";
-				li += Arbiter.encodeChars(attrValue);
-				li += "' type='" + typeInfo.type + "'></div></li>";
+				if(type == "health_facility") {
+					li += '<li style="padding:5px; border-radius: 4px;">';
+						li += '<div>';
+							li += '<label for="hospitalTypeSelect">facility type</label>';
+							li += '<select name="hospitalTypeSelect" id="hospitalTypeSelect">';
+								if(attrValue == 'hospital') {
+									li += '<option value="hospital" selected="true">hospital</option>';
+								} else {
+									li += '<option value="hospital">hospital</option>';
+								}
+								if(attrValue == 'field_hospital') {
+									li += '<option value="field_hospital" selected="true">field_hospital</option>';
+								} else {
+									li += '<option value="field_hospital">field_hospital</option>';
+								}
+								if(attrValue == 'sar') {
+									li += '<option value="sar" selected="true">sar</option>';
+								} else {
+									li += '<option value="sar">sar</option>';
+								}
+								if(attrValue == 'medical_collection') {
+									li += '<option value="medical_collection" selected="true">medical_collection</option>';
+								} else {
+									li += '<option value="medical_collection">medical_collection</option>';
+								}
+								if(attrValue == 'air_medvac') {
+									li += '<option value="air_medvac" selected="true">air_medvac</option>';
+								} else {
+									li += '<option value="air_medvac">air_medvac</option>';
+								}
+								if(attrValue == 'clinic') {
+									li += '<option value="clinic" selected="true">clinic</option>';
+								} else {
+									li += '<option value="clinic">clinic</option>';
+								}
+								if(attrValue == 'unknown') {
+									li += '<option value="unknown" selected="true">unknown</option>';
+								} else {
+									li += '<option value="unknown">unknown</option>';
+								}
+							li += '</select>';
+						li += '</dev>';
+					li += '</li>';
+				} else {
+					li += "<li style='padding:5px; border-radius: 4px;'><div>";
+					li += "<label for='textinput-" + type + "'>";
+					li += type;
+					li += "</label>";
+					li += "<input name='' ";
+					li += "autocorrect='off' autocapitalize='off' ";
+					li += "id='textinput-" + type + "' placeholder='" + typeInfo.placeholder + "' value='";
+					li += Arbiter.encodeChars(attrValue);
+					li += "' type='" + typeInfo.type + "'></div></li>";
+				}
 			}
 			
 			$("ul#attribute-list").empty().append(li).listview("refresh");
+											
 			$("#attributeMenuContent").append('<div id="saveAttributesFailed" style="display:none;">' +
 											  	'<span style="color:red;font-size:24px;">&#x2716;</span>' +
 												'<span style="color:red;">Save Failed</span>' +
@@ -3705,6 +3805,7 @@ var Arbiter = {
 			newLayers.push(newWMSLayer);
 			
 			strategies[0].events.register("success", '', function(event) {
+				console.log("layer startegy save success");
 				
 				var wfsLayer = event.object.layer;
 				console.log("layer startegy success event: ", event);
@@ -3780,6 +3881,11 @@ var Arbiter = {
 				Cordova.transaction(Arbiter.currentProject.variablesDatabase, "DELETE FROM dirty_table;", [], pullFeatures);
 			});
 		}
+		
+		strategies[0].events.register("fail", '', function(event) {
+			console.log('layer save failed. event: ', event);
+			Arbiter.error('Layer save failed. event: ', event);
+		});
 		
 		//TODO: not used?
 		var tableName = meta.featureType;
@@ -3934,6 +4040,66 @@ var Arbiter = {
 		}
 	},
 	
+	addOrRemoveWMSLayersForWFSLayers: function() {
+		
+		if (map) { 
+			var wfsLayers = map.getLayersByName(/.*-wfs/);
+			var wmsLayers = map.getLayersByName(/.*-wms/);
+			
+			console.log("checkAndCreateWMSLayersForWFSLayers, wfsLayers: ", wfsLayers, ", wmsLayers: ", wmsLayers);		
+			
+			if(Arbiter.isOnline) {
+	
+				for(var layerKey in wfsLayers) {
+					var layer = wfsLayers[layerKey];
+					var index = layer.name.indexOf('-wfs');
+					var layerNickname = layer.name.substring(0, index);
+					var wmsLayer = map.getLayersByName(layerNickname + '-wms');
+						
+					// if no corresponding wms layer
+					if (wmsLayer.length === 0) {
+						var url = layer.protocol.url.substring(0, layer.protocol.url.indexOf('/wfs'));
+						var newLayer = new OpenLayers.Layer.WMS(layerNickname + "-wms", url + "/wms", {
+							layers : layer.protocol.featureType,
+							transparent : 'TRUE'
+						});
+	
+						map.addLayer(newLayer);
+						console.log('adding new layer: ', newLayer);
+					} else {
+						// we already have the layer, make sure it is visible
+						wmsLayer[0].setVisibility(true);
+						console.log('setting layer to visible: ', layer);
+					}
+				}
+				
+			} else {
+				// not online, hide layers
+				for(var layerKey in wmsLayers) {
+					var layer = wmsLayers[layerKey];
+					layer.setVisibility(false);
+					console.log('setting layer to NOT visible: ', layer);
+				}
+			}
+				
+			for(var layerKey in wmsLayers) {
+				var layer = wmsLayers[layerKey];
+				var index = layer.name.indexOf('-wms');
+				var layerNickname = layer.name.substring(0, index);
+				var wfsLayer = map.getLayersByName(layerNickname + '-wfs');
+				
+				// if no corresponding wfs layer, remove it
+				if (wfsLayer.length === 0) {
+					map.removeLayer(wfsLayer[0]);
+					console.log('removing layer since does not have corresponding wfs');
+					Arbiter.warning('removing layer since does not have corresponding wfs');
+				}
+			}
+		}
+		
+		console.log('---- pairWMSLayersToWFSLayers, done');
+	},
+	
 	// Get the current bounds of the map for GET requests.
 	getCurrentExtent: function() {
 		return map.getExtent();
@@ -3991,12 +4157,16 @@ var Arbiter = {
 		console.log("Arbiter: Online");
 		Arbiter.isOnline = true;	
 		Arbiter.setSyncColor();
+		
+		Arbiter.addOrRemoveWMSLayersForWFSLayers();		
 	},
 	
 	onOffline: function() {
 		console.log("Arbiter: Offline");
 		Arbiter.isOnline = false;
 		Arbiter.setSyncColor();
+		
+		Arbiter.addOrRemoveWMSLayersForWFSLayers();		
 	},
 	
 	onBatteryCritical: function(info) {

@@ -139,6 +139,16 @@ html, body {
 	background-color:rgba(0, 60, 136, 0.496094);
 }
 
+#idWorkingOverlay {
+	overflow: scroll;
+	left: 100%;
+	right: 0px;
+	height: 100%;
+	top:0px;
+	left: 100%;
+	background-color:rgba(60, 60, 60, 0.8);
+}
+
 #attributeTab {
 	position:absolute;
 	z-index:1005;
@@ -152,24 +162,19 @@ html, body {
 	display:none;
 }
 
-#idWorkingOverlay {
+#idAttributeMenu {
 	overflow: scroll;
 	left: 100%;
 	right: 0px;
 	height: 100%;
 	top:0px;
 	left: 100%;
-	background-color:rgba(60, 60, 60, 0.9);
+	background-color:rgba(136, 60, 0, 0.496094);
 }
 
-#idAttributeMenu {
+#attributeMenuContent {
 	overflow: scroll;
-	left: 100%;
-	right: 0px;
-	height   : 100%;
-	top:0px;
-	left: 100%;
-	background-color:rgba(136, 60, 0, 0.496094);
+	height: 80%;
 }
 
 #idLayerListContainer {

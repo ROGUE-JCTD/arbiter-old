@@ -893,10 +893,7 @@ clearCache : function(tileset, successCallback, vDb) {
 					}
 					
 					if (removeCounter === res.rows.length) {
-						TileUtil.deleteTileIdsEntries(vDb);
-						if (successCallback){
-							successCallback();
-						}
+						TileUtil.deleteTileIdsEntries(vDb, successCallback);
 					}
 				};
 				
@@ -925,7 +922,7 @@ clearCache : function(tileset, successCallback, vDb) {
 	});		
 }, 
 
-deleteTileIdsEntries: function(vDb){
+deleteTileIdsEntries: function(vDb, successCallback){
 	console.log("---- TileUtil.deleteTileIdsEntries");
 	
 	if (!vDb){
@@ -938,6 +935,10 @@ deleteTileIdsEntries: function(vDb){
 		tx.executeSql(statement, [], function(tx, res){
 			if (TileUtil.debug) {
 				console.log("---- TileUtil.deleteTileIdsEntries done");
+			}
+			
+			if (successCallback){
+				successCallback();
 			}
 		}, function(e1, e2) {
 			Arbiter.error("chk9", e1, e2);
