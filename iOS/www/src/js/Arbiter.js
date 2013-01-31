@@ -501,7 +501,7 @@ var Arbiter = {
 						var layerTypeName	= serverList[serverKey].layers[layerKey].typeName;
 						
 						//Create the layer button.
-						var li  = "<li data-li-id=\"" + LayerNickname + "\"><a data-role='button' onClick=\"Arbiter.onAddLayerPage(";
+						var li  = "<li class='classLayerListItem' data-li-id=\"" + LayerNickname + "\"><a data-role='button' onClick=\"Arbiter.onAddLayerPage(";
 							li += "'" + LayerNickname + "', ";
 							li += "'" + layerTypeName + "', ";
 							li += "'" + serverName + "'";

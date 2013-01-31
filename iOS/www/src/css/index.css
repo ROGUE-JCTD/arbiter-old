@@ -181,6 +181,13 @@ html, body {
 	margin: 10px;
 }
 
+.classLayerListItem {
+	border-top-left-radius: 20px;
+	border-top-right-radius: 20px;
+	border-bottom-left-radius: 20px;
+	border-bottom-right-radius: 20px;
+}
+
 .olControlZoom{
 	left:0px !important;
 	border-top-left-radius: 0px !important;
