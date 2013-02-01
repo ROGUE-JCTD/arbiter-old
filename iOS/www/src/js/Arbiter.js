@@ -46,6 +46,7 @@ var layerColors = ['aqua', 'yellow', 'teal', 'purple', 'fuchsia', 'lime', 'maroo
 var baseLayer;
 
 var wmsSelectControl;
+var selectControl;
 var wktFormatter;
 var capabilitiesFormatter;
 var describeFeatureTypeReader;
@@ -124,6 +125,10 @@ var CurrentLanguage = LanguageType.ENGLISH;
 var awayFromMap = false;
 var editorTabOpen = false;
 var attributeTab = false;
+
+var layerBeingEdited= null;
+
+var syncing = false;
 
 var Arbiter = { 
 	
@@ -701,7 +706,9 @@ var Arbiter = {
 		
 		jqSyncUpdates.click(function(event){
 			if(Arbiter.isOnline) {
+			
 				console.log("---- jqSyncUpdates.click");
+				
 				var layers = map.getLayersByClass('OpenLayers.Layer.Vector');
 			
 				var ans = true;
@@ -2690,6 +2697,22 @@ var Arbiter = {
 			var serverName = jqServerSelect.val();
 			var serverInfo = Arbiter.currentProject.serverList[serverName];
 			var typeName = jqLayerSelect.val();
+			
+			//#TODO:
+			//Check if we are editing a layer.
+			if(layerBeingEdited != null) {
+			
+				//var ans = confirm("Are you sure you want to remove \"" + layerNickname + "\" from the project?");
+				
+				//if(ans){
+					//jqSyncUpdates.click();
+					
+					//Delete that layer.
+					//Arbiter.deleteLayer(server, layerNickname);
+				//}
+				//If so remove the older layer.
+				//Arbiter.deleteLayer(layerBeingEdited.serverName, layerBeingEdited.layerNickname);
+			}
 
 			jqLayerNickname.removeClass('invalid-field');
 			
@@ -2808,6 +2831,12 @@ var Arbiter = {
 			
 			$("#idDeleteLayer").hide();
 			
+			$("#serverselect").removeClass("ui-disabled");
+			$("#layerselect").removeClass("ui-disabled");
+			$("#layernickname").removeClass("ui-disabled");
+			
+			layerBeingEdited = null;
+			
 			// if we only have one server, select it
 			var severListKeys = Object.keys(Arbiter.currentProject.serverList);
 			if (severListKeys.length === 1){
@@ -2821,8 +2850,17 @@ var Arbiter = {
 			console.log("onAddLayerPage.Edit layer");
 			
 			$("#idDeleteLayer").show();
+			layerBeingEdited = {
+				serverName: _serverName,
+				layerNickname: _layerNickName,
+				layerTypeName: _layerTypeName
+			};
+			
+			$("#serverselect").addClass("ui-disabled");
+			$("#layerselect").addClass("ui-disabled");
+			$("#layernickname").addClass("ui-disabled");
 
-			Arbiter.enableLayerSelectAndNickname();
+			//Arbiter.enableLayerSelectAndNickname();
 
 			jqLayerNickname.val(_layerNickName);
 
@@ -2835,7 +2873,7 @@ var Arbiter = {
 			Arbiter.addLayersOnServerToLayerDropdown(_serverName, _layerNickName, function(){
 				jqLayerSelect.val(_layerTypeName);
 				jqLayerSelect.selectmenu('refresh', true);
-			})
+			});
 		}
 		
 		Arbiter.changePage_Pop(div_AddLayerPage);
@@ -3946,6 +3984,8 @@ var Arbiter = {
 		newWFSLayer.events.register("featureselected", null, function(event) {
 			console.log("Feature selected: ", event.feature);
 			
+			$("#syncUpdates").addClass("ui-disabled");
+			
 			selectedFeature = event.feature;
 			oldSelectedFID = event.feature.fid;
 			
@@ -3960,17 +4000,25 @@ var Arbiter = {
 
 		newWFSLayer.events.register("featureunselected", null, function(event) {
 			console.log("Feature unselected: ", event);
+			
+			$("#syncUpdates").removeClass("ui-disabled");
+			
 			selectedFeature = null;
 			oldSelectedFID = null;
 			
 			Arbiter.CloseAttributesMenu();
 
-			if (jqAttributeTab.is(':visible'))
+			if (jqAttributeTab.is(':visible')) {
 				jqAttributeTab.toggle();
+			}
 			
 			if(jqDeleteFeatureButton.is(':visible')){
 				jqFindMeButton.addClass('arbiter-map-tools-bottom');
 				jqDeleteFeatureButton.toggle();
+			}
+			
+			if(syncing) {
+										
 			}
 		});
 		
@@ -3990,7 +4038,7 @@ var Arbiter = {
 		});
 
 		var addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer, OpenLayers.Handler.Point);
-		var selectControl = new OpenLayers.Control.SelectFeature( newWFSLayer, OpenLayers.Handler.Point);
+		Arbiter.selectControl = new OpenLayers.Control.SelectFeature( newWFSLayer, OpenLayers.Handler.Point);
 		
 		addFeatureControl.events.register("featureadded", null, function(event) {
 			if(featureInBounds == false) {
@@ -4007,15 +4055,15 @@ var Arbiter = {
 			
 			Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
 			
-			selectControl.select(event.feature);
+			Arbiter.selectControl.select(event.feature);
 			
 			console.log("opening tab");
 			jqAddFeature.click();
 			Arbiter.ToggleAttributeMenu();
 		});
 		
-		map.addControl(selectControl);
-		selectControl.activate();
+		map.addControl(Arbiter.selectControl);
+		Arbiter.selectControl.activate();
 		
 		map.addControl(addFeatureControl);
 
