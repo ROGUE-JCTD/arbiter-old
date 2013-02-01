@@ -506,7 +506,7 @@ var Arbiter = {
 						var layerTypeName	= serverList[serverKey].layers[layerKey].typeName;
 						
 						//Create the layer button.
-						var li  = "<li class='classLayerListItem' data-li-id=\"" + LayerNickname + "\"><a data-role='button' onClick=\"Arbiter.onAddLayerPage(";
+						var li  = "<li class='classLayerListItem' server='" + serverName + "' data-li-id=\"" + layerTypeName + "\"><a data-role='button' onClick=\"Arbiter.onAddLayerPage(";
 							li += "'" + LayerNickname + "', ";
 							li += "'" + layerTypeName + "', ";
 							li += "'" + serverName + "'";
@@ -1256,7 +1256,7 @@ var Arbiter = {
 			
 			Arbiter.addOrRemoveWMSLayersForWFSLayers();
 			
-			//open the editor tab. a hack to avoid the jumping feature bug
+			//#HACK  this prevents the jumping feature bug
 			Arbiter.ToggleEditorMenu();
     	}
 	},
@@ -3020,10 +3020,6 @@ var Arbiter = {
 						return 0;
 					});
 					
-					
-					var layersInUse = $('#idLayerSettingsList .list-item');
-					var inUse = false;
-						
 					for(var i = 0;i < layerList.length;i++){
 						layer = layerList[i];
 						
@@ -3036,14 +3032,12 @@ var Arbiter = {
 						}
 						
 						inUse = false;
-						for(var k = 0; k < layersInUse.length; ++k) {
-							if( layer.name === $(layersInUse[k]).attr('layertypename') || 
-							    layer.name === Arbiter.currentProject.baseLayerInfo.layernickname ) {
-								
+
+						$("#layerList > li").each(function() {
+							if((layer.name === $(this).attr("data-li-id") && serverName === $(this).attr("server")) || layer.title === Arbiter.currentProject.baseLayerInfo.layernickname) {
 								inUse = true;
-								break;
 							}
-						}
+						});
 						
 						if(inUse == false || layer.title == existingLayerName) {
 							options +=  '<option layersrs="' + layersrs + '" value="' +
@@ -4060,6 +4054,8 @@ var Arbiter = {
 			console.log("opening tab");
 			jqAddFeature.click();
 			Arbiter.ToggleAttributeMenu();
+			//#HACK  sync does funny things if the feature isnt saved first
+			$("#idAttrSave").click();
 		});
 		
 		map.addControl(Arbiter.selectControl);
