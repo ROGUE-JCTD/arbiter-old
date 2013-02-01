@@ -1249,7 +1249,7 @@ var Arbiter = {
 			
 			Arbiter.addOrRemoveWMSLayersForWFSLayers();
 			
-			//open the editor tab. a hack to avoid the jumping feature bug
+			//#HACK  this prevents the jumping feature bug
 			Arbiter.ToggleEditorMenu();
     	}
 	},
@@ -4006,6 +4006,8 @@ var Arbiter = {
 			console.log("opening tab");
 			jqAddFeature.click();
 			Arbiter.ToggleAttributeMenu();
+			//#HACK  sync does funny things if the feature isnt saved first
+			$("#idAttrSave").click();
 		});
 		
 		map.addControl(selectControl);
