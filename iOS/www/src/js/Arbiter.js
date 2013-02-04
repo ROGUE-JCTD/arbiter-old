@@ -2781,8 +2781,12 @@ var Arbiter = {
 						if (useAsBaseLayer) {
 							Arbiter.currentProject.baseLayerInfo.servername = serverName;
 							Arbiter.currentProject.baseLayerInfo.layernickname = jqLayerNickname.val();
-							// save it
-							//Arbiter.setProjectProperty("baseLayerInfo", Arbiter.currentProject.baseLayerInfo);
+							
+							// if in settings menu,actually save the settings. otherwise if it is during project creation
+							// it will be saved on onCreateProject
+							if(awayFromMap){
+								Arbiter.setProjectProperty("baseLayerInfo", Arbiter.currentProject.baseLayerInfo);
+							}
 						}
 						
 						var selectedOption = jqLayerSelect.find('option:selected');
