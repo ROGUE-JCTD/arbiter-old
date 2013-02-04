@@ -1,20 +1,4 @@
 /* ============================ *
- *   	    Catch Script Errors
- * ============================ */
-
-function windowError(message, url, line) {
-    
-    var msg = 	"A script error has been detected. Please re-start your session as this error might cause more issues. " +
-				"Taking note of steps that led to this error can help us resolve this issue." +
-				"\n\nMessage: " + (message? message: "") + "\nUrl: " + (url? url: "") + "\nLine: " + (line? line: "");
-
-    console.log(msg);
-    alert(msg);
-}
-window.onerror=windowError;
-
-
-/* ============================ *
  *   	    Projections
  * ============================ */
 var WGS84;
@@ -2781,12 +2765,6 @@ var Arbiter = {
 						if (useAsBaseLayer) {
 							Arbiter.currentProject.baseLayerInfo.servername = serverName;
 							Arbiter.currentProject.baseLayerInfo.layernickname = jqLayerNickname.val();
-							
-							// if in settings menu,actually save the settings. otherwise if it is during project creation
-							// it will be saved on onCreateProject
-							if(awayFromMap){
-								Arbiter.setProjectProperty("baseLayerInfo", Arbiter.currentProject.baseLayerInfo);
-							}
 						}
 						
 						var selectedOption = jqLayerSelect.find('option:selected');
@@ -2815,6 +2793,35 @@ var Arbiter = {
 		} else {
 			Arbiter.error('Selected layer is not valid');
 		}
+	},
+	
+	onLayersPageDone: function(){
+		
+		if(awayFromMap){		
+			Arbiter.getProjectProperty("baseLayerInfo", function(key, value){
+				
+				var lastBaseLayerInfo = { servername: value.servername, layernickname: value.layernickname};
+				
+				if (lastBaseLayerInfo.servername !== Arbiter.currentProject.baseLayerInfo.servername ||
+					lastBaseLayerInfo.layernickname !== Arbiter.currentProject.baseLayerInfo.layernickname	) {
+					
+					Arbiter.setProjectProperty("baseLayerInfo", Arbiter.currentProject.baseLayerInfo);
+					baseLayer.destroy();
+					
+					baseLayer = Arbiter.createBaseLayer(Arbiter.currentProject.baseLayerInfo.servername, Arbiter.currentProject.baseLayerInfo.layernickname, true);
+					map.addLayer(baseLayer);
+					
+					alert('please perform a full sync by pressing and holding the sync botton to pull down the new tiles');
+				}
+				
+				Arbiter.changePage_Pop(div_ProjectSettingsPage);
+				
+			}, function(key){
+				Arbiter.error("did not find project property baseLayerInfo");
+			}, true);			
+		} else {
+			Arbiter.changePage_Pop(div_ProjectSettingsPage);
+		}		
 	},
 	
 	onAddLayerPage: function(_layerNickName, _layerTypeName, _serverName){
