@@ -640,6 +640,12 @@ var Arbiter = {
 		jqDeleteFeatureButton.click(function(){
 			console.log("Delete Feature Button Click");
 			
+			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			if(addFeatureControl.active){
+				addFeatureControl.deactivate();
+				jqAddFeature.removeClass("active-color");
+			}
+			
 			if(Arbiter.currentProject.activeLayer){
 				var ans = confirm("Are you sure you want to delete this feature?");
 				
@@ -657,10 +663,22 @@ var Arbiter = {
 		});
 		
 		jqGoToAOI.click(function(event){
+			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			if(addFeatureControl.active){
+				addFeatureControl.deactivate();
+				jqAddFeature.removeClass("active-color");
+			}
+			
 			map.zoomToExtent(Arbiter.currentProject.aoi);
 		});
 		
 		jqFindMeButton.click(function(event){
+			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			if(addFeatureControl.active){
+				addFeatureControl.deactivate();
+				jqAddFeature.removeClass("active-color");
+			}
+			
 			Cordova.getGeolocation(function(position){
 				var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
 				console.log("center: ", center);
@@ -675,6 +693,12 @@ var Arbiter = {
 		});
 		
 		jqAOIFindMeButton.click(function(event){
+			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			if(addFeatureControl.active){
+				addFeatureControl.deactivate();
+				jqAddFeature.removeClass("active-color");
+			}
+			
 			Cordova.getGeolocation(function(position){
 				var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
 				console.log("aoi center: ", center);
@@ -689,6 +713,12 @@ var Arbiter = {
 		});
 		
 		jqSyncUpdates.click(function(event){
+			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			if(addFeatureControl.active){
+				addFeatureControl.deactivate();
+				jqAddFeature.removeClass("active-color");
+			}
+			
 			if(Arbiter.isOnline) {
 			
 				console.log("---- jqSyncUpdates.click");
@@ -733,10 +763,22 @@ var Arbiter = {
 		});
 				
 		jqEditorTab.click(function(event){
+			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			if(addFeatureControl.active){
+				addFeatureControl.deactivate();
+				jqAddFeature.removeClass("active-color");
+			}
+			
 			Arbiter.ToggleEditorMenu();
 		});
 		
 		jqAttributeTab.click(function(event){
+			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			if(addFeatureControl.active){
+				addFeatureControl.deactivate();
+				jqAddFeature.removeClass("active-color");
+			}
+			
 			Arbiter.ToggleAttributeMenu();
 		});
 				
