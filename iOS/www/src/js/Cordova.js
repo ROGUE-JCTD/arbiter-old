@@ -223,7 +223,7 @@ var Cordova = {
 	},
 	
 	checkConnection: function() {
-        var networkState = navigator.connection.type;
+        var networkState = navigator.network.connection.type;
 		
         var states = {};
         states[Connection.UNKNOWN]  = 'Unknown connection';
