@@ -532,6 +532,10 @@ html, body {
 	margin-right: auto;
 }
 
+#idDeleteLayerButton{
+	background-image:-webkit-linear-gradient(top, #700000, #600000);
+}
+
 #idAddServerButton div{
 	width: 70%;
 	margin-left: auto;
