@@ -683,10 +683,8 @@ var Arbiter = {
 				var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
 				console.log("center: ", center);
 				
-				if(map.getZoom() < 13)
-					map.setCenter(center, 13);
-				else
-					map.setCenter(center);
+				map.setCenter(center);
+				
 			}, function(error){
 				alert("Location not available... Please check that Location Services are on for Arbiter");
 			});
@@ -703,10 +701,8 @@ var Arbiter = {
 				var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
 				console.log("aoi center: ", center);
 				
-				if(aoiMap.getZoom() < 13)
-					aoiMap.setCenter(center, 13);
-				else
-					aoiMap.setCenter(center);
+				aoiMap.setCenter(center);
+				
 			}, function(error){
 				alert("Location not available... Please check that Location Services are on for Arbiter");
 			});
@@ -3773,6 +3769,11 @@ var Arbiter = {
 						li += '<div>';
 							li += '<label for="hospitalTypeSelect">facility type</label>';
 							li += '<select name="hospitalTypeSelect" id="hospitalTypeSelect">';
+								if(attrValue == 'unknown') {
+									li += '<option value="unknown" selected="true">unknown</option>';
+								} else {
+									li += '<option value="unknown">unknown</option>';
+								}
 								if(attrValue == 'hospital') {
 									li += '<option value="hospital" selected="true">hospital</option>';
 								} else {
@@ -3802,11 +3803,6 @@ var Arbiter = {
 									li += '<option value="clinic" selected="true">clinic</option>';
 								} else {
 									li += '<option value="clinic">clinic</option>';
-								}
-								if(attrValue == 'unknown') {
-									li += '<option value="unknown" selected="true">unknown</option>';
-								} else {
-									li += '<option value="unknown">unknown</option>';
 								}
 							li += '</select>';
 						li += '</dev>';
