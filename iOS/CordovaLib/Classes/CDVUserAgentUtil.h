@@ -17,7 +17,11 @@
  under the License.
  */
 
-#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 
-@interface CDVCordovaView : UIWebView {}
+@interface CDVUserAgentUtil : NSObject
++ (NSString*)originalUserAgent;
++ (void)acquireLock:(void (^)(NSInteger lockToken))block;
++ (void)releaseLock:(NSInteger)lockToken;
++ (void)setUserAgent:(NSString*)value lockToken:(NSInteger)lockToken;
 @end

@@ -21,6 +21,7 @@
 #import "CDV.h"
 #import "CDVCommandQueue.h"
 #import "CDVViewController.h"
+#import "CDVCommandDelegateImpl.h"
 
 @implementation CDVCommandQueue
 
@@ -86,14 +87,14 @@
 
         for (NSUInteger i = 0; i < [_queue count]; ++i) {
             // Parse the returned JSON array.
-            NSArray* commandBatch = [[_queue objectAtIndex:i] cdvjk_mutableObjectFromJSONString];
+            NSArray* commandBatch = [[_queue objectAtIndex:i] JSONObject];
 
             // Iterate over and execute all of the commands.
             for (NSArray* jsonEntry in commandBatch) {
                 CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:jsonEntry];
                 if (![self execute:command]) {
 #ifdef DEBUG
-                        NSString* commandJson = [jsonEntry cdvjk_JSONString];
+                        NSString* commandJson = [jsonEntry JSONString];
                         static NSUInteger maxLogLength = 1024;
                         NSString* commandString = ([commandJson length] > maxLogLength) ?
                         [NSString stringWithFormat:@"%@[...]", [commandJson substringToIndex:maxLogLength]] :
@@ -120,10 +121,10 @@
     }
 
     // Fetch an instance of this class
-    CDVPlugin* obj = [_viewController getCommandInstance:command.className];
+    CDVPlugin* obj = [_viewController.commandDelegate getCommandInstance:command.className];
 
     if (!([obj isKindOfClass:[CDVPlugin class]])) {
-        NSLog(@"ERROR: Plugin '%@' not found, or is not a CDVPlugin. Check your plugin mapping in Cordova.plist.", command.className);
+        NSLog(@"ERROR: Plugin '%@' not found, or is not a CDVPlugin. Check your plugin mapping in config.xml.", command.className);
         return NO;
     }
     BOOL retVal = YES;

@@ -17,21 +17,13 @@
  under the License.
  */
 
-#import "CDVCordovaView.h"
+@interface CDVConfigParser : NSObject <NSXMLParserDelegate>{}
 
-@implementation CDVCordovaView
+@property (nonatomic, readonly, strong) NSMutableDictionary* pluginsDict;
+@property (nonatomic, readonly, strong) NSMutableDictionary* settings;
+@property (nonatomic, readonly, strong) NSMutableArray* whitelistHosts;
+@property (nonatomic, readonly, strong) NSString* startPage;
 
-- (void)loadRequest:(NSURLRequest*)request
-{
-    [super loadRequest:request];
-}
-
-/*
-// Only override drawRect: if you perform custom drawing.
-// An empty implementation adversely affects performance during animation.
-- (void)drawRect:(CGRect)rect {
-    // Drawing code.
-}
-*/
+- (NSString*)getStartPage;
 
 @end

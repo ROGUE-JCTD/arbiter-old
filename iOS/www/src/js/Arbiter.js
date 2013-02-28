@@ -168,9 +168,13 @@ var Arbiter = {
 		setInterval(function(){if(Cordova.checkConnection()){Arbiter.onOnline();} else { Arbiter.onOffline();}}, 15000);
 		
 		//Save divs for later
+		
 		div_MapPage 		= $('#idMapPage');
+		console.log("map page ", div_MapPage);
 		div_WelcomePage		= $('#idWelcomePage');
+		console.log("welcome page ", div_WelcomePage);
 		div_ProjectsPage	= $('#idProjectsPage');
+		console.log("project page ", div_ProjectsPage);
 		div_NewProjectPage	= $('#idNewProjectPage');
 		div_ServersPage		= $('#idServersPage');
 		div_LayersPage		= $('#idLayersPage');
@@ -267,6 +271,7 @@ var Arbiter = {
 											//Populate the existing server dropdown
 											Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers;", [], function(tx, res){
 												//Create the list for servers
+												console.log("wist lidget");
 												Arbiter.serversList = new ListWidget({
 													div_id: "idServersList",
 													before_delete: function(itemInfo, deleteRow){

@@ -17,30 +17,33 @@
  under the License.
  */
 
-#import "CDVCordovaView.h"
-
-#import "JSONKit.h"
+#import <UIKit/UIKit.h>
+#import <Foundation/NSJSONSerialization.h>
 #import "CDVAvailability.h"
 #import "CDVInvokedUrlCommand.h"
 #import "CDVCommandDelegate.h"
 #import "CDVWhitelist.h"
+#import "CDVScreenOrientationDelegate.h"
 
 @class CDVCommandQueue;
 @class CDVCommandDelegateImpl;
 
-@interface CDVViewController : UIViewController <UIWebViewDelegate>{
-    @private
+@interface CDVViewController : UIViewController <UIWebViewDelegate, CDVScreenOrientationDelegate>{
+    @protected
     CDVCommandDelegateImpl* _commandDelegate;
+    @protected
+    CDVCommandQueue* _commandQueue;
+    NSString* _userAgent;
 }
 
-@property (nonatomic, strong) IBOutlet CDVCordovaView* webView;
+@property (nonatomic, strong) IBOutlet UIWebView* webView;
 
 @property (nonatomic, readonly, strong) NSMutableDictionary* pluginObjects;
 @property (nonatomic, readonly, strong) NSDictionary* pluginsMap;
 @property (nonatomic, readonly, strong) NSDictionary* settings;
+@property (nonatomic, readonly, strong) NSXMLParser* configParser;
 @property (nonatomic, readonly, strong) CDVWhitelist* whitelist; // readonly for public
 @property (nonatomic, readonly, assign) BOOL loadFromString;
-@property (nonatomic, readwrite, copy)NSString * invokeString CDV_DEPRECATED(2.0, "Use window.handleOpenURL(url instead. It is called when the app is launched through a custom scheme url.");
 
 @property (nonatomic, readwrite, assign) BOOL useSplashScreen;
 @property (nonatomic, readonly, strong) IBOutlet UIActivityIndicatorView* activityView;
@@ -50,13 +53,14 @@
 @property (nonatomic, readwrite, copy) NSString* startPage;
 @property (nonatomic, readonly, strong) CDVCommandQueue* commandQueue;
 @property (nonatomic, readonly, strong) CDVCommandDelegateImpl* commandDelegate;
+@property (nonatomic, readonly) NSString* userAgent;
 
 + (NSDictionary*)getBundlePlist:(NSString*)plistName;
 + (NSString*)applicationDocumentsDirectory;
 
 - (void)printMultitaskingInfo;
 - (void)createGapView;
-- (CDVCordovaView*)newCordovaViewWithFrame:(CGRect)bounds;
+- (UIWebView*)newCordovaViewWithFrame:(CGRect)bounds;
 
 - (void)javascriptAlert:(NSString*)text;
 - (NSString*)appURLScheme;
@@ -66,5 +70,7 @@
 
 - (id)getCommandInstance:(NSString*)pluginName;
 - (void)registerPlugin:(CDVPlugin*)plugin withClassName:(NSString*)className;
+
+- (BOOL)URLisAllowed:(NSURL*)url;
 
 @end
