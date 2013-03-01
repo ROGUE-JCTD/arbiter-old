@@ -964,7 +964,6 @@ var Arbiter = {
 		    			var layer = layerList[layerKey];
 		    			Arbiter.layerCount++;
 	    				Arbiter.insertProjectsLayer(serverId, serverName, layerKey, layerList[layerKey], false);
-		    			
 		    		}
 		    		//Arbiter.layerCount += addedLayers;
 		    		
@@ -1209,8 +1208,20 @@ var Arbiter = {
     		console.log("---- onShowMap.awayFromMap");
     		awayFromMap = false;
     		
-    		//Node: do not do much
+			//the listview has to be refreshed and re-bound or switching layers wont work properly after adding a layer
+			$("ul#editor-layer-list").listview("refresh");
+			
+			$("input[type='radio']").bind( "change", function(event, ui) {
+				console.log("Radio Change");
+				console.log($("input[type=radio]:checked").attr('id'));
+				
+				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.deactivate();
+				//Arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
+				Arbiter.currentProject.activeLayer = $("input[type=radio]:checked")[0].getAttribute('id');
+				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
+			});
     	
+    		//Node: do not do much
     		Arbiter.addOrRemoveWMSLayersForWFSLayers();
     	} else {
 	    	if (map){
@@ -1685,6 +1696,7 @@ var Arbiter = {
 		// Example: <a data-role="button" id="1" onClick="Arbiter.onClick_OpenProject(this)">TempProject</a>
 		console.log("PopulateProjectsList");
 		jqProjectsList.listview("refresh");
+		Arbiter.radioNumber = 1;
 		//jqProjectsList.listview('refresh');
 		//TODO: Load projects that are available
 		// - add them to the ProjectsList
@@ -2006,8 +2018,6 @@ var Arbiter = {
 		li += "<label for='radio-choice-" + Arbiter.radioNumber + "'>";
 		li += serverName + " / " + layerName;
 		li += "</label>";
-		
-		Arbiter.radioNumber++;
 		 
 		//add the data from local storage
 		console.log("checking scope issue with readLayerFromDb call", layer);
@@ -2031,10 +2041,10 @@ var Arbiter = {
     			// only add if it has feature type as otherwise it is a layer usable as base layer
     			if (Arbiter.isVectorLayer(serverKey, layerKey, layer.featureType)) {
     				Arbiter.readLayer(serverList[serverKey], layers[layerKey], serverKey, layerKey, false);
+					Arbiter.radioNumber++;
     			}
 			}
 		}
-		Arbiter.radioNumber = 1;
 	},
 	
 	setLayerAttributeInfo: function(serverList, layername, f_table_name){
@@ -2149,6 +2159,7 @@ var Arbiter = {
 			
 			console.log("Layer: ", layer);
 			
+			Arbiter.radioNumber--;
 			//TODO: check all statements for end ;
 			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM geometry_columns WHERE f_table_name=?", [layer.featureType], function(tx, res){
 				Cordova.transaction(Arbiter.currentProject.dataDatabase, "DROP TABLE '" + layer.featureType + "';", [], function(tx, res){
@@ -2715,7 +2726,7 @@ var Arbiter = {
 	},
 	
 	submitLayer: function(){
-		console.log("Submiting Time! ARBITER SMASH!");
+		console.log("Submitting Time! ARBITER SMASH!");
 		var valid = Arbiter.validateAddLayerSubmit();
 		
 		jqLayerSubmit.removeClass('ui-btn-active');
@@ -2798,7 +2809,7 @@ var Arbiter = {
 							
 						//TODO: ummm, this needs to be fixed. 
 						if(awayFromMap){
-							Arbiter.layerCount = 1;
+							Arbiter.layerCount++;
 							Arbiter.insertProjectsLayer(serverInfo.serverId, serverName, layernickname, serverInfo.layers[layernickname], true);
 						}													 
 						
@@ -2823,7 +2834,7 @@ var Arbiter = {
 							
 						//TODO: ummm, this needs to be fixed. 
 						if(awayFromMap){
-							Arbiter.layerCount = 1;
+							Arbiter.layerCount++;
 							Arbiter.insertProjectsLayer(serverInfo.serverId, serverName, layernickname, serverInfo.layers[layernickname], true);
 						}							
 
