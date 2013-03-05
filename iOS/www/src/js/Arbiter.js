@@ -271,24 +271,58 @@ var Arbiter = {
 											//Populate the existing server dropdown
 											Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM servers;", [], function(tx, res){
 												//Create the list for servers
-												console.log("wist lidget");
 												Arbiter.serversList = new ListWidget({
 													div_id: "idServersList",
 													before_delete: function(itemInfo, deleteRow){
 														console.log("before_delete - itemInfo: ", itemInfo);
 														
-														var ans = confirm('Are you sure you want to remove "' + itemInfo.servername + '" from the project?');
+														var serverInUse = false;
+														Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM server_usage WHERE server_id=?", [itemInfo.serverid], function(tx, res){
+															var ans;
+															if(res.rows.length){
+																if(res.rows.length === 1 && Arbiter.getAssociativeArraySize(Arbiter.currentProject.serverList[itemInfo.servername].layers) == 0) {
+																	serverInUse = false;
+																} else {
+																	serverInUse = true;
+																	alert("This server is in use by one or more projects");
+																}
+															}
 														
-														if(ans){
-															Arbiter.deletingLayersInfo = {
-																servername: itemInfo.servername,
-																layername: null
-															};
+															if(serverInUse === false) {
+																var ans = confirm('Are you sure you want to remove "' + itemInfo.servername + '" from the project?');
+														
+																if(ans){
+																	Arbiter.deletingLayersInfo = {
+																		servername: itemInfo.servername,
+																		layername: null
+																	};
 															
-															Arbiter.deleteLayerCount = Arbiter.getAssociativeArraySize(Arbiter.currentProject.serverList[itemInfo.servername].layers);
-															
-															jqSyncUpdates.click();
-														}
+																	Arbiter.deleteLayerCount = Arbiter.getAssociativeArraySize(Arbiter.currentProject.serverList[itemInfo.servername].layers);
+																
+																	var removeFromProject = function(){
+																	//remove from the currentProject object
+																	if(Arbiter.currentProject.serverList[itemInfo.servername]){
+																		delete Arbiter.currentProject.serverList[itemInfo.servername];
+																	}
+			
+																		deleteRow();
+																	};
+		
+																	var deleteServer = function(){
+																		//delete the server from the globalDatabase
+																		Cordova.transaction(Arbiter.globalDatabase, "DELETE FROM servers WHERE id=?", [itemInfo.serverid], function(tx, res){
+																			removeFromProject();
+																		}, function(e){
+																			console.log("delete server err: ", e);
+																		});
+																	};
+																
+																	deleteServer();
+																}
+															}
+														}, function(e){
+															console.log("check server_usage err:", e);
+														});
 													},
 													edit_button_id: "idEditServersButton",
 													checkbox: true,
@@ -726,8 +760,12 @@ var Arbiter = {
 				
 				var layers = map.getLayersByClass('OpenLayers.Layer.Vector');
 			
+				console.log("got layers by class");
+				
 				var ans = true;
 				if(Arbiter.currentProject.deletedServers.length){
+					console.log("Arbiter.currentProject.deletedServers.length == true");
+					
 					var layersWithoutServer = "";
 					for(var x in Arbiter.currentProject.deletedServers){
 						for(y in Arbiter.currentProject.deletedServers[x].layers){
@@ -4152,7 +4190,7 @@ var Arbiter = {
 			var wfsLayers = map.getLayersByName(/.*-wfs/);
 			var wmsLayers = map.getLayersByName(/.*-wms/);
 			
-			console.log("checkAndCreateWMSLayersForWFSLayers, wfsLayers: ", wfsLayers, ", wmsLayers: ", wmsLayers);		
+			//console.log("checkAndCreateWMSLayersForWFSLayers, wfsLayers: ", wfsLayers, ", wmsLayers: ", wmsLayers);
 			
 			if(Arbiter.isOnline) {
 	
@@ -4171,11 +4209,11 @@ var Arbiter = {
 						});
 	
 						map.addLayer(newLayer);
-						console.log('adding new layer: ', newLayer);
+						//console.log('adding new layer: ', newLayer);
 					} else {
 						// we already have the layer, make sure it is visible
 						wmsLayer[0].setVisibility(true);
-						console.log('setting layer to visible: ', layer);
+						//console.log('setting layer to visible: ', layer);
 					}
 				}
 				
@@ -4184,7 +4222,7 @@ var Arbiter = {
 				for(var layerKey in wmsLayers) {
 					var layer = wmsLayers[layerKey];
 					layer.setVisibility(false);
-					console.log('setting layer to NOT visible: ', layer);
+					//console.log('setting layer to NOT visible: ', layer);
 				}
 			}
 				
@@ -4197,13 +4235,13 @@ var Arbiter = {
 				// if no corresponding wfs layer, remove it
 				if (wfsLayer.length === 0) {
 					map.removeLayer(wfsLayer[0]);
-					console.log('removing layer since does not have corresponding wfs');
+					//console.log('removing layer since does not have corresponding wfs');
 					Arbiter.warning('removing layer since does not have corresponding wfs');
 				}
 			}
 		}
 		
-		console.log('---- pairWMSLayersToWFSLayers, done');
+		//console.log('---- pairWMSLayersToWFSLayers, done');
 	},
 	
 	// Get the current bounds of the map for GET requests.
