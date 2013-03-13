@@ -747,7 +747,9 @@ var Arbiter = {
 		});
 		
 		jqSyncUpdates.click(function(event){
-			Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.selectControl.unselect(selectedFeature);
+			if(selectedFeature) {
+				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.selectControl.unselect(selectedFeature);
+			}
 			
 			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
 			if(addFeatureControl.active){
