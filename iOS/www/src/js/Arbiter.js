@@ -30,7 +30,6 @@ var layerColors = ['aqua', 'yellow', 'teal', 'purple', 'fuchsia', 'lime', 'maroo
 var baseLayer;
 
 var wmsSelectControl;
-var selectControl;
 var wktFormatter;
 var capabilitiesFormatter;
 var describeFeatureTypeReader;
@@ -748,6 +747,8 @@ var Arbiter = {
 		});
 		
 		jqSyncUpdates.click(function(event){
+			Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.selectControl.unselect(selectedFeature);
+			
 			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
@@ -1148,7 +1149,6 @@ var Arbiter = {
 		Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 		Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
 		
-		console.log("~~ CORDOVA ERROR LINE 955 ~~");
 		console.log("Project Name: " + Arbiter.currentProject.name);
 		//get the project id
 		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects WHERE name=?;", [Arbiter.currentProject.name], function(tx, res){
@@ -1332,7 +1332,7 @@ var Arbiter = {
 			
 			Arbiter.addOrRemoveWMSLayersForWFSLayers();
 			
-			//#HACK  this prevents the jumping feature bug
+			//#HACK  this prevents the jumping feature bug on iOS
 			Arbiter.ToggleEditorMenu();
     	}
 	},
@@ -2428,7 +2428,7 @@ var Arbiter = {
             timeout: 5000,
             error: function(jqXHR, textStatus, errorThrown) {
                if(errorThrown == "timeout") {
-                    alert("Failed to connect\nServer not responding");
+                    alert("Could not connect\nServer not responding");
                }
                if(errorThrown == "Not Found") {
                     $.ajax({type: "POST", url: url + "/j_spring_security_check", data: {username: username, password: password},
@@ -2440,7 +2440,7 @@ var Arbiter = {
                     });
                }
                else {
-                    alert("Could not find server\nEnsure URL was entered correctly and server is online");
+                    alert("Could not connect\nEnsure URL was entered correctly and server is online");
                }
             },
             success: function(data, textStatus, jqXHR) {
@@ -3751,7 +3751,7 @@ var Arbiter = {
 				var protocol = selectedFeature.layer.protocol;
 				Arbiter.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
 				
-				//this should go back in when the feature selection bug is fixed
+				//HACK this should go back in when the feature selection bug is fixed
 				//Arbiter.ToggleAttributeMenu();
 			}else{
 				$("#saveAttributesFailed").fadeIn(1000, function(){
@@ -4081,8 +4081,6 @@ var Arbiter = {
 		newWFSLayer.events.register("featureselected", null, function(event) {
 			console.log("Feature selected: ", event.feature);
 			
-			$("#syncUpdates").addClass("ui-disabled");
-			
 			selectedFeature = event.feature;
 			oldSelectedFID = event.feature.fid;
 			
@@ -4098,8 +4096,6 @@ var Arbiter = {
 		newWFSLayer.events.register("featureunselected", null, function(event) {
 			console.log("Feature unselected: ", event);
 			
-			$("#syncUpdates").removeClass("ui-disabled");
-			
 			selectedFeature = null;
 			oldSelectedFID = null;
 			
@@ -4112,10 +4108,6 @@ var Arbiter = {
 			if(jqDeleteFeatureButton.is(':visible')){
 				jqFindMeButton.addClass('arbiter-map-tools-bottom');
 				jqDeleteFeatureButton.toggle();
-			}
-			
-			if(syncing) {
-										
 			}
 		});
 		
@@ -4135,10 +4127,9 @@ var Arbiter = {
 		});
 
 		var addFeatureControl = new OpenLayers.Control.DrawFeature(newWFSLayer, OpenLayers.Handler.Point);
-		Arbiter.selectControl = new OpenLayers.Control.SelectFeature( newWFSLayer, OpenLayers.Handler.Point);
 		
 		addFeatureControl.events.register("featureadded", null, function(event) {
-			if(featureInBounds == false) {
+			if(featureInBounds === false) {
 				return false;
 			}
 			// populate the features attributes object
@@ -4152,15 +4143,13 @@ var Arbiter = {
 			
 			Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
 			
-			Arbiter.selectControl.select(event.feature);
+			modifyControl.selectControl.select(event.feature);
 			
 			console.log("opening tab");
 			jqAddFeature.click();
+			
 			Arbiter.ToggleAttributeMenu();
 		});
-		
-		map.addControl(Arbiter.selectControl);
-		Arbiter.selectControl.activate();
 		
 		map.addControl(addFeatureControl);
 
@@ -4296,7 +4285,7 @@ var Arbiter = {
 	},
 	
 	onOnline: function() {
-		console.log("Arbiter: Online");
+		//console.log("Arbiter: Online");
 		Arbiter.isOnline = true;	
 		Arbiter.setSyncColor();
 		
