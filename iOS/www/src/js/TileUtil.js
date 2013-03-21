@@ -509,8 +509,108 @@ queueCacheRequests: function(bounds, onlyCountTile) {
 	return count;
 },
 
-
 queueCacheRequestsForZoom: function(layer, bounds, zoomLevel, onlyCountTile) {
+	
+	var count = 0;
+	
+    var resolutionForZoom = map.getResolutionForZoom(zoomLevel);
+    var extentWidth = (bounds.right - bounds.left) / resolutionForZoom;
+    var extentHeight = (bounds.top - bounds.bottom) / resolutionForZoom;	
+	
+    // work out mininum number of rows and columns; this is the number of
+    // tiles required to cover the viewport plus at least one for panning
+
+    var viewSize = layer.map.getSize();
+    
+    //var origin = layer.getTileOrigin();
+    //var resolution = layer.map.getResolution();
+    
+	var origin = layer.getTileOrigin();
+	var resolution = layer.getServerResolution(resolutionForZoom);
+	
+    var serverResolution = layer.getServerResolution();
+    var ratio = resolution / serverResolution;
+    var tileSize = {
+            w: layer.tileSize.w / ratio,
+            h: layer.tileSize.h / ratio
+        };
+
+    var minRows = Math.ceil(viewSize.h/tileSize.h) + 2 * layer.buffer + 1;
+    var minCols = Math.ceil(viewSize.w/tileSize.w) + 2 * layer.buffer + 1;
+
+    var tileLayout = layer.calculateGridLayout(bounds, origin, resolution);
+    layer.gridLayout = tileLayout;
+    
+    var tilelon = tileLayout.tilelon;
+    var tilelat = tileLayout.tilelat;
+    
+    var layerContainerDivLeft = layer.map.layerContainerOriginPx.x;
+    var layerContainerDivTop = layer.map.layerContainerOriginPx.y;
+
+    var tileBounds = layer.getTileBoundsForGridIndex(0, 0);
+    var startPx = layer.map.getViewPortPxFromLonLat(
+        new OpenLayers.LonLat(tileBounds.left, tileBounds.top)
+    );
+    startPx.x = Math.round(startPx.x) - layerContainerDivLeft;
+    startPx.y = Math.round(startPx.y) - layerContainerDivTop;
+
+    var tileData = [], center = layer.map.getCenter();
+
+    var rowidx = 0;
+    do {
+        var row = layer.grid[rowidx];
+        if (!row) {
+            row = [];
+            layer.grid.push(row);
+        }
+        
+        var colidx = 0;
+        do {
+            tileBounds = layer.getTileBoundsForGridIndex(rowidx, colidx);
+            var px = startPx.clone();
+            px.x = px.x + colidx * Math.round(tileSize.w);
+            px.y = px.y + rowidx * Math.round(tileSize.h);
+            var tile = row[colidx];
+            if (!tile) {
+                tile = layer.addTile(tileBounds, px);
+                layer.addTileMonitoringHooks(tile);
+                row.push(tile);
+            } else {
+                tile.moveTo(tileBounds, px, false);
+            }
+            var tileCenter = tileBounds.getCenterLonLat();
+            tileData.push({
+                tile: tile,
+                distance: Math.pow(tileCenter.lon - center.lon, 2) +
+                    Math.pow(tileCenter.lat - center.lat, 2)
+            });
+ 
+            colidx += 1;
+        } while ((tileBounds.right <= bounds.right + tilelon * layer.buffer)
+                 || colidx < minCols);
+         
+        rowidx += 1;
+    } while((tileBounds.bottom >= bounds.bottom - tilelat * layer.buffer)
+            || rowidx < minRows);
+    
+    //shave off exceess rows and colums
+    this.removeExcessTiles(rowidx, colidx);
+
+    var resolution = layer.getServerResolution();
+    // store the resolution of the grid
+    this.gridResolution = resolution;
+
+    //now actually draw the tiles
+    tileData.sort(function(a, b) {
+        return a.distance - b.distance; 
+    });
+    for (var i=0, ii=tileData.length; i<ii; ++i) {
+        tileData[i].tile.draw();
+    }
+},
+
+
+queueCacheRequestsForZoomOld: function(layer, bounds, zoomLevel, onlyCountTile) {
 	
 	var count = 0;
 		
@@ -523,16 +623,16 @@ queueCacheRequestsForZoom: function(layer, bounds, zoomLevel, onlyCountTile) {
 
 	var tileLayout = layer.calculateGridLayout(bounds, origin, resolution);
 
-	var tileoffsetx = Math.round(tileLayout.tileoffsetx); 
-	var tileoffsety = Math.round(tileLayout.tileoffsety);
+//	var tileoffsetx = Math.round(tileLayout.tileoffsetx); 
+//	var tileoffsety = Math.round(tileLayout.tileoffsety);
 	
-	var tileoffsetlon = tileLayout.tileoffsetlon;
-	var tileoffsetlat = tileLayout.tileoffsetlat;
+	var tilelon = tileLayout.tilelon;
+	var tilelat = tileLayout.tilelat;
 	//console.log("tileoffsetx: ", tileoffsetx, ", tileoffsety: ", tileoffsety, ", tileoffsetlon: ", tileoffsetlon, ", tileoffsetlat: ", tileoffsetlat);
 
 	//NOTE: this is a correction over what openlayers does to catch a bug and include the tiles in the edge cases. 
-	var minCols = (Math.abs(tileoffsetx) + extentWidth) / layer.tileSize.w;
-	var minRows = (Math.abs(tileoffsety) + extentHeight) / layer.tileSize.h;
+	var minCols = (/*Math.abs(tileoffsetx) + */ extentWidth) / layer.tileSize.w;
+	var minRows = (/*Math.abs(tileoffsety) + */ extentHeight) / layer.tileSize.h;
 	//console.log("-- zoomLevel: ", zoomLevel, ", minCols: ", minCols, ", minRows: ", minRows, ", extentWidth: ", extentWidth, ", extentHeight: ", extentHeight, ", layer.tileSize.w: ", layer.tileSize.w, ", layer.tileSize.h: ", layer.tileSize.h);
 
 	
