@@ -1335,7 +1335,7 @@ var Arbiter = {
 			Arbiter.addOrRemoveWMSLayersForWFSLayers();
 			
 			//#HACK  this prevents the jumping feature bug on iOS
-			Arbiter.ToggleEditorMenu();
+			//Arbiter.ToggleEditorMenu();
     	}
 	},
 	
@@ -3754,7 +3754,7 @@ var Arbiter = {
 				Arbiter.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
 				
 				//HACK this should go back in when the feature selection bug is fixed
-				//Arbiter.ToggleAttributeMenu();
+				Arbiter.ToggleAttributeMenu();
 			}else{
 				$("#saveAttributesFailed").fadeIn(1000, function(){
 					$(this).fadeOut(3000);
@@ -3901,7 +3901,6 @@ var Arbiter = {
 	 */
 	AddLayer: function(meta) {
 		console.log("---- AddLayer. meta: ", meta);
-		console.log("meta", meta);
 		var protocol = null;
 		var newLayers = [];
 		var strategies = [];
