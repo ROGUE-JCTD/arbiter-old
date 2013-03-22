@@ -513,75 +513,69 @@ queueCacheRequestsForZoom: function(layer, bounds, zoomLevel, onlyCountTile) {
 	
 	var count = 0;
 	
-    // work out mininum number of rows and columns; this is the number of
-    // tiles required to cover the viewport plus at least one for panning
-
-    var viewSize = layer.map.getSize();
-    
 	var origin = layer.getTileOrigin();
     var resolutionForZoom = map.getResolutionForZoom(zoomLevel);
 	var resolutionForZoomServer = layer.getServerResolution(resolutionForZoom);
-    var ratio = resolutionForZoom / resolutionForZoomServer;
-    var tileSize = {
-            w: layer.tileSize.w / ratio,
-            h: layer.tileSize.h / ratio
-        };
-
-	// SM: Added since will compute rows and columns based on this instead of buffer etc
-	var extentWidth = (bounds.right - bounds.left) / resolutionForZoom;
-    var extentHeight = (bounds.top - bounds.bottom) / resolutionForZoom;	
-
-
-    var minRows = Math.ceil(viewSize.h/tileSize.h) + 2 * layer.buffer + 1;
-    var minCols = Math.ceil(viewSize.w/tileSize.w) + 2 * layer.buffer + 1;
-
-	//NOTE: this is a correction over what openlayers does to catch a bug and include the tiles in the edge cases. 
-	//var minCols = (Math.abs(tileoffsetx) +  extentWidth) / layer.tileSize.w;
-	//var minRows = (Math.abs(tileoffsety) + extentHeight) / layer.tileSize.h;    
 
     var tileLayout = layer.calculateGridLayout(bounds, origin, resolutionForZoomServer);
-    
     var tilelon = tileLayout.tilelon;
     var tilelat = tileLayout.tilelat;
     
-    var layerContainerDivLeft = layer.map.layerContainerOriginPx.x;
-    var layerContainerDivTop = layer.map.layerContainerOriginPx.y;
+    // computing offset the same way OpenLayers 2.12 was doing it before tileoffsetx, tileoffsetlon, tileoffsety, tileoffsetlat where removed 
+    // from the result of calculateGridLayout
+    var offsetlon = bounds.left - origin.lon;
+    var tilecol = Math.floor(offsetlon/tilelon) - layer.buffer;
+    var tilecolremain = offsetlon/tilelon - tilecol;
+    var tileoffsetx = -tilecolremain * layer.tileSize.w;
+    var tileoffsetlon = origin.lon + tilecol * tilelon;
+    
+    var offsetlat = bounds.top - (origin.lat + tilelat);  
+    var tilerow = Math.ceil(offsetlat/tilelat) + layer.buffer;
+    var tilerowremain = tilerow - offsetlat/tilelat;
+    var tileoffsety = -tilerowremain * layer.tileSize.h;
+    var tileoffsetlat = origin.lat + tilerow * tilelat;
+    
+	// Added since will compute rows and columns based on the provided bound instead of layer buffer etc
+	var extentWidth = (bounds.right - bounds.left) / resolutionForZoom;
+    var extentHeight = (bounds.top - bounds.bottom) / resolutionForZoom;	
+    
+	//NOTE: this is a correction over what openlayers does in Grid.initGriddedTiles to catch a bug and include the tiles in the edge cases. 
+	var minCols = (Math.abs(tileoffsetx) +  extentWidth) / layer.tileSize.w;
+	var minRows = (Math.abs(tileoffsety) +  extentHeight) / layer.tileSize.h;  
 
-    var tileBounds = layer.getTileBoundsForGridIndex(0, 0);
-    var startPx = layer.map.getViewPortPxFromLonLat(
-        new OpenLayers.LonLat(tileBounds.left, tileBounds.top)
-    );
-    startPx.x = Math.round(startPx.x) - layerContainerDivLeft;
-    startPx.y = Math.round(startPx.y) - layerContainerDivTop;
+	var startX = tileoffsetx;
+	var startLon = tileoffsetlon;
 
-    var tileData = [], center = layer.map.getCenter();
+	for (var row = 0; row < minRows; row++) {
+		tileoffsetlon = startLon;
+		tileoffsetx = startX;
 
-    var rowidx = 0;
-    do {
-        var colidx = 0;
-        do {
-            tileBounds = layer.getTileBoundsForGridIndex(rowidx, colidx);
+		for (var col = 0; col < minCols; col++) {
+			var tileBoundsLeft = tileoffsetlon;
+			var tileBoundsTop = tileoffsetlat + tilelat;
+			var tileBoundsRight = tileoffsetlon + tilelon;
+			var tileBoundsBottom = tileoffsetlat;
+			
+			tileoffsetlon += tilelon;
+			tileoffsetx += layer.tileSize.w;
+			
 			count++;
 			if (!onlyCountTile){
-				//var tileBounds = new OpenLayers.Bounds(tileBoundsLeft, tileBoundsBottom, tileBoundsRight, tileBoundsTop);
+				var tileBounds = new OpenLayers.Bounds(tileBoundsLeft, tileBoundsBottom, tileBoundsRight, tileBoundsTop);
 				//TODO: try using best fit zoom for bounds instead of storing...should work 
 			 	caching.requestQueue.push({ bounds: tileBounds, zoom: zoomLevel });
 			}
-			
-            colidx += 1;
-        } while ((tileBounds.right <= bounds.right + tilelon * layer.buffer)
-                 || colidx < minCols);
-         
-        rowidx += 1;
-    } while((tileBounds.bottom >= bounds.bottom - tilelat * layer.buffer)
-            || rowidx < minRows);
-    
-    return count;
+		}
 
+		tileoffsetlat -= tilelat;
+		tileoffsety += layer.tileSize.h;
+	}
+	
+	return count;
 },
 
 
-queueCacheRequestsForZoomOld: function(layer, bounds, zoomLevel, onlyCountTile) {
+queueCacheRequestsForZoomOpenLayers212: function(layer, bounds, zoomLevel, onlyCountTile) {
 	
 	var count = 0;
 		
@@ -599,12 +593,10 @@ queueCacheRequestsForZoomOld: function(layer, bounds, zoomLevel, onlyCountTile) 
 	
 	var tilelon = tileLayout.tilelon;
 	var tilelat = tileLayout.tilelat;
-	//console.log("tileoffsetx: ", tileoffsetx, ", tileoffsety: ", tileoffsety, ", tileoffsetlon: ", tileoffsetlon, ", tileoffsetlat: ", tileoffsetlat);
 
 	//NOTE: this is a correction over what openlayers does to catch a bug and include the tiles in the edge cases. 
 	var minCols = (Math.abs(tileoffsetx) +  extentWidth) / layer.tileSize.w;
 	var minRows = (Math.abs(tileoffsety) + extentHeight) / layer.tileSize.h;
-	//console.log("-- zoomLevel: ", zoomLevel, ", minCols: ", minCols, ", minRows: ", minRows, ", extentWidth: ", extentWidth, ", extentHeight: ", extentHeight, ", layer.tileSize.w: ", layer.tileSize.w, ", layer.tileSize.h: ", layer.tileSize.h);
 
 	
 	var tilelon = tileLayout.tilelon;
