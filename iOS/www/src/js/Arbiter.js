@@ -748,7 +748,7 @@ var Arbiter = {
 		
 		jqSyncUpdates.click(function(event){
 			if(selectedFeature) {
-				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.selectControl.unselect(selectedFeature);
+				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.unselectFeature(selectedFeature);
 			}
 			
 			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
@@ -4078,12 +4078,15 @@ var Arbiter = {
 				Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
 			}
 		});
-
-		newWFSLayer.events.register("featureselected", null, function(event) {
-			console.log("Feature selected: ", event.feature);
+		
+		modifyControl.selectFeature = function(feature) {
+			if(this.feature){
+				this.unselectFeature(this.feature);
+			}
+			console.log("Feature selected: ", feature);
 			
-			selectedFeature = event.feature;
-			oldSelectedFID = event.feature.fid;
+			selectedFeature = feature;
+			oldSelectedFID = feature.fid;
 			
 			if (!jqAttributeTab.is(':visible'))
 				jqAttributeTab.toggle();
@@ -4091,11 +4094,25 @@ var Arbiter = {
 			if(!jqDeleteFeatureButton.is(':visible')){
 				jqFindMeButton.removeClass('arbiter-map-tools-bottom');
 				jqDeleteFeatureButton.toggle();
-			}	
-		});
+			}
+			
+			//OpenLayers removed the modify control's nested select control
+			//consequently, we need to do all this tomfoolery to select a feature
+			this.feature=feature;
+			this.layer.selectedFeatures.push(feature);
+			this.layer.drawFeature(feature,'select');
+			this.modified=false;
+			this.resetVertices();
+			this.onModificationStart(this.feature);
 
-		newWFSLayer.events.register("featureunselected", null, function(event) {
-			console.log("Feature unselected: ", event);
+			var modified=feature.modified;
+			if(feature.geometry&&!(modified&&modified.geometry)){
+				this._originalGeometry=feature.geometry.clone();
+			}
+		};
+		console.log("modifyControl.selectFeature: ", modifyControl.unselectFeature);
+		modifyControl.unselectFeature = function(feature) {
+			console.log("Feature unselected: ", feature);
 			
 			selectedFeature = null;
 			oldSelectedFID = null;
@@ -4110,7 +4127,27 @@ var Arbiter = {
 				jqFindMeButton.addClass('arbiter-map-tools-bottom');
 				jqDeleteFeatureButton.toggle();
 			}
-		});
+			
+			//More OpenLayers sillyness
+			this.layer.removeFeatures(this.vertices,{silent:true});
+			this.vertices=[];
+			this.layer.destroyFeatures(this.virtualVertices,{silent:true});
+			this.virtualVertices=[];
+			if(this.dragHandle){
+				this.layer.destroyFeatures([this.dragHandle],{silent:true});
+				delete this.dragHandle;
+			}
+			if(this.radiusHandle){
+				this.layer.destroyFeatures([this.radiusHandle],{silent:true});
+				delete this.radiusHandle;
+			}
+			this.layer.drawFeature(this.feature,'default');
+			this.feature=null;
+			OpenLayers.Util.removeItem(this.layer.selectedFeatures,feature);
+			this.onModificationEnd(feature);
+			this.layer.events.triggerEvent("afterfeaturemodified",{feature:feature,modified:this.modified});
+			this.modified=false;
+		};
 		
 		var featureInBounds;
 		newWFSLayer.events.register("beforefeatureadded", null, function(event) {
@@ -4144,7 +4181,7 @@ var Arbiter = {
 			
 			Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
 			
-			modifyControl.selectControl.select(event.feature);
+			modifyControl.selectFeature(event.feature);
 			
 			console.log("opening tab");
 			jqAddFeature.click();
