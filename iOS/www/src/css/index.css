@@ -163,7 +163,6 @@ html, body {
 }
 
 #idAttributeMenu {
-	overflow: scroll;
 	left: 100%;
 	right: 0px;
 	height: 100%;
@@ -174,7 +173,7 @@ html, body {
 
 #attributeMenuContent {
 	overflow: scroll;
-	height: 80%;
+	height: 75%;
 }
 
 #idLayerListContainer {

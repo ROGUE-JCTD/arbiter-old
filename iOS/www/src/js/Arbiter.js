@@ -29,7 +29,8 @@ var layerColors = ['aqua', 'yellow', 'teal', 'purple', 'fuchsia', 'lime', 'maroo
  * ============================ */
 var baseLayer;
 
-var wmsSelectControl;
+var selectControl;
+var modifyControl;
 var wktFormatter;
 var capabilitiesFormatter;
 var describeFeatureTypeReader;
@@ -153,6 +154,8 @@ var Arbiter = {
 	deletingLayersInfo: null,
 	
 	radioNumber: 1,
+	
+	metaLayersList: [],
 
     Initialize: function() {
 		console.log("What will you have your Arbiter do?"); // http://www.youtube.com/watch?v=nhcHoUj4GlQ
@@ -664,7 +667,7 @@ var Arbiter = {
 		jqAddFeature.click(function(event){
 			console.log("Add Feature");
 			if(Arbiter.currentProject.activeLayer){
-				var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+				var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
 				if(addFeatureControl.active){
 					addFeatureControl.deactivate();
 					$(this).removeClass("active-color");
@@ -678,7 +681,7 @@ var Arbiter = {
 		jqDeleteFeatureButton.click(function(){
 			console.log("Delete Feature Button Click");
 			
-			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
 				jqAddFeature.removeClass("active-color");
@@ -688,20 +691,21 @@ var Arbiter = {
 				var ans = confirm("Are you sure you want to delete this feature?");
 				
 				if(ans){
-					var controls = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer];
+					var controls = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
 					var modifyControl = controls.modifyControl;
 					
 					var savedSelectedFeature = selectedFeature;
 					
-					modifyControl.deactivate();
+					selectControl.unselect(savedSelectedFeature);
+					//modifyControl.deactivate();
 					Arbiter.deleteFeature(savedSelectedFeature);
-					modifyControl.activate();
+					//modifyControl.activate();
 				}
 			}
 		});
 		
 		jqGoToAOI.click(function(event){
-			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
 				jqAddFeature.removeClass("active-color");
@@ -711,7 +715,7 @@ var Arbiter = {
 		});
 		
 		jqFindMeButton.click(function(event){
-			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
 				jqAddFeature.removeClass("active-color");
@@ -729,7 +733,7 @@ var Arbiter = {
 		});
 		
 		jqAOIFindMeButton.click(function(event){
-			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
 				jqAddFeature.removeClass("active-color");
@@ -748,10 +752,10 @@ var Arbiter = {
 		
 		jqSyncUpdates.click(function(event){
 			if(selectedFeature) {
-				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.unselectFeature(selectedFeature);
+				selectControl.unselect(selectedFeature);
 			}
 			
-			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
 				jqAddFeature.removeClass("active-color");
@@ -805,7 +809,7 @@ var Arbiter = {
 		});
 				
 		jqEditorTab.click(function(event){
-			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
 				jqAddFeature.removeClass("active-color");
@@ -815,7 +819,7 @@ var Arbiter = {
 		});
 		
 		jqAttributeTab.click(function(event){
-			var addFeatureControl = Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].insertControl;
+			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
 				jqAddFeature.removeClass("active-color");
@@ -1145,7 +1149,7 @@ var Arbiter = {
 		Arbiter.currentProject.name = projectName;
 		Arbiter.currentProject.serverList = {};
 		Arbiter.currentProject.deletedServers = { length: 0 };
-		Arbiter.currentProject.modifyControls = {};
+		Arbiter.currentProject.insertControls = {};
 		
 		// set dataDatabase and variablesDatabase
 		Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
@@ -1243,11 +1247,13 @@ var Arbiter = {
     
     onShowMap: function(){
     	console.log("---- onShowMap");
- 
+		var selectControlLayers;
+		
+		
     	if (awayFromMap === true) {
     		console.log("---- onShowMap.awayFromMap");
     		awayFromMap = false;
-    		
+			
 			//the listview has to be refreshed and re-bound or switching layers wont work properly after adding a layer
 			$("ul#editor-layer-list").listview("refresh");
 			
@@ -1255,15 +1261,35 @@ var Arbiter = {
 				console.log("Radio Change");
 				console.log($("input[type=radio]:checked").attr('id'));
 				
-				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.deactivate();
-				//Arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
 				Arbiter.currentProject.activeLayer = $("input[type=radio]:checked")[0].getAttribute('id');
-				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 			});
     	
-    		//Node: do not do much
     		Arbiter.addOrRemoveWMSLayersForWFSLayers();
-    	} else {
+			
+			console.log("onshowmap select control ", selectControl);
+			selectControl.deactivate();
+			selectControl.destroy();
+			map.removeControl(selectControl);
+			
+			selectControlLayers = [];
+			for(var layer in map.layers) {
+				for(var metalayer in Arbiter.metaLayersList) {
+					if(map.layers[layer].name == Arbiter.metaLayersList[metalayer].nickname + "-wfs") {
+						selectControlLayers.push(map.layers[layer]);
+					}
+				}
+			}
+			console.log("onshowmap select control layers ", selectControlLayers);
+    		selectControl = new OpenLayers.Control.SelectFeature(selectControlLayers);
+			
+			map.addControl(selectControl);
+			console.log("onshowmap select control ", selectControl);
+			selectControl.activate();
+			
+			if(Arbiter.metaLayersList[0]) {
+				Arbiter.currentProject.activeLayer = Arbiter.metaLayersList[0].nickname;
+			}
+		} else {
 	    	if (map){
 	    		Arbiter.error("map should not exist!");
 	    	}
@@ -1315,10 +1341,7 @@ var Arbiter = {
 				console.log("Radio Change");
 				console.log($("input[type=radio]:checked").attr('id'));
 				
-				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.deactivate();
-				//Arbiter.currentProject.activeLayer = $("input[type=radio]:checked").attr('id');
 				Arbiter.currentProject.activeLayer = $("input[type=radio]:checked")[0].getAttribute('id');
-				Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 			});
 			
 			var statement = "SELECT * FROM tileIds;";
@@ -1334,8 +1357,18 @@ var Arbiter = {
 			
 			Arbiter.addOrRemoveWMSLayersForWFSLayers();
 			
-			//#HACK  this prevents the jumping feature bug on iOS
-			//Arbiter.ToggleEditorMenu();
+			
+			selectControlLayers = [];
+			for(var layer in map.layers) {
+				for(var metalayer in Arbiter.metaLayersList) {
+					if(map.layers[layer].name == Arbiter.metaLayersList[metalayer].nickname + "-wfs") {
+						selectControlLayers.push(map.layers[layer]);
+					}
+				}
+			}
+    		selectControl = new OpenLayers.Control.SelectFeature(selectControlLayers);
+			map.addControl(selectControl);
+			selectControl.activate();
     	}
 	},
 	
@@ -2051,7 +2084,7 @@ var Arbiter = {
 		if(Arbiter.radioNumber == Arbiter.currentProject.currentLayerRadioNumber) {
 			li += "checked='checked'/>";
 			Arbiter.currentProject.activeLayer = layerName;
-			Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
+			//Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 		} else {
 		 	li += "/>";
 		}
@@ -2234,16 +2267,14 @@ var Arbiter = {
 						Arbiter.currentProject.activeLayer = null;
 					}
 					
-					console.log("before deleting modify controls: " + layername, Arbiter.currentProject.modifyControls);
+					console.log("before deleting modify controls: " + layername, Arbiter.currentProject.insertControls);
 					/*
 					 * Delete the controls for editing the layer
 					 */
-					var controls = Arbiter.currentProject.modifyControls[layername];
-					map.removeControl(controls.modifyControl);
+					var controls = Arbiter.currentProject.insertControls[layername];
 					map.removeControl(controls.insertControl);
-					controls.modifyControl.destroy();
 					controls.insertControl.destroy();
-					delete Arbiter.currentProject.modifyControls[layername];
+					delete Arbiter.currentProject.insertControls[layername];
 					
 					console.log("after delete modify controls");
 					$('ul#editor-layer-list #' + layername).parent().remove();
@@ -3599,9 +3630,9 @@ var Arbiter = {
 											selectedFeature = feature;
 											if(layername == Arbiter.currentProject.activeLayer){ // it should be the activeLayer
 //												console.log("the layer is the activeLayer", Arbiter.currentProject.modifyControls);
-												if(Arbiter.currentProject.modifyControls[layername]){
+												if(Arbiter.currentProject.insertControls[layername]){
 //													console.log("the modify control exists:", Arbiter.currentProject.modifyControls[layername]);
-													Arbiter.currentProject.modifyControls[layername].modifyControl.selectFeature(feature);
+													selectControl.select(feature);
 												}
 											}
 										}
@@ -3753,7 +3784,6 @@ var Arbiter = {
 				var protocol = selectedFeature.layer.protocol;
 				Arbiter.insertFeaturesIntoTable([selectedFeature], protocol.featureType, protocol.geometryName, protocol.srsName, true);
 				
-				//HACK this should go back in when the feature selection bug is fixed
 				Arbiter.ToggleAttributeMenu();
 			}else{
 				$("#saveAttributesFailed").fadeIn(1000, function(){
@@ -3914,6 +3944,10 @@ var Arbiter = {
 		var serverLayer = server.layers[meta.nickname];
 		
 		if (meta.username) {
+			//HACK ? works for now, might need to be adjusted for cases such as adding a new layer or re-entering a project
+			Arbiter.metaLayersList.push(meta);
+			console.log("addLayer metaLayersList ", Arbiter.metaLayersList);
+			
 			var encodedCredentials = $.base64.encode(meta.username + ':' + meta.password);
 
 			protocol = new OpenLayers.Protocol.WFS({
@@ -4069,24 +4103,33 @@ var Arbiter = {
 		
 		map.addLayers(newLayers);
 
-		var modifyControl = new OpenLayers.Control.ModifyFeature(newWFSLayer);
+		//var modifyControl = new OpenLayers.Control.ModifyFeature(newWFSLayer);
 		
 		newWFSLayer.events.register("featuremodified", null, function(event) {
 			console.log("feature modified", event);
-			console.log("featuremodified modify Control feature", modifyControl.feature);
+			//console.log("featuremodified modify Control feature", modifyControl.feature);
 			if(!jqDeleteFeatureButton.hasClass('active-color')){
 				Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
 			}
 		});
 		
-		modifyControl.selectFeature = function(feature) {
-			if(this.feature){
-				this.unselectFeature(this.feature);
+		newWFSLayer.events.register("beforefeatureselected", null, function(event) {
+			console.log("before select event layer ", event.feature.layer);
+			console.log("before select activelayer ", Arbiter.currentProject.activeLayer);
+			if(event.feature.layer.name !== (Arbiter.currentProject.activeLayer + "-wfs")) {
+				return false;
 			}
-			console.log("Feature selected: ", feature);
+		});
+		
+		newWFSLayer.events.register("featureselected", null, function(event) {
+			console.log("selecting feature: ", event.feature);
 			
-			selectedFeature = feature;
-			oldSelectedFID = feature.fid;
+			if(selectedFeature){
+				//selectControl.unselect(selectedFeature);
+			}
+			
+			selectedFeature = event.feature;
+			oldSelectedFID = event.feature.fid;
 			
 			if (!jqAttributeTab.is(':visible'))
 				jqAttributeTab.toggle();
@@ -4096,23 +4139,66 @@ var Arbiter = {
 				jqDeleteFeatureButton.toggle();
 			}
 			
-			//OpenLayers removed the modify control's nested select control
-			//consequently, we need to do all this tomfoolery to select a feature
-			this.feature=feature;
-			this.layer.selectedFeatures.push(feature);
-			this.layer.drawFeature(feature,'select');
-			this.modified=false;
-			this.resetVertices();
-			this.onModificationStart(this.feature);
-
-			var modified=feature.modified;
-			if(feature.geometry&&!(modified&&modified.geometry)){
-				this._originalGeometry=feature.geometry.clone();
-			}
-		};
-		console.log("modifyControl.selectFeature: ", modifyControl.unselectFeature);
-		modifyControl.unselectFeature = function(feature) {
-			console.log("Feature unselected: ", feature);
+			modifyControl = new OpenLayers.Control.ModifyFeature(event.feature.layer, {standalone: true});
+			map.addControl(modifyControl);
+			
+			//console.log("feature selected modify control dragstart ", modifyControl.dragStart);
+			modifyControl.dragStart = function (feature) {
+				if(feature != this.feature) {
+					return;
+				}
+				
+				var isPoint = feature.geometry.CLASS_NAME == 'OpenLayers.Geometry.Point';
+				if (!this.standalone && ((!feature._sketch && isPoint) || !feature._sketch)) {
+					if (this.toggle && this.feature === feature) {
+						// mark feature for unselection
+						this._unselect = feature;
+					}
+					this.selectFeature(feature);
+				}
+				if (feature._sketch || isPoint) {
+					// feature is a drag or virtual handle or point
+					this.vertex = feature;
+					this.handlers.drag.stopDown = true;
+				}
+			};
+			
+			modifyControl.unselectFeature = function(feature) {
+				console.log("modify control unselect", feature);
+				
+				this.layer.removeFeatures(this.vertices,{silent:true});
+				this.vertices=[];
+				this.layer.destroyFeatures(this.virtualVertices,{silent:true});
+				this.virtualVertices=[];
+				if(this.dragHandle){
+					this.layer.destroyFeatures([this.dragHandle],{silent:true});
+					delete this.dragHandle;
+				}
+				if(this.radiusHandle){
+					this.layer.destroyFeatures([this.radiusHandle],{silent:true});
+					delete this.radiusHandle;
+				}
+				this.layer.drawFeature(this.feature,'default');
+				this.feature=null;
+				OpenLayers.Util.removeItem(this.layer.selectedFeatures,feature);
+				this.onModificationEnd(feature);
+				this.layer.events.triggerEvent("afterfeaturemodified",{feature:feature,modified:this.modified});
+				this.modified=false;
+				
+				//HACK  For some mysterious reason the select control's unselect event doesn't fire on clickoff,
+					//so I manually call it here.  This step was not necessary in the OpenLayers example I messed with,
+					//which concerns me.
+				if(selectedFeature !== null) {
+					selectControl.unselect(feature);
+				}
+			};
+			
+			modifyControl.activate();
+			
+			modifyControl.selectFeature(event.feature);
+		});
+		newWFSLayer.events.register("featureunselected", null, function(event) {
+			console.log("unselecting feature: ", event.feature);
 			
 			selectedFeature = null;
 			oldSelectedFID = null;
@@ -4128,26 +4214,13 @@ var Arbiter = {
 				jqDeleteFeatureButton.toggle();
 			}
 			
-			//More OpenLayers sillyness
-			this.layer.removeFeatures(this.vertices,{silent:true});
-			this.vertices=[];
-			this.layer.destroyFeatures(this.virtualVertices,{silent:true});
-			this.virtualVertices=[];
-			if(this.dragHandle){
-				this.layer.destroyFeatures([this.dragHandle],{silent:true});
-				delete this.dragHandle;
-			}
-			if(this.radiusHandle){
-				this.layer.destroyFeatures([this.radiusHandle],{silent:true});
-				delete this.radiusHandle;
-			}
-			this.layer.drawFeature(this.feature,'default');
-			this.feature=null;
-			OpenLayers.Util.removeItem(this.layer.selectedFeatures,feature);
-			this.onModificationEnd(feature);
-			this.layer.events.triggerEvent("afterfeaturemodified",{feature:feature,modified:this.modified});
-			this.modified=false;
-		};
+			modifyControl.deactivate();
+			modifyControl.destroy();
+			map.removeControl(modifyControl);
+		});
+		newWFSLayer.events.register("beforefeaturemodified", null, function(event) {
+			console.log("beforefeaturemodified event recieved");
+		});
 		
 		var featureInBounds;
 		newWFSLayer.events.register("beforefeatureadded", null, function(event) {
@@ -4181,7 +4254,8 @@ var Arbiter = {
 			
 			Arbiter.insertFeaturesIntoTable([ event.feature ], meta.featureType, meta.geomName, meta.srsName, true);
 			
-			modifyControl.selectFeature(event.feature);
+			//modifyControl.selectFeature(event.feature);
+			selectControl.select(event.feature);
 			
 			console.log("opening tab");
 			jqAddFeature.click();
@@ -4192,13 +4266,10 @@ var Arbiter = {
 		map.addControl(addFeatureControl);
 
 		// TODO: Change the active modify control
-		map.addControl(modifyControl);
+		//map.addControl(modifyControl);
 		// modifyControl.activate();
 		
-		Arbiter.currentProject.modifyControls[meta.nickname] = {
-			modifyControl : modifyControl,
-			insertControl : addFeatureControl
-		};
+		Arbiter.currentProject.insertControls[meta.nickname] = addFeatureControl;
 
 		//var li = "<li><a id='layer-list-item'>" + meta.nickname + "</a></li>";
 		
