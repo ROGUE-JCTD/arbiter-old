@@ -2826,7 +2826,7 @@ var Arbiter = {
 			jqLayerNickname.removeClass('invalid-field');
 			
 			var request = new OpenLayers.Request.GET({
-				url: serverInfo.url + "/wfs?service=wfs&version=1.1.0&request=DescribeFeatureType&typeName=" + typeName,
+				url: serverInfo.url + "/wfs?service=wfs&version=1.0.0&request=DescribeFeatureType&typeName=" + typeName,
 				callback: function(response){
 					console.log('response for get info on wms: ', response );
 					var obj = describeFeatureTypeReader.read(response.responseText);
@@ -3730,10 +3730,6 @@ var Arbiter = {
 		
 		return true;
 	},
-	
-	countCharInString: function(str, char){
-		return str;					  
-	},
 							  
 	SubmitAttributes: function(){
 		if(selectedFeature){
@@ -3751,11 +3747,7 @@ var Arbiter = {
 					console.log('type: ', type);
 					
 					var attrValue;
-					if(type == "health_facility") {
-						attrValue = $("#hospitalTypeSelect").val();
-					} else {
-						attrValue = $(Arbiter.idToJQuerySelectorSafe("textinput-" + type)).val();
-					}
+					attrValue = $(Arbiter.idToJQuerySelectorSafe(type+"-input")).val();
 					
 					console.log('======== attrValue: ', attrValue, ', type: ', type);
 					
@@ -3836,82 +3828,124 @@ var Arbiter = {
 		console.log(selectedFeature);
 		if(selectedFeature){
 			var li = "";
-			var attrValue = '';
-							  
-			for(var type in selectedFeature.layer.attributeTypes){ 
-				
-				console.log('type: ', type);
-				
-				var typeInfo = Arbiter.getInputType(type);
+			var currentAttrValue = '';
 			
-				if (selectedFeature.attributes[type]) {
-					attrValue = selectedFeature.attributes[type];
-				} else {
-					attrValue = '';
+			
+			console.log("selectedFeature.layer ", selectedFeature.layer);
+			console.log("metaLayersList ", Arbiter.metaLayersList);
+			
+			
+			var index = selectedFeature.layer.name.indexOf('-wfs');
+			var layerNickname = selectedFeature.layer.name.substring(0, index);
+			var layerIndex = 0;
+			
+			//if the user has two or more layers with the same name from different servers, this will just pick the first one,
+				//which isnt necessarily correct
+			console.log("finding active layer");
+			
+			console.log("layerNickname ", layerNickname);
+			for(var layerObj in Arbiter.metaLayersList) {
+				console.log("layerObj ", Arbiter.metaLayersList[layerObj]);
+				if(layerNickname === Arbiter.metaLayersList[layerObj].nickname) {
+					break;
 				}
-				
-				if(type == "health_facility") {
-					li += '<li style="padding:5px; border-radius: 4px;">';
-						li += '<div>';
-							li += '<label for="hospitalTypeSelect">facility type</label>';
-							li += '<select name="hospitalTypeSelect" id="hospitalTypeSelect">';
-								if(attrValue == 'unknown') {
-									li += '<option value="unknown" selected="true">unknown</option>';
-								} else {
-									li += '<option value="unknown">unknown</option>';
-								}
-								if(attrValue == 'hospital') {
-									li += '<option value="hospital" selected="true">hospital</option>';
-								} else {
-									li += '<option value="hospital">hospital</option>';
-								}
-								if(attrValue == 'field_hospital') {
-									li += '<option value="field_hospital" selected="true">field_hospital</option>';
-								} else {
-									li += '<option value="field_hospital">field_hospital</option>';
-								}
-								if(attrValue == 'sar') {
-									li += '<option value="sar" selected="true">sar</option>';
-								} else {
-									li += '<option value="sar">sar</option>';
-								}
-								if(attrValue == 'medical_collection') {
-									li += '<option value="medical_collection" selected="true">medical_collection</option>';
-								} else {
-									li += '<option value="medical_collection">medical_collection</option>';
-								}
-								if(attrValue == 'air_medvac') {
-									li += '<option value="air_medvac" selected="true">air_medvac</option>';
-								} else {
-									li += '<option value="air_medvac">air_medvac</option>';
-								}
-								if(attrValue == 'clinic') {
-									li += '<option value="clinic" selected="true">clinic</option>';
-								} else {
-									li += '<option value="clinic">clinic</option>';
-								}
-							li += '</select>';
-						li += '</dev>';
-					li += '</li>';
-				} else {
-					li += "<li style='padding:5px; border-radius: 4px;'><div>";
-					li += "<label for='textinput-" + type + "'>";
-					li += type;
-					li += "</label>";
-					li += "<input name='' ";
-					li += "autocorrect='off' autocapitalize='off' ";
-					li += "id='textinput-" + type + "' placeholder='" + typeInfo.placeholder + "' value='";
-					li += Arbiter.encodeChars(attrValue);
-					li += "' type='" + typeInfo.type + "'></div></li>";
-				}
+				layerIndex++;
 			}
 			
-			$("ul#attribute-list").empty().append(li).listview("refresh");
+			var activeLayer = Arbiter.metaLayersList[layerIndex];
+			
+			console.log("got active layer ", activeLayer);
+			
+			var postRequest = '<DescribeFeatureType ' +
+				'service="WFS" ' +
+				'version="1.0.0" ' +
+				'xmlns="http://www.opengis.net/wfs" ' +
+				'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
+				'xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.0.0/WFS-basic.xsd"> ' +
+				'<TypeName>' + activeLayer.typeName + '</TypeName> ' +
+				'</DescribeFeatureType>';
+			console.log("created post request");
+			
+			var encodedCredentials = $.base64.encode(activeLayer.username + ':' + activeLayer.password);
+			
+			console.log("encoded credentials");
+			
+			var request = new OpenLayers.Request.POST({
+				url: activeLayer.url + "/wfs",
+				data: postRequest,
+				headers: {
+					'Content-Type': 'text/xml;charset=utf-8',
+					'Authorization': 'Basic ' + encodedCredentials
+				},
+				callback: function(response){
+					var obj = describeFeatureTypeReader.read(response.responseText);
+					
+					//HACK  assuming only one feature type
+					for(var type in obj.featureTypes[0].properties) {
+						var attrType = obj.featureTypes[0].properties[type];
+						
+						console.log("type ", attrType);
+						console.log("obj.featureTypes[0].properties ", obj.featureTypes[0].properties);
+						console.log("selectedFeature.attributes ", selectedFeature.attributes);
+						console.log("selectedFeature.attributes[type] ", selectedFeature.attributes[attrType.name]);
+						
+						if(attrType.type.indexOf("gml:") >= 0) {
+							continue;
+						}
+						
+						if(selectedFeature.attributes[attrType.name]) {
+							currentAttrValue = selectedFeature.attributes[attrType.name];
+						} else {
+							currentAttrValue = '';
+						}
+						
+						if(attrType.restriction && attrType.restriction.enumeration) {
+							//create dropdown menu
+							li += '<li style="padding:5px; border-radius: 4px;">';
+								li += '<div>';
+									li += '<label for="' + attrType.name + '-input">' + attrType.name + '</label>';
+									li += '<select name="' + attrType.name + '-input" id="' + attrType.name + '-input">';
+									
+										for(var value in attrType.restriction.enumeration) {
+											var objValue = attrType.restriction.enumeration[value];
 											
-			$("#attributeMenuContent").append('<div id="saveAttributesFailed" style="display:none;">' +
-											  	'<span style="color:red;font-size:24px;">&#x2716;</span>' +
-												'<span style="color:red;">Save Failed</span>' +
-											'</div>');
+											//populate dropdown
+											li += '<option value="' + objValue + '"';
+											li += (currentAttrValue == objValue) ? ' selected="true">' : '>';
+											li += objValue + '</option>';
+										}
+										
+									li += '</select>';
+								li += '</div>';
+							li += '</li>';
+						}
+						else {
+							//create boring text box
+							var typeInfo = Arbiter.getInputType(attrType.name);
+							
+							li += "<li style='padding:5px; border-radius: 4px;'><div>";
+							li += "<label for='" + attrType.name + "-input'>";
+							li += attrType.name;
+							li += "</label>";
+							li += "<input name='' ";
+							li += "autocorrect='off' autocapitalize='off' ";
+							li += "id='" + attrType.name + "-input' placeholder='" + typeInfo.placeholder + "' value='";
+							li += Arbiter.encodeChars(currentAttrValue);
+							li += "' type='" + typeInfo.type + "'></div></li>";
+						}
+					}
+					
+					$("ul#attribute-list").empty().append(li).listview("refresh");
+													
+					$("#attributeMenuContent").append('<div id="saveAttributesFailed" style="display:none;">' +
+														'<span style="color:red;font-size:24px;">&#x2716;</span>' +
+														'<span style="color:red;">Save Failed</span>' +
+													'</div>');
+				},
+				failure: function(response){
+					Arbiter.error('describeFeatureType failed');
+				}
+			});
 		}
 	},
 	
