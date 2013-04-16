@@ -12,17 +12,11 @@ Arbiter is meant to be flexible: no particular data schema is presumed.  It gets
 
 We've tested on iPad, iPhone, Nexus 7 tablets, and Galaxy S
 
-## Installation
-
-## Running Tests
-
 ## Arbiter Development Environment
 
 ### Cordova
-Arbiter uses Cordova 2.2.0, which is included with this project.
-If you would like more information on Cordova 2.2.0 you can head over to http://phonegap.com/ .
-
-Direct Download for Cordova 2.2.0: https://github.com/phonegap/phonegap/zipball/2.2.0
+Arbiter uses Cordova 2.4.0, which is included with this project.
+If you would like more information on Cordova 2.4.0 you can head over to http://phonegap.com/ .
 
 ### Weinre
 Weinre is an tool you can use in your web browser to debug Cordova applications.
