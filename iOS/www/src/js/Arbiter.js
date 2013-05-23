@@ -2823,14 +2823,19 @@ var Arbiter = {
 				//Arbiter.deleteLayer(layerBeingEdited.serverName, layerBeingEdited.layerNickname);
 			}
 
+			var encodedCredentials = $.base64.encode(serverInfo.username + ':' + serverInfo.password);
+
 			jqLayerNickname.removeClass('invalid-field');
 			
 			var request = new OpenLayers.Request.GET({
 				url: serverInfo.url + "/wfs?service=wfs&version=1.0.0&request=DescribeFeatureType&typeName=" + typeName,
+				Authorization : 'Basic ' + encodedCredentials,
 				callback: function(response){
-					console.log('response for get info on wms: ', response );
+					console.log('response for get info on wms: ', response);
 					var obj = describeFeatureTypeReader.read(response.responseText);
-													 
+					
+					console.log('obj.featureTypes: ', obj.featureTypes);
+					
 					if(obj.featureTypes && obj.featureTypes.length){
 						var layerattributes = [];
 						var attributeTypes = [];
@@ -2853,12 +2858,22 @@ var Arbiter = {
 							}else if(property.type.indexOf("xsd:") >= 0){
 								layerattributes.push(property.name);
 								
+								var valueRestrictions = null;
+									
+								if(property.restriction && property.restriction.enumeration) {
+									//add restriction to this layer
+									console.log("property.restriction", property.restriction);
+									valueRestrictions = property.restriction;
+								}
+								
 								//types don't actually matter that much for storing in sqlite, but
 								//we need them persistent so we can check manually
 								attributeTypes.push({
 									type: property.type.substr(4),
-									notnull: !property.nillable
+									notnull: !property.nillable//,
+									//restrictions: valueRestrictions
 								});
+								console.log("attributeType: ", attributeTypes);
 							}
 						}
 						
@@ -3135,8 +3150,13 @@ var Arbiter = {
 		jqLayerSelect.selectmenu();
 		
 		var serverInfo = Arbiter.currentProject.serverList[serverName];
+		var encodedCredentials = $.base64.encode(serverInfo.username + ':' + serverInfo.password);
+		
 		var request = new OpenLayers.Request.GET({
 			url: serverInfo.url + "/wms?service=wms&version=1.1.1&request=getCapabilities",
+			headers: {
+				Authorization : 'Basic ' + encodedCredentials
+			},
 			user: serverInfo.username,
 			password: serverInfo.password,
 			callback: function(response){
@@ -3830,11 +3850,6 @@ var Arbiter = {
 			var li = "";
 			var currentAttrValue = '';
 			
-			
-			console.log("selectedFeature.layer ", selectedFeature.layer);
-			console.log("metaLayersList ", Arbiter.metaLayersList);
-			
-			
 			var index = selectedFeature.layer.name.indexOf('-wfs');
 			var layerNickname = selectedFeature.layer.name.substring(0, index);
 			var layerIndex = 0;
@@ -3854,98 +3869,154 @@ var Arbiter = {
 			
 			var activeLayer = Arbiter.metaLayersList[layerIndex];
 			
-			console.log("got active layer ", activeLayer);
+			console.log("selectedFeature.attributes: ", selectedFeature.attributes);
+			for(var type in selectedFeature.attributes){ 
+				
+				console.log('type: ', type);
+				
+				var typeInfo = Arbiter.getInputType(type);
+				var attrData = '';
 			
-			var postRequest = '<DescribeFeatureType ' +
-				'service="WFS" ' +
-				'version="1.0.0" ' +
-				'xmlns="http://www.opengis.net/wfs" ' +
-				'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
-				'xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.0.0/WFS-basic.xsd"> ' +
-				'<TypeName>' + activeLayer.typeName + '</TypeName> ' +
-				'</DescribeFeatureType>';
-			console.log("created post request");
-			
-			var encodedCredentials = $.base64.encode(activeLayer.username + ':' + activeLayer.password);
-			
-			console.log("encoded credentials");
-			
-			var request = new OpenLayers.Request.POST({
-				url: activeLayer.url + "/wfs",
-				data: postRequest,
-				headers: {
-					'Content-Type': 'text/xml;charset=utf-8',
-					'Authorization': 'Basic ' + encodedCredentials
-				},
-				callback: function(response){
-					var obj = describeFeatureTypeReader.read(response.responseText);
-					
-					//HACK  assuming only one feature type
-					for(var type in obj.featureTypes[0].properties) {
-						var attrType = obj.featureTypes[0].properties[type];
-						
-						console.log("type ", attrType);
-						console.log("obj.featureTypes[0].properties ", obj.featureTypes[0].properties);
-						console.log("selectedFeature.attributes ", selectedFeature.attributes);
-						console.log("selectedFeature.attributes[type] ", selectedFeature.attributes[attrType.name]);
-						
-						if(attrType.type.indexOf("gml:") >= 0) {
-							continue;
-						}
-						
-						if(selectedFeature.attributes[attrType.name]) {
-							currentAttrValue = selectedFeature.attributes[attrType.name];
-						} else {
-							currentAttrValue = '';
-						}
-						
-						if(attrType.restriction && attrType.restriction.enumeration) {
-							//create dropdown menu
-							li += '<li style="padding:5px; border-radius: 4px;">';
-								li += '<div>';
-									li += '<label for="' + attrType.name + '-input">' + attrType.name + '</label>';
-									li += '<select name="' + attrType.name + '-input" id="' + attrType.name + '-input">';
-									
-										for(var value in attrType.restriction.enumeration) {
-											var objValue = attrType.restriction.enumeration[value];
-											
-											//populate dropdown
-											li += '<option value="' + objValue + '"';
-											li += (currentAttrValue == objValue) ? ' selected="true">' : '>';
-											li += objValue + '</option>';
-										}
-										
-									li += '</select>';
-								li += '</div>';
-							li += '</li>';
-						}
-						else {
-							//create boring text box
-							var typeInfo = Arbiter.getInputType(attrType.name);
-							
-							li += "<li style='padding:5px; border-radius: 4px;'><div>";
-							li += "<label for='" + attrType.name + "-input'>";
-							li += attrType.name;
-							li += "</label>";
-							li += "<input name='' ";
-							li += "autocorrect='off' autocapitalize='off' ";
-							li += "id='" + attrType.name + "-input' placeholder='" + typeInfo.placeholder + "' value='";
-							li += Arbiter.encodeChars(currentAttrValue);
-							li += "' type='" + typeInfo.type + "'></div></li>";
-						}
-					}
-					
-					$("ul#attribute-list").empty().append(li).listview("refresh");
-													
-					$("#attributeMenuContent").append('<div id="saveAttributesFailed" style="display:none;">' +
-														'<span style="color:red;font-size:24px;">&#x2716;</span>' +
-														'<span style="color:red;">Save Failed</span>' +
-													'</div>');
-				},
-				failure: function(response){
-					Arbiter.error('describeFeatureType failed');
+				attrData = selectedFeature.layer.attributeTypes[type];
+				if (selectedFeature.layer.attributeTypes[type]) {
+					attrData = selectedFeature.layer.attributeTypes[type];
 				}
-			});
+				
+				console.log("attrData: ", attrData);
+				if(attrData.restriction && attrData.restriction.enumeration) {
+					//create dropdown menu
+					li += '<li style="padding:5px; border-radius: 4px;">';
+						li += '<div>';
+							li += '<label for="' + type + '-input">' + type + '</label>';
+							li += '<select name="' + type + '-input" id="' + type + '-input">';
+							
+								for(var value in attrData.restriction.enumeration) {
+									var objValue = attrData.restriction.enumeration[value];
+									
+									//populate dropdown
+									li += '<option value="' + objValue + '"';
+									li += (currentAttrValue == objValue) ? ' selected="true">' : '>';
+									li += objValue + '</option>';
+								}
+								
+							li += '</select>';
+						li += '</div>';
+					li += '</li>';
+				} else {
+					li += "<li style='padding:5px; border-radius: 4px;'><div>";
+					li += "<label for='" + type + "-input'>";
+					li += type;
+					li += "</label>";
+					li += "<input name='' ";
+					li += "autocorrect='off' autocapitalize='off' ";
+					li += "id='" + type + "-input' placeholder='" + type + "' value='";
+					li += Arbiter.encodeChars(currentAttrValue);
+					li += "' type='" + typeInfo.type + "'></div></li>";
+				}
+			}
+			
+			$("ul#attribute-list").empty().append(li).listview("refresh");
+											
+			$("#attributeMenuContent").append('<div id="saveAttributesFailed" style="display:none;">' +
+											  	'<span style="color:red;font-size:24px;">&#x2716;</span>' +
+												'<span style="color:red;">Save Failed</span>' +
+											'</div>');
+			
+			//old implementaion
+//			var activeLayer = Arbiter.metaLayersList[layerIndex];
+//			
+//			console.log("got active layer ", activeLayer);
+//			
+//			var postRequest = '<DescribeFeatureType ' +
+//				'service="WFS" ' +
+//				'version="1.0.0" ' +
+//				'xmlns="http://www.opengis.net/wfs" ' +
+//				'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
+//				'xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.0.0/WFS-basic.xsd"> ' +
+//				'<TypeName>' + activeLayer.typeName + '</TypeName> ' +
+//				'</DescribeFeatureType>';
+//			console.log("created post request");
+//			
+//			var encodedCredentials = $.base64.encode(activeLayer.username + ':' + activeLayer.password);
+//			
+//			console.log("encoded credentials");
+//			
+//			var request = new OpenLayers.Request.POST({
+//				url: activeLayer.url + "/wfs",
+//				data: postRequest,
+//				headers: {
+//					'Content-Type': 'text/xml;charset=utf-8',
+//					'Authorization': 'Basic ' + encodedCredentials
+//				},
+//				callback: function(response){
+//					var obj = describeFeatureTypeReader.read(response.responseText);
+//					
+//					//HACK  assuming only one feature type
+//					for(var type in obj.featureTypes[0].properties) {
+//						var attrType = obj.featureTypes[0].properties[type];
+//						
+//						console.log("type ", attrType);
+//						console.log("obj.featureTypes[0].properties ", obj.featureTypes[0].properties);
+//						console.log("selectedFeature.attributes ", selectedFeature.attributes);
+//						console.log("selectedFeature.attributes[type] ", selectedFeature.attributes[attrType.name]);
+//						
+//						if(attrType.type.indexOf("gml:") >= 0) {
+//							continue;
+//						}
+//						
+//						if(selectedFeature.attributes[attrType.name]) {
+//							currentAttrValue = selectedFeature.attributes[attrType.name];
+//						} else {
+//							currentAttrValue = '';
+//						}
+//						
+//						if(attrType.restriction && attrType.restriction.enumeration) {
+//							//create dropdown menu
+//							li += '<li style="padding:5px; border-radius: 4px;">';
+//								li += '<div>';
+//									li += '<label for="' + attrType.name + '-input">' + attrType.name + '</label>';
+//									li += '<select name="' + attrType.name + '-input" id="' + attrType.name + '-input">';
+//									
+//										for(var value in attrType.restriction.enumeration) {
+//											var objValue = attrType.restriction.enumeration[value];
+//											
+//											//populate dropdown
+//											li += '<option value="' + objValue + '"';
+//											li += (currentAttrValue == objValue) ? ' selected="true">' : '>';
+//											li += objValue + '</option>';
+//										}
+//										
+//									li += '</select>';
+//								li += '</div>';
+//							li += '</li>';
+//						}
+//						else {
+//							//create boring text box
+//							var typeInfo = Arbiter.getInputType(attrType.name);
+//							
+//							li += "<li style='padding:5px; border-radius: 4px;'><div>";
+//							li += "<label for='" + attrType.name + "-input'>";
+//							li += attrType.name;
+//							li += "</label>";
+//							li += "<input name='' ";
+//							li += "autocorrect='off' autocapitalize='off' ";
+//							li += "id='" + attrType.name + "-input' placeholder='" + typeInfo.placeholder + "' value='";
+//							li += Arbiter.encodeChars(currentAttrValue);
+//							li += "' type='" + typeInfo.type + "'></div></li>";
+//						}
+//					}
+//					
+//					$("ul#attribute-list").empty().append(li).listview("refresh");
+//													
+//					$("#attributeMenuContent").append('<div id="saveAttributesFailed" style="display:none;">' +
+//														'<span style="color:red;font-size:24px;">&#x2716;</span>' +
+//														'<span style="color:red;">Save Failed</span>' +
+//													'</div>');
+//				},
+//				failure: function(response){
+//					Arbiter.error('describeFeatureType failed');
+//				}
+//			});
 		}
 	},
 	
@@ -3970,11 +4041,13 @@ var Arbiter = {
 		var strategies = [];
 		var server;
 		
-		if(meta.username)
+		if(meta.username) {
 			server = Arbiter.currentProject.serverList[meta.serverName];
-		else
+		} else {
 			server = Arbiter.currentProject.deletedServers[meta.serverName];
+		}
 		
+		console.log("server layers", server.layers);
 		var serverLayer = server.layers[meta.nickname];
 		
 		if (meta.username) {
@@ -4125,13 +4198,13 @@ var Arbiter = {
 		});
 
 		newWFSLayer.styleMap = styleMap;
-		
-		
 
 		newWFSLayer.attributeTypes = {};
 		
-		for(var i = 0; i < serverLayer.attributes.length;i++)
+		console.log("addLayer serverlayer attrType", serverLayer.attributeTypes);
+		for(var i = 0; i < serverLayer.attributes.length;i++) {
 			newWFSLayer.attributeTypes[serverLayer.attributes[i]] = serverLayer.attributeTypes[i];
+		}
 		
 		newLayers.push(newWFSLayer);
 		
