@@ -3870,7 +3870,7 @@ var Arbiter = {
 			var activeLayer = Arbiter.metaLayersList[layerIndex];
 			
 			console.log("selectedFeature.attributes: ", selectedFeature.attributes);
-			for(var type in selectedFeature.attributes){ 
+			for(var type in selectedFeature.layer.attributeTypes){
 				
 				console.log('type: ', type);
 				
@@ -3878,8 +3878,10 @@ var Arbiter = {
 				var attrData = '';
 			
 				attrData = selectedFeature.layer.attributeTypes[type];
-				if (selectedFeature.layer.attributeTypes[type]) {
-					attrData = selectedFeature.layer.attributeTypes[type];
+				if (selectedFeature.attributes[type]) {
+					currentAttrValue = selectedFeature.attributes[type];
+				} else {
+					currentAttrValue = '';
 				}
 				
 				console.log("attrData: ", attrData);
