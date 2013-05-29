@@ -36,6 +36,7 @@
 		<script type="text/javascript" src="../cordova-2.4.0.js"></script>
         <script type="text/javascript" src="js/First.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
+        <script type="text/javascript" src="js/sha1.js"></script>
 		<script type="text/javascript" src="js/Arbiter.js"></script>
 		<script type="text/javascript" src="js/Cordova.js"></script>
 		<script type="text/javascript" src="js/TileUtil.js"></script>
@@ -307,15 +308,36 @@
 					</div>
 				</div>
 				
-				<div id="idAttributeMenu" style="position:absolute;z-index:2000;">
+				<div id="idAttributeMenu" style="position:absolute;z-index:2001;">
 					<div data-role="content" id="attributeMenuContent">
 						<ul id="attribute-list" data-role="listview" data-mini="true" style="padding:20px;"></ul>
 					</div>
 					<input id="idAttrSave" type="submit" value="Save" data-mini="true" onClick="Arbiter.SubmitAttributes()">
 					<input type="submit" value="Cancel" data-mini="true" onClick="Arbiter.ToggleAttributeMenu()">
 				</div>
+                
+                <div id="idMediaPanel" style="position:absolute;z-index:2002;">
+                    <div data-role="content" id="mediaPanelContent">
+                        <ul id="media-list" data-role="listview" data-mini="true" style="padding:5px;"></ul>
+                    </div>
+                    <div id="mediaPanelControls">
+                        <input type="submit" value="Add Media From Camera" data-mini="true" onClick="Arbiter.CameraPicker()">
+                        <input type="submit" value="Add Media From Library" data-mini="true" onClick="Arbiter.LibraryPicker()">
+                        <input id="idMediaSave" type="submit" value="Accept" data-mini="true" onClick="Arbiter.SubmitMedia()">
+                        <input type="submit" value="Cancel" data-mini="true" onClick="Arbiter.ToggleMediaPanel()">
+                    </div>
+                </div>
+                
+                <div id="idMediaViewer" style="position:absolute;z-index:2003;">
+                    <div data-role="content" id="mediaViewerContent">
+                    </div>
+                    <div id="mediaViewerControls">
+                        <a id="idDeleteMediaButton" type="submit" data-mini="true" onClick="Arbiter.RemoveMedia()">Delete</a>
+                        <input type="submit" value="Cancel" data-mini="true" onClick="Arbiter.ToggleMediaViewer()">
+                    </div>
+                </div>
 				
-				<div id="idWorkingOverlay" style="position:absolute;z-index:2000;">
+				<div id="idWorkingOverlay" style="position:absolute;z-index:2003;">
 					<div data-role="content" id="cachingTilesMenuContent" style="position:absolute; top:50%; left:30%; height:10em; margin-top:-5em">
 						<div id="loadingIndicator"><div style="padding: 3px 1px;"></div></div>
 						<div id="idWorkingOverlayTitle"><center></center></div>

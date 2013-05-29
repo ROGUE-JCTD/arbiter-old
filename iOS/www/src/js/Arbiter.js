@@ -41,6 +41,11 @@ var modifiedTable = "dirtytable";
 var selectedFeature;
 var oldSelectedFID;
 
+var mediaEntries = null;
+var originalMediaEntries = null;
+
+var currentMedia = null;
+
 /*
  *	jQuery Elements
  */
@@ -109,6 +114,8 @@ var CurrentLanguage = LanguageType.ENGLISH;
 var awayFromMap = false;
 var editorTabOpen = false;
 var attributeTab = false;
+var mediaPanelOpen = false;
+var mediaViewerOpen = false;
 
 var layerBeingEdited= null;
 
@@ -1707,6 +1714,22 @@ var Arbiter = {
 			Arbiter.CloseAttributesMenu();
 		}
 	},
+    
+    ToggleMediaPanel: function() {
+        if(!mediaPanelOpen) {
+            Arbiter.OpenMediaPanel();
+        } else {
+            Arbiter.CloseMediaPanel();
+        }
+    },
+    
+    ToggleMediaViewer: function() {
+        if(!mediaViewerOpen) {
+            Arbiter.OpenMediaViewer();
+        } else {
+            Arbiter.CloseMediaViewer();
+        }
+    },
 
 	OpenEditorMenu: function() {
 		editorTabOpen = true;
@@ -1737,8 +1760,155 @@ var Arbiter = {
 	
 	CloseAttributesMenu: function() {
 		attributeTab = false;
+        if(mediaPanelOpen) {
+            Arbiter.CloseMediaPanel();
+        }
 		$("#idAttributeMenu").animate({ "left": "100%" }, 50);
 	},
+    
+    OpenMediaPanel: function() {
+        mediaPanelOpen = true;
+        mediaEntries = originalMediaEntries.slice(0);
+        $("#idMediaPanel").animate({"left": "0px" }, 50);
+        Arbiter.PopulateMediaPanel();
+    },
+        
+    CloseMediaPanel: function() {
+        mediaPanelOpen = false;
+        mediaEntries = originalMediaEntries.slice(0);
+        if(mediaViewerOpen) {
+            Arbiter.CloseMediaViewer();
+        }
+        $("#idMediaPanel").animate({"left": "100%" }, 50);
+    },
+    
+    OpenMediaViewer: function() {
+        window.requestFileSystem(LocalFileSystem.PERSISTENT, 0,
+            function(fileSys) {
+                Arbiter.fileSystem.root.getFile("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media/" + currentMedia, {create: false, exclusive: false},
+                    function(dir) {
+                        $("div#mediaViewerContent").html("<img style='position:relative;' width=100% src='file://" + dir.fullPath + "'></img>");
+                        $("#idMediaViewer").animate({"left": "0px" }, 50);
+                    }, function(error) {
+                        alert("Could not find media file.");
+                    });
+            }, Arbiter.error);
+        mediaViewerOpen = true;
+    },
+        
+    CloseMediaViewer: function() {
+        mediaViewerOpen = false;
+        currentMedia = null;
+        $("#idMediaViewer").animate({"left": "100%" }, 50);
+    },
+    
+    CameraPicker: function() {
+        navigator.camera.getPicture(Arbiter.onCameraSuccess, Arbiter.onCameraFail, { quality: 20, allowEdit: false,
+                                    destinationType: Camera.DestinationType.FILE_URI, encodingType: Camera.EncodingType.JPEG });
+    },
+    
+    onCameraSuccess: function(imageURI) {
+        Arbiter.addMedia(imageURI);
+    },
+        
+    onCameraFail: function(message) {
+        if(message != "no image selected") {
+            setTimeout(function() {
+                   alert("Unable to use the camera for this device.");
+            }, 0);
+        }
+    },
+    
+    LibraryPicker: function() {
+        navigator.camera.getPicture(Arbiter.onLibrarySuccess, Arbiter.onLibraryFail, { quality: 20, allowEdit: false,
+                                    destinationType: Camera.DestinationType.FILE_URI, sourceType: Camera.PictureSourceType.PHOTOLIBRARY, encodingType: Camera.EncodingType.JPEG });
+    },
+    
+    ViewMedia: function(mediaFile) {
+        currentMedia = mediaFile;
+        Arbiter.ToggleMediaViewer();
+    },
+    
+    RemoveMedia: function() {
+        var index = -1;
+        for(var i = 0; i < mediaEntries.length; i++) {
+            if(mediaEntries[i] == currentMedia) {
+                index = i;
+                break;
+            }
+        }
+        if(index != -1) {
+            mediaEntries.splice(index,1);
+        }
+        currentMedia = null;
+        Arbiter.PopulateMediaPanel();
+        Arbiter.ToggleMediaViewer();
+    },
+    
+    onLibrarySuccess: function(imageURI) {
+        Arbiter.addMedia(imageURI);
+    },
+        
+    onLibraryFail: function(message) {
+        if(message != "no image selected") {
+            setTimeout(function() {
+                   alert("Unable to access the photo library on this device.");
+            }, 0);
+        }
+    },
+    
+    addMedia: function(imageURI) {
+        window.resolveLocalFileSystemURI(imageURI, Arbiter.copyMedia, Arbiter.copyFail);
+        
+    },
+    
+    copyMedia: function(fileEntry) {
+        window.requestFileSystem(LocalFileSystem.PERSISTENT, 0,
+            function(fileSys) {
+                Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media", {create: true, exclusive: false},
+                    function(dir) {
+                        Arbiter.fileSystem.root.getFile("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media/temp.jpg", {create: true, exclusive: false},
+                            function(tempFile) {
+                                tempFile.remove(
+                                    function() {
+                                        fileEntry.copyTo(dir, "temp.jpg", Arbiter.copySuccess, Arbiter.copyFail);
+                                    }, Arbiter.copyFail);
+                            }, Arbiter.copyFail);
+                    }, Arbiter.copyFail);
+            }, Arbiter.copyFail); 
+    },
+    
+    copySuccess: function(newFile) {
+        newFile.file(
+            function(file) {
+                var reader = new FileReader();
+                reader.onloadend = function(evt) {
+                     var newFileName = SHA1(evt.target.result) + ".jpg";
+                     newFile.getParent(
+                        function(parentDir) {
+                            newFile.moveTo(parentDir,newFileName,
+                                function(copiedFile) {
+                                    mediaEntries[mediaEntries.length] = newFileName;
+                                    Arbiter.PopulateMediaPanel();
+                                    newFile.remove(function() {}, function() {});
+                                }, function(error) {
+                                    if(error.code != FileError.PATH_EXISTS_ERR) {
+                                        Arbiter.copyFail(null);
+                                    } else {
+                                        mediaEntries[mediaEntries.length] = newFileName;
+                                        Arbiter.PopulateMediaPanel();
+                                        newFile.remove(function() {}, function() {});
+                                    }
+                                });
+                        }, Arbiter.copyFail);
+                };
+                reader.readAsDataURL(file);
+            }, Arbiter.copyFail);
+    },
+    
+    copyFail: function(error) {
+        alert("Unable to copy media to the project directory.");
+    },
 	
 	showMessageOverlay: function(title, message) {
 		$("#idWorkingOverlay").animate({ "left": "0%" }, 5);
@@ -3708,6 +3878,9 @@ var Arbiter = {
 		var inputs = $("ul#attribute-list input");
 		var attributeTypes = feature.layer.attributeTypes;
 		inputs.each(function(){
+            if($(this).attr("type") != "text") {
+                return;
+            }
 			var attribute = $(this).parent().text();
 			var value = $(this).val();
 			console.log(attribute + ": " + value);
@@ -3765,9 +3938,14 @@ var Arbiter = {
 				
 				for(var type in selectedFeature.layer.attributeTypes){ 					
 					console.log('type: ', type);
-					
-					var attrValue;
-					attrValue = $(Arbiter.idToJQuerySelectorSafe(type+"-input")).val();
+                        
+                    var attrValue;
+                              
+                    if(type == "media"){
+                        attrValue = JSON.stringify(originalMediaEntries);
+                    }else{
+                        attrValue = $(Arbiter.idToJQuerySelectorSafe(type+"-input")).val();
+                    }
 					
 					console.log('======== attrValue: ', attrValue, ', type: ', type);
 					
@@ -3807,6 +3985,11 @@ var Arbiter = {
 		//$.mobile.changePage("#idMapPage", {transition: "slide", reverse: true});
 		Arbiter.changePage_Pop('#idMapPage');
 	},
+                              
+    SubmitMedia: function() {
+        originalMediaEntries = mediaEntries.slice(0);
+        Arbiter.ToggleMediaPanel();
+    },
 	
 	// escapes . and : in the id name which makes jq selector not work as expected.
 	idToJQuerySelectorSafe: function(id) { 
@@ -3868,11 +4051,14 @@ var Arbiter = {
 			}
 			
 			var activeLayer = Arbiter.metaLayersList[layerIndex];
-			
+            var hasMedia = false;
+            mediaEntries = null;
 			console.log("selectedFeature.attributes: ", selectedFeature.attributes);
 			for(var type in selectedFeature.layer.attributeTypes){
 				
 				console.log('type: ', type);
+                              
+
 				
 				var typeInfo = Arbiter.getInputType(type);
 				var attrData = '';
@@ -3883,6 +4069,18 @@ var Arbiter = {
 				} else {
 					currentAttrValue = '';
 				}
+                              
+                if(type=="media"){
+                    hasMedia = true;
+                    if(currentAttrValue == '') {
+                        mediaEntries = new Array();
+                    } else {
+                        mediaEntries = JSON.parse(currentAttrValue);
+                    }
+                    originalMediaEntries = mediaEntries.slice(0);
+                    console.log("Media Entries: " + mediaEntries);
+                    continue;
+                }
 				
 				console.log("attrData: ", attrData);
 				if(attrData.restriction && attrData.restriction.enumeration) {
@@ -3916,6 +4114,11 @@ var Arbiter = {
 					li += "' type='" + typeInfo.type + "'></div></li>";
 				}
 			}
+            if(hasMedia){
+                li += "<li style='padding:5px; border-radius: 4px;'>";
+                li += "<input style='width=100%' type='submit' value='Media' type='media' onClick='Arbiter.ToggleMediaPanel()'>";
+                li += "</li>";
+            }
 			
 			$("ul#attribute-list").empty().append(li).listview("refresh");
 											
@@ -4021,6 +4224,38 @@ var Arbiter = {
 //			});
 		}
 	},
+                              
+    PopulateMediaPanel: function() {
+        var li = "";
+        var processed = 0;
+
+        window.requestFileSystem(LocalFileSystem.PERSISTENT, 0,
+            function(fileSys) {
+                if(mediaEntries.length == 0) {
+                    $("ul#media-list").empty().append(li).listview("refresh");
+                }
+                for(var i = 0; i < mediaEntries.length; i++) {
+                    var mediaEntry = mediaEntries[i];
+                    Arbiter.fileSystem.root.getFile("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media/" + mediaEntry, {create: false, exclusive: false},
+                        function(dir) {
+                            console.log(dir.fullPath);
+                            var name = dir.name;
+                            if(name.length > 13) {
+                                name = name.substr(0,10) + "...";
+                            }
+                            li += "<li style='padding:5px; border-radius: 4px;' onClick=\"Arbiter.ViewMedia(\'" + dir.name + "\')\">";
+                            li += "<img style='position:relative;' height=60 width=60 src='file://" + dir.fullPath + "' align='left'>" + name;
+                            li += "</li>";
+                            processed++;
+                            if(processed == mediaEntries.length) {
+                                $("ul#media-list").empty().append(li).listview("refresh");
+                            }
+                        }, function(error) {
+                            alert("Could not find media file.");
+                        });
+                }
+            }, Arbiter.error);
+    },
 	
 	/*
  	meta: {

@@ -171,6 +171,43 @@ html, body {
 	background-color:rgba(136, 60, 0, 0.496094);
 }
 
+#idMediaPanel {
+    left: 100%;
+    right:0px;
+    height: 100%;
+    top:0px;
+    left: 100%;
+    background-color:rgba(0,0,0,0.95);
+}
+
+#mediaPanelControls {
+    height:100px;
+    bottom:100%;
+}
+
+#mediaPanelContent {
+    overflow: scroll;
+    height: 58%;
+}
+
+#idMediaViewer {
+    left: 100%;
+    right:0px;
+    height: 100%;
+    top:0px;
+    left: 100%;
+    background-color:rgba(0,0,0,0.95);
+}
+
+#mediaViewerControls {
+    height:50px;
+    bottom:100%;
+}
+
+#mediaViewerContent {
+    height: 75%;
+}
+
 #attributeMenuContent {
 	overflow: scroll;
 	height: 75%;
@@ -529,6 +566,10 @@ html, body {
 }
 
 #idDeleteLayerButton{
+	background-image:-webkit-linear-gradient(top, #700000, #600000);
+}
+
+#idDeleteMediaButton {
 	background-image:-webkit-linear-gradient(top, #700000, #600000);
 }
 

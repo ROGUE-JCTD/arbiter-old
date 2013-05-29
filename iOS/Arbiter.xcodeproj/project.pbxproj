@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		040B758D17564D2100CE6E38 /* sha1.js in Sources */ = {isa = PBXBuildFile; fileRef = 040B758C17564D2100CE6E38 /* sha1.js */; };
 		0C39FE29167660270008C978 /* SQLitePlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 0C39FE28167660270008C978 /* SQLitePlugin.m */; };
 		0C39FE2C167661B50008C978 /* libsqlite3.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 0C39FE2B167661B50008C978 /* libsqlite3.0.dylib */; };
 		1D3623260D0F684500981E51 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1D3623250D0F684500981E51 /* AppDelegate.m */; };
@@ -65,6 +66,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		040B758C17564D2100CE6E38 /* sha1.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; name = sha1.js; path = www/src/js/sha1.js; sourceTree = "<group>"; };
 		0C39FE27167660270008C978 /* SQLitePlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SQLitePlugin.h; sourceTree = "<group>"; };
 		0C39FE28167660270008C978 /* SQLitePlugin.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SQLitePlugin.m; sourceTree = "<group>"; };
 		0C39FE2B167661B50008C978 /* libsqlite3.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsqlite3.0.dylib; path = usr/lib/libsqlite3.0.dylib; sourceTree = SDKROOT; };
@@ -178,6 +180,7 @@
 		29B97314FDCFA39411CA2CEA /* CustomTemplate */ = {
 			isa = PBXGroup;
 			children = (
+				040B758C17564D2100CE6E38 /* sha1.js */,
 				0C39FE2B167661B50008C978 /* libsqlite3.0.dylib */,
 				301BF56E109A69640062928A /* www */,
 				301BF52D109A57CC0062928A /* CordovaLib.xcodeproj */,
@@ -420,6 +423,7 @@
 				1D3623260D0F684500981E51 /* AppDelegate.m in Sources */,
 				302D95F114D2391D003F00A1 /* MainViewController.m in Sources */,
 				0C39FE29167660270008C978 /* SQLitePlugin.m in Sources */,
+				040B758D17564D2100CE6E38 /* sha1.js in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
