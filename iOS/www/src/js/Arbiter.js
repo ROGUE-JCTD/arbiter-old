@@ -43,6 +43,7 @@ var oldSelectedFID;
 
 var mediaEntries = null;
 var originalMediaEntries = null;
+var newMediaEntries = null;
 
 var currentMedia = null;
 
@@ -1630,7 +1631,7 @@ var Arbiter = {
 				Arbiter.error("getProjectProperty.err1", e1, e2);
 			});
 		}, function(e1, e2) {
-			Arbiter.error("getProjectProperty.err1", e1, e2);
+			Arbiter.error("getProjectProperty.err2", e1, e2);
 		});	
 	},
 
@@ -1790,7 +1791,8 @@ var Arbiter = {
                         $("div#mediaViewerContent").html("<img style='position:relative;' width=100% src='file://" + dir.fullPath + "'></img>");
                         $("#idMediaViewer").animate({"left": "0px" }, 50);
                     }, function(error) {
-                        alert("Could not find media file.");
+                        $("div#mediaViewerContent").html("<img style='position:relative;' width=100% src='img/not-found.png'></img>");
+                        $("#idMediaViewer").animate({"left": "0px" }, 50);
                     });
             }, Arbiter.error);
         mediaViewerOpen = true;
@@ -3923,6 +3925,14 @@ var Arbiter = {
 		
 		return true;
 	},
+                              
+    AddNewMediaItems: function(array) {
+        for(var i = 0; i < newMediaEntries.length; i++) {
+            if(array.indexOf(newMediaEntries[i]) == -1) {
+                array.push(newMediaEntries[i]);
+            }
+        }
+    },
 							  
 	SubmitAttributes: function(){
 		if(selectedFeature){
@@ -3943,6 +3953,23 @@ var Arbiter = {
                               
                     if(type == "media"){
                         attrValue = JSON.stringify(originalMediaEntries);
+                        if(newMediaEntries != null && newMediaEntries.length > 0) {
+                            var mediaMap = {layer:{},};
+                            Arbiter.getProjectProperty("mediaToSend", function(key, value){
+                                var mediaLayer = value.layer[selectedFeature.layer.name];
+                                if(mediaLayer == null) {
+                                    mediaLayer = new Array();
+                                }
+                                Arbiter.AddNewMediaItems(mediaLayer);
+                                value.layer[selectedFeature.layer.name] = mediaLayer;
+                                Arbiter.setProjectProperty("mediaToSend", value);
+                            }, function(key){
+                                var mediaLayer = new Array();
+                                Arbiter.AddNewMediaItems(mediaLayer);
+                                mediaMap.layer[selectedFeature.layer.name] = mediaLayer;
+                                Arbiter.setProjectProperty("mediaToSend",mediaMap);
+                            }, true);
+                        }
                     }else{
                         attrValue = $(Arbiter.idToJQuerySelectorSafe(type+"-input")).val();
                     }
@@ -3986,7 +4013,19 @@ var Arbiter = {
 		Arbiter.changePage_Pop('#idMapPage');
 	},
                               
+    ArrayRemove: function(array, item) {
+        var index;
+        while((index=array.indexOf(item)) !== -1) {
+            array.splice(index,1);
+        }
+        return array;
+    },
+                              
     SubmitMedia: function() {
+        newMediaEntries = mediaEntries.slice(0);
+        for(var i = 0;i < originalMediaEntries.length; i++) {
+            Arbiter.ArrayRemove(newMediaEntries, originalMediaEntries[i]);
+        }
         originalMediaEntries = mediaEntries.slice(0);
         Arbiter.ToggleMediaPanel();
     },
@@ -4233,28 +4272,40 @@ var Arbiter = {
             function(fileSys) {
                 if(mediaEntries.length == 0) {
                     $("ul#media-list").empty().append(li).listview("refresh");
-                }
-                for(var i = 0; i < mediaEntries.length; i++) {
-                    var mediaEntry = mediaEntries[i];
-                    Arbiter.fileSystem.root.getFile("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media/" + mediaEntry, {create: false, exclusive: false},
-                        function(dir) {
-                            console.log(dir.fullPath);
-                            var name = dir.name;
-                            if(name.length > 13) {
-                                name = name.substr(0,10) + "...";
-                            }
-                            li += "<li style='padding:5px; border-radius: 4px;' onClick=\"Arbiter.ViewMedia(\'" + dir.name + "\')\">";
-                            li += "<img style='position:relative;' height=60 width=60 src='file://" + dir.fullPath + "' align='left'>" + name;
-                            li += "</li>";
-                            processed++;
-                            if(processed == mediaEntries.length) {
-                                $("ul#media-list").empty().append(li).listview("refresh");
-                            }
-                        }, function(error) {
-                            alert("Could not find media file.");
-                        });
+                } else {
+                    Arbiter.AddMediaEntry(0,li);
                 }
             }, Arbiter.error);
+    },
+                              
+    AddMediaEntry: function(index,li) {
+        var mediaEntry = mediaEntries[index];
+        var name = mediaEntry;
+        var lengthLimit = 15;
+        if(name.length > lengthLimit + 3) {
+            name = name.substr(0,lengthLimit) + "...";
+        }
+
+        Arbiter.fileSystem.root.getFile("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media/" + mediaEntry, {create: false, exclusive: false},
+            function(dir) {
+                li += "<li style='padding:5px; border-radius: 4px;' onClick=\"Arbiter.ViewMedia(\'" + mediaEntry + "\')\">" +
+                      "<img style='position:relative;' height=60 width=60 src='file://" + dir.fullPath + "' align='left'>" + name +
+                      "</li>";
+                if(++index == mediaEntries.length) {
+                    $("ul#media-list").empty().append(li).listview("refresh");
+                } else {
+                    Arbiter.AddMediaEntry(index,li);
+                }
+            }, function(error) {
+                li += "<li style='padding:5px; border-radius: 4px;' onClick=\"Arbiter.ViewMedia(\'" + mediaEntry + "\')\">" +
+                      "<img style='position:relative;' height=60 width=60 src='img/not-found.png' align='left'>" + name +
+                      "</li>";
+                if(++index == mediaEntries.length) {
+                    $("ul#media-list").empty().append(li).listview("refresh");
+                } else {
+                    Arbiter.AddMediaEntry(index,li);
+                }
+            });
     },
 	
 	/*
