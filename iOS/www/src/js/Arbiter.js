@@ -1923,7 +1923,7 @@ var Arbiter = {
     },
     
     CameraPicker: function() {
-        navigator.camera.getPicture(Arbiter.onCameraSuccess, Arbiter.onCameraFail, { quality: 20, allowEdit: false,
+        navigator.camera.getPicture(Arbiter.onCameraSuccess, Arbiter.onCameraFail, { quality: 20, allowEdit: false, correctOrientation: true,
                                     destinationType: Camera.DestinationType.FILE_URI, encodingType: Camera.EncodingType.JPEG });
     },
     
@@ -1940,7 +1940,7 @@ var Arbiter = {
     },
     
     LibraryPicker: function() {
-        navigator.camera.getPicture(Arbiter.onLibrarySuccess, Arbiter.onLibraryFail, { quality: 20, allowEdit: false,
+        navigator.camera.getPicture(Arbiter.onLibrarySuccess, Arbiter.onLibraryFail, { quality: 20, allowEdit: false, correctOrientation: true,
                                     destinationType: Camera.DestinationType.FILE_URI, sourceType: Camera.PictureSourceType.PHOTOLIBRARY, encodingType: Camera.EncodingType.JPEG });
     },
     
