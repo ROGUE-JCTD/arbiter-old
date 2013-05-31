@@ -792,6 +792,24 @@ var Arbiter = {
 				}
 			
 				if(ans){
+                    var layersToSave = 0;
+                    for ( var i = 0; i < layers.length; i++) {
+                        if( layers[i].strategies &&
+                            layers[i].strategies.length &&
+                            layers[i].strategies[0] &&
+                            layers[i].strategies[0].save){
+                            layersToSave++;
+                        }
+                    }
+                    var syncedLayers = 0;
+                    var mediaMap = {layer:{},};
+                    var layerCallback = function(layer, failed) {
+                        syncedLayers++;
+                        mediaMap.layer[layer] = failed;
+                        if(syncedLayers === layersToSave) {
+                            Arbiter.UpdateNewMediaProperty(mediaMap);
+                        }
+                    };
 					for ( var i = 0; i < layers.length; i++) {
 						if( layers[i].strategies && 
 					    	layers[i].strategies.length &&
@@ -801,6 +819,7 @@ var Arbiter = {
 							console.log('---- saving layer: ',  layers[i]);
 						
 							layers[i].strategies[0].save();
+                            Arbiter.SyncMedia(layers[i].name,layerCallback);
 						} else {
 							console.log('---- NOT saving layer: ', layers[i]);
 						}
@@ -1699,6 +1718,105 @@ var Arbiter = {
 			Arbiter.error("setProjectProperty.err6", e1, e2);
 		});	
 	},
+    
+    SyncMedia: function(layer,layerCallback) {
+        Arbiter.getProjectProperty("mediaToSend", function(key, value){
+            var mediaLayer = value.layer[layer];
+            if(mediaLayer != null && mediaLayer.length > 0) {
+                var mediaCounter = 0;
+                var failedMedia = new Array();
+                var mediaCallback = function(success,media) {
+                    mediaCounter++;
+                    if(success === false) {
+                        failedMedia.push(media);
+                    }
+                    if(mediaCounter === mediaLayer.length) {
+                        if(layerCallback) {
+                            layerCallback(layer,failedMedia);
+                        }
+                    }
+                };
+                for(var i = 0; i < mediaLayer.length;i++) {
+                    Arbiter.SendMedia(mediaLayer[i],mediaCallback);
+                }
+            }
+        }, function(key){}, true);
+    },
+    
+    SendMedia: function(media,mediaCallback) {
+        window.requestFileSystem(LocalFileSystem.PERSISTENT, 0,
+            function(fileSys) {
+                Arbiter.fileSystem.root.getFile("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media/" + media, {create: false, exclusive: false},
+                    function(fileEntry) {
+                        var options = new FileUploadOptions();
+                        options.fileKey="file";
+                        options.fileName=fileEntry.name;
+                        options.mimeType="image/jpeg";
+                        
+                        var params = {};
+                        
+                        options.params = params;
+                        
+                        var ft = new FileTransfer();
+                        ft.upload(fileEntry.fullPath, encodeURI("http://geoserver.rogue.lmnsolutions.com/file-service/services/document/upload"), function(response) {
+                            console.log("Code = " + response.responseCode);
+                            console.log("Response = " + response.response);
+                            console.log("Sent = " + response.bytesSent);
+                            if(mediaCallback) {
+                                mediaCallback(true);
+                            }
+                        }, function(error) {
+                            alert("Unable to transfer '" + media + "': FileTransferError Code = " + error.code);
+                            console.log("upload error source " + error.source);
+                            console.log("upload error target " + error.target);
+                            if(mediaCallback) {
+                                mediaCallback(false,media);
+                            }
+                        }, options);
+                    }, function(error) {
+                        alert("Unable to transfer '" + media + "': File not found locally.");
+                        if(mediaCallback) {
+                            mediaCallback(false,media);
+                        }
+                    });
+            }, function(error) {
+                alert("Unable to transfer '" + media + "': Could not acquire file system.");
+                if(mediaCallback) {
+                    mediaCallback(false,media);
+                }
+            });
+    },
+    
+    DownloadMedia: function(media) {
+        for(var i = 0; i < media.length;i++) {
+            Arbiter.DownloadMediaEntry(media[i]);
+        }
+    },
+    
+    DownloadMediaEntry: function(entry) {
+        //only download if we don't have it
+        window.requestFileSystem(LocalFileSystem.PERSISTENT, 0,
+            function(fileSys) {
+                Arbiter.fileSystem.root.getFile("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media/" + entry, {create: false, exclusive: false},
+                    function(fileEntry) {/*do nothing*/}, function(error) {
+                        // download
+                        Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media", {create: true, exclusive: false},
+                            function(dir) {
+                                var fileTransfer = new FileTransfer();
+                                var uri = encodeURI("http://geoserver.rogue.lmnsolutions.com/file-service/services/document/download?blobKey=" + entry);
+                                fileTransfer.download(uri,dir.fullPath + "/" + entry,
+                                    function(result) {
+                                        console.log("download complete: " + result.fullPath);
+                                    }, function(transferError) {
+                                        console.log("download error source " + transferError.source);
+                                        console.log("download error target " + transferError.target);
+                                        console.log("upload error code" + transferError.code);
+                                    });
+                            }, Arbiter.error);
+                    });
+            }, Arbiter.error);
+
+    },
 
 	ToggleEditorMenu: function() {
 		if(!editorTabOpen) {
@@ -3259,23 +3377,37 @@ var Arbiter = {
 					var dtAttributes = [];
 					var i;
 					var value;
+                    var mediaColumn = false;
 					
-					//get the columns that are type dateTime
+					//handle special columns
 					console.log("number of columns: " + res.rows.length);
 					for(i = 0; i < res.rows.length;i++){
-						if(res.rows.item(i).type == "dateTime")
-							dtAttributes.push(res.rows.item(i).name);
+                        if(res.rows.item(i).type == "dateTime") {
+                            dtAttributes.push(res.rows.item(i).name);
+                        }
+                        if(res.rows.item(i).name == "media") {
+                            mediaColumn = true;
+                        }
 					}
 					
-					//GeoServer doesn't include the 'Z' when storing the dateTime, so add it manually
+					
 					console.log("dtAttributes: ", dtAttributes);
 					for(i = 0; i < features.length;i++){
+                        //GeoServer doesn't include the 'Z' when storing the dateTime, so add it manually
 						for(var j = 0; j < dtAttributes.length;j++){
 							value = features[i].attributes[dtAttributes[j]];
 							console.log("dt value: " + value);
 							if(value && value.substr(value.length - 1) != 'Z')
 								features[i].attributes[dtAttributes[j]] += 'Z';
 						}
+                        //download media
+                        if(mediaColumn === true) {
+                            var mediaAttribute = features[i].attributes["media"];
+                            if(mediaAttribute != null) {
+                                var featureMedia = JSON.parse(mediaAttribute);
+                                Arbiter.DownloadMedia(featureMedia);
+                            }
+                        }
 					}
 					
 					console.log("pullFeatures: ", features);
@@ -3932,6 +4064,19 @@ var Arbiter = {
                 array.push(newMediaEntries[i]);
             }
         }
+    },
+                              
+    UpdateNewMediaProperty: function(updates) {
+        Arbiter.getProjectProperty("mediaToSend", function(key, value){
+            for (var layer in updates.layer) {
+                if (updates.layer.hasOwnProperty(layer)) {
+                    value.layer[layer] = updates.layer[layer];
+                }
+            }
+            Arbiter.setProjectProperty("mediaToSend", value);
+        }, function(key){
+            Arbiter.setProjectProperty("mediaToSend",updates);
+        }, true);
     },
 							  
 	SubmitAttributes: function(){
