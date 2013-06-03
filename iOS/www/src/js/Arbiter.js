@@ -848,10 +848,18 @@ var Arbiter = {
 					    	layers[i].strategies[0] &&
 					    	layers[i].strategies[0].save){
 
-                            layers[i].strategies[0].onCommit = layerSaveCallback;
-                        
-                            console.log('---- saving layer: ',  layers[i]);
-                            layers[i].strategies[0].save();
+                            (function(layer) {
+                                var originalCommitFunction = layer.strategies[0].onCommit;
+                                layer.strategies[0].onCommit = function(response) {
+                                    var args = Array.prototype.slice.call(arguments);
+                                    var returnValue = originalCommitFunction.apply(this,args);
+                                    layerSaveCallback(response);
+                                    return returnValue;
+                                };
+                            
+                                console.log('---- saving layer: ',  layers[i]);
+                                layer.strategies[0].save();
+                            })(layers[i]);
 						} else {
 							console.log('---- NOT saving layer: ', layers[i]);
 						}
@@ -1755,7 +1763,6 @@ var Arbiter = {
         var url = layer.protocol.url;
         var index = url.indexOf("geoserver/wfs");
         url = url.substring(0,index) + "file-service/services/document/upload";
-        console.log("Media URL: " + url);
         Arbiter.getProjectProperty("mediaToSend", function(key, value){
             var mediaLayer = value.layer[layer.name];
             if(mediaLayer != null && mediaLayer.length > 0) {
