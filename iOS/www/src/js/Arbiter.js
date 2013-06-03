@@ -802,24 +802,56 @@ var Arbiter = {
                         }
                     }
                     var syncedLayers = 0;
+                    var totalFailed = 0;
                     var mediaMap = {layer:{},};
                     var layerCallback = function(layer, failed) {
                         syncedLayers++;
                         mediaMap.layer[layer] = failed;
+                        totalFailed += failed.length;
+                        console.log("LAYER CALLBACK: layer:", layer," failed: ",failed);
                         if(syncedLayers === layersToSave) {
+                            console.log("UPDATING MEDIA: map:",mediaMap);
                             Arbiter.UpdateNewMediaProperty(mediaMap);
+                            if(totalFailed > 0) {
+                                alert("Vector data synchronized, but failed to send " + totalFailed + " media item(s).  Check connection and try again.");
+                            }
                         }
                     };
+                    
+                    var savedLayers = 0;
+                    var failedLayers = 0;
+                    var layerSaveCallback = function(response) {
+                        if(response.success && response.success()) {
+                            savedLayers++;
+                        } else {
+                            failedLayers++;
+                        }
+                        if(failedLayers + savedLayers === layersToSave) {
+                            if(failedLayers === 0) {
+                                for ( var i = 0; i < layers.length; i++) {
+                                    if( layers[i].strategies &&
+                                        layers[i].strategies.length &&
+                                        layers[i].strategies[0] &&
+                                        layers[i].strategies[0].save){
+                                    
+                                        Arbiter.SyncMedia(layers[i],layerCallback);
+                                    }
+                                }
+                            } else {
+                                alert(failedLayers + " layer(s) failed to synchronize.");
+                            }
+                        }
+                    }
 					for ( var i = 0; i < layers.length; i++) {
-						if( layers[i].strategies && 
+						if( layers[i].strategies &&
 					    	layers[i].strategies.length &&
 					    	layers[i].strategies[0] &&
 					    	layers[i].strategies[0].save){
 
-							console.log('---- saving layer: ',  layers[i]);
-						
-							layers[i].strategies[0].save();
-                            Arbiter.SyncMedia(layers[i].name,layerCallback);
+                            layers[i].strategies[0].onCommit = layerSaveCallback;
+                        
+                            console.log('---- saving layer: ',  layers[i]);
+                            layers[i].strategies[0].save();
 						} else {
 							console.log('---- NOT saving layer: ', layers[i]);
 						}
@@ -1720,30 +1752,35 @@ var Arbiter = {
 	},
     
     SyncMedia: function(layer,layerCallback) {
+        var url = layer.protocol.url;
+        var index = url.indexOf("geoserver/wfs");
+        url = url.substring(0,index) + "file-service/services/document/upload";
+        console.log("Media URL: " + url);
         Arbiter.getProjectProperty("mediaToSend", function(key, value){
-            var mediaLayer = value.layer[layer];
+            var mediaLayer = value.layer[layer.name];
             if(mediaLayer != null && mediaLayer.length > 0) {
                 var mediaCounter = 0;
                 var failedMedia = new Array();
                 var mediaCallback = function(success,media) {
                     mediaCounter++;
+                    console.log("MEDIA CALLBACK: success:", success," media: ",media);
                     if(success === false) {
                         failedMedia.push(media);
                     }
                     if(mediaCounter === mediaLayer.length) {
                         if(layerCallback) {
-                            layerCallback(layer,failedMedia);
+                            layerCallback(layer.name,failedMedia);
                         }
                     }
                 };
                 for(var i = 0; i < mediaLayer.length;i++) {
-                    Arbiter.SendMedia(mediaLayer[i],mediaCallback);
+                    Arbiter.SendMedia(url,mediaLayer[i],mediaCallback);
                 }
             }
         }, function(key){}, true);
     },
     
-    SendMedia: function(media,mediaCallback) {
+    SendMedia: function(url,media,mediaCallback) {
         window.requestFileSystem(LocalFileSystem.PERSISTENT, 0,
             function(fileSys) {
                 Arbiter.fileSystem.root.getFile("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media/" + media, {create: false, exclusive: false},
@@ -1758,7 +1795,7 @@ var Arbiter = {
                         options.params = params;
                         
                         var ft = new FileTransfer();
-                        ft.upload(fileEntry.fullPath, encodeURI("http://geoserver.rogue.lmnsolutions.com/file-service/services/document/upload"), function(response) {
+                        ft.upload(fileEntry.fullPath, encodeURI(url), function(response) {
                             console.log("Code = " + response.responseCode);
                             console.log("Response = " + response.response);
                             console.log("Sent = " + response.bytesSent);
@@ -1766,7 +1803,6 @@ var Arbiter = {
                                 mediaCallback(true);
                             }
                         }, function(error) {
-                            alert("Unable to transfer '" + media + "': FileTransferError Code = " + error.code);
                             console.log("upload error source " + error.source);
                             console.log("upload error target " + error.target);
                             if(mediaCallback) {
