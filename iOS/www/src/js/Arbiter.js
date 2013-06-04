@@ -948,12 +948,20 @@ var Arbiter = {
     
     insertIntoGeometryColumnTable: function(layer){
     	var insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
-		"f_geometry_column, geometry_type, srid) VALUES (?,?,?,?)";
+		"f_geometry_column, geometry_type, srid, enumeration) VALUES (?,?,?,?,?)";
+		
+		var enumString = "";
+		for(var type in layer.attributeTypes) {
+			if(layer.attributeTypes[type].restrictions) {
+				enumString += layer.attributes[type] + ":'" +
+				JSON.stringify(layer.attributeTypes[type].restrictions) + "' ";
+			}
+		}
     
-    	Cordova.transaction(Arbiter.currentProject.dataDatabase, insertGeometryColumnRowSql, [layer.featureType, layer.geomName, layer.geometryType, layer.srsName], 
+    	Cordova.transaction(Arbiter.currentProject.dataDatabase, insertGeometryColumnRowSql, [layer.featureType, layer.geomName, layer.geometryType, layer.srsName, enumString],
 				function(tx, res){ 
 					console.log("INSERT INTO geometry_columns"); 
-				}, function(e){ 
+				}, function(e){
 					console.log("Failed to INSERT INTO geometry_columns"); 
 				}
 		);
@@ -961,14 +969,17 @@ var Arbiter = {
     
     createFeatureTable: function(serverName, layer, layerName, projectIsOpen){
     	/*BEING USED IN TRANSACTION CALLBACK*/
+		console.log("createFeatureTable");
     	var server = Arbiter.currentProject.serverList[serverName];
     	
     	var attributeSql = "id integer primary key, fid text, " + layer.geomName + " text not null";
 		
 		for(var i = 0; i < layer.attributes.length; i++){
+			
 			attributeSql += ", '" + layer.attributes[i] + "' " + layer.attributeTypes[i].type;
-			if(layer.attributeTypes[i].notnull)
+			if(layer.attributeTypes[i].notnull) {
 				attributeSql += " not null";
+			}
 		}
 		
 		var createFeatureTableSql = "CREATE TABLE IF NOT EXISTS '" + layer.featureType + "'" +
@@ -993,7 +1004,7 @@ var Arbiter = {
 						}	
 					}else{
 						console.log("layerCount: " + Arbiter.layerCount);
-					 }
+					}
 				}else{
 					console.log("featureIncrement: " + featureIncrement);
 				}
@@ -2466,15 +2477,22 @@ var Arbiter = {
 			var geomName;
 			//var server = Arbiter.currentProject.serverList[serverName];
 			var serverLayer = serverList.layers[layername];
-			console.log("serverLayer: bugga", serverLayer);
 			if (res.rows.length) { // should only be 1 right now
-				console.log("geometry_columns: ", res.rows.item(0));
 				geomName = res.rows.item(0).f_geometry_column;
 
 				// get the attributes of the layer
 				var tableSelectSql = "PRAGMA table_info ('" + f_table_name + "');";
 
 				serverLayer.geomName = geomName;
+				
+				var enumData = null;
+				//if theres an enumeration then there are one or more attributes with value restirctions,
+				//so we'll store this stuff to use in the next transaction callback
+				if(res.rows.item(0).enumeration) {
+					enumData = res.rows.item(0).enumeration;
+				}
+				
+				
 				serverLayer.srsName = res.rows.item(0).srid;
 				serverLayer.geometryType = res.rows.item(0).geometry_type;
 
@@ -2484,10 +2502,27 @@ var Arbiter = {
 						attr = res.rows.item(h);
 
 						if (attr.name != 'fid' && attr.name != geomName && attr.name != 'id'){
+							var valueRestrictions = null;
+					
+							if(enumData) {
+								if(enumData.indexOf(attr.name) != -1) {
+									var indexA = enumData.indexOf(attr.name);
+									var indexB = indexA;
+								
+									//this will get the beginning of the json string with the restriction data...
+									indexA = enumData.indexOf("'", indexA) + 1;
+									//and the end of said string
+									indexB = enumData.indexOf("'", indexA);
+									var enumString = enumData.substring(indexA, indexB);
+									
+									valueRestrictions = JSON.parse(enumString);
+								}
+							}
 							serverLayer.attributes.push(attr.name);
 							serverLayer.attributeTypes.push({
 								type: attr.type,
-								notnull: attr.notnull
+								notnull: attr.notnull,
+								restrictions: valueRestrictions
 							});
 						}
 					}
@@ -3088,10 +3123,9 @@ var Arbiter = {
 	},
 	
 	createDataTables: function(){
-		
 		var createGeometryColumnsSql = "CREATE TABLE IF NOT EXISTS geometry_columns (f_table_name text not null, " +
-		"f_geometry_column text not null, geometry_type text not null, srid text not null, " +
-		"PRIMARY KEY(f_table_name, f_geometry_column));";
+		"f_geometry_column text not null, geometry_type text not null, srid text not null, enumeration text, ";
+		createGeometryColumnsSql += "PRIMARY KEY(f_table_name, f_geometry_column));";
 		
 		Cordova.transaction(Arbiter.currentProject.dataDatabase, createGeometryColumnsSql, [],
 			function(tx, res){ console.log("createGeometryColumnsSql win!"); }, function(e){ console.log("Error createGeometryColumnsSql - " + e); });
@@ -3166,7 +3200,9 @@ var Arbiter = {
 			
 			var request = new OpenLayers.Request.GET({
 				url: serverInfo.url + "/wfs?service=wfs&version=1.0.0&request=DescribeFeatureType&typeName=" + typeName,
-				Authorization : 'Basic ' + encodedCredentials,
+				headers: {
+					Authorization : 'Basic ' + encodedCredentials
+				},
 				callback: function(response){
 					console.log('response for get info on wms: ', response);
 					var obj = describeFeatureTypeReader.read(response.responseText);
@@ -3207,8 +3243,8 @@ var Arbiter = {
 								//we need them persistent so we can check manually
 								attributeTypes.push({
 									type: property.type.substr(4),
-									notnull: !property.nillable//,
-									//restrictions: valueRestrictions
+									notnull: !property.nillable,
+									restrictions: valueRestrictions
 								});
 								console.log("attributeType: ", attributeTypes);
 							}
@@ -4298,11 +4334,6 @@ var Arbiter = {
 			var layerNickname = selectedFeature.layer.name.substring(0, index);
 			var layerIndex = 0;
 			
-			//if the user has two or more layers with the same name from different servers, this will just pick the first one,
-				//which isnt necessarily correct
-			console.log("finding active layer");
-			
-			console.log("layerNickname ", layerNickname);
 			for(var layerObj in Arbiter.metaLayersList) {
 				console.log("layerObj ", Arbiter.metaLayersList[layerObj]);
 				if(layerNickname === Arbiter.metaLayersList[layerObj].nickname) {
@@ -4314,13 +4345,7 @@ var Arbiter = {
 			var activeLayer = Arbiter.metaLayersList[layerIndex];
             var hasMedia = false;
             mediaEntries = null;
-			console.log("selectedFeature.attributes: ", selectedFeature.attributes);
 			for(var type in selectedFeature.layer.attributeTypes){
-				
-				console.log('type: ', type);
-                              
-
-				
 				var typeInfo = Arbiter.getInputType(type);
 				var attrData = '';
 			
@@ -4344,15 +4369,16 @@ var Arbiter = {
                 }
 				
 				console.log("attrData: ", attrData);
-				if(attrData.restriction && attrData.restriction.enumeration) {
+				console.log("typeInfo: ", typeInfo);
+				if(attrData && attrData.restrictions && attrData.restrictions.enumeration) {
 					//create dropdown menu
 					li += '<li style="padding:5px; border-radius: 4px;">';
 						li += '<div>';
 							li += '<label for="' + type + '-input">' + type + '</label>';
 							li += '<select name="' + type + '-input" id="' + type + '-input">';
 							
-								for(var value in attrData.restriction.enumeration) {
-									var objValue = attrData.restriction.enumeration[value];
+								for(var value in attrData.restrictions.enumeration) {
+									var objValue = attrData.restrictions.enumeration[value];
 									
 									//populate dropdown
 									li += '<option value="' + objValue + '"';
@@ -4387,102 +4413,6 @@ var Arbiter = {
 											  	'<span style="color:red;font-size:24px;">&#x2716;</span>' +
 												'<span style="color:red;">Save Failed</span>' +
 											'</div>');
-			
-			//old implementaion
-//			var activeLayer = Arbiter.metaLayersList[layerIndex];
-//			
-//			console.log("got active layer ", activeLayer);
-//			
-//			var postRequest = '<DescribeFeatureType ' +
-//				'service="WFS" ' +
-//				'version="1.0.0" ' +
-//				'xmlns="http://www.opengis.net/wfs" ' +
-//				'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
-//				'xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.0.0/WFS-basic.xsd"> ' +
-//				'<TypeName>' + activeLayer.typeName + '</TypeName> ' +
-//				'</DescribeFeatureType>';
-//			console.log("created post request");
-//			
-//			var encodedCredentials = $.base64.encode(activeLayer.username + ':' + activeLayer.password);
-//			
-//			console.log("encoded credentials");
-//			
-//			var request = new OpenLayers.Request.POST({
-//				url: activeLayer.url + "/wfs",
-//				data: postRequest,
-//				headers: {
-//					'Content-Type': 'text/xml;charset=utf-8',
-//					'Authorization': 'Basic ' + encodedCredentials
-//				},
-//				callback: function(response){
-//					var obj = describeFeatureTypeReader.read(response.responseText);
-//					
-//					//HACK  assuming only one feature type
-//					for(var type in obj.featureTypes[0].properties) {
-//						var attrType = obj.featureTypes[0].properties[type];
-//						
-//						console.log("type ", attrType);
-//						console.log("obj.featureTypes[0].properties ", obj.featureTypes[0].properties);
-//						console.log("selectedFeature.attributes ", selectedFeature.attributes);
-//						console.log("selectedFeature.attributes[type] ", selectedFeature.attributes[attrType.name]);
-//						
-//						if(attrType.type.indexOf("gml:") >= 0) {
-//							continue;
-//						}
-//						
-//						if(selectedFeature.attributes[attrType.name]) {
-//							currentAttrValue = selectedFeature.attributes[attrType.name];
-//						} else {
-//							currentAttrValue = '';
-//						}
-//						
-//						if(attrType.restriction && attrType.restriction.enumeration) {
-//							//create dropdown menu
-//							li += '<li style="padding:5px; border-radius: 4px;">';
-//								li += '<div>';
-//									li += '<label for="' + attrType.name + '-input">' + attrType.name + '</label>';
-//									li += '<select name="' + attrType.name + '-input" id="' + attrType.name + '-input">';
-//									
-//										for(var value in attrType.restriction.enumeration) {
-//											var objValue = attrType.restriction.enumeration[value];
-//											
-//											//populate dropdown
-//											li += '<option value="' + objValue + '"';
-//											li += (currentAttrValue == objValue) ? ' selected="true">' : '>';
-//											li += objValue + '</option>';
-//										}
-//										
-//									li += '</select>';
-//								li += '</div>';
-//							li += '</li>';
-//						}
-//						else {
-//							//create boring text box
-//							var typeInfo = Arbiter.getInputType(attrType.name);
-//							
-//							li += "<li style='padding:5px; border-radius: 4px;'><div>";
-//							li += "<label for='" + attrType.name + "-input'>";
-//							li += attrType.name;
-//							li += "</label>";
-//							li += "<input name='' ";
-//							li += "autocorrect='off' autocapitalize='off' ";
-//							li += "id='" + attrType.name + "-input' placeholder='" + typeInfo.placeholder + "' value='";
-//							li += Arbiter.encodeChars(currentAttrValue);
-//							li += "' type='" + typeInfo.type + "'></div></li>";
-//						}
-//					}
-//					
-//					$("ul#attribute-list").empty().append(li).listview("refresh");
-//													
-//					$("#attributeMenuContent").append('<div id="saveAttributesFailed" style="display:none;">' +
-//														'<span style="color:red;font-size:24px;">&#x2716;</span>' +
-//														'<span style="color:red;">Save Failed</span>' +
-//													'</div>');
-//				},
-//				failure: function(response){
-//					Arbiter.error('describeFeatureType failed');
-//				}
-//			});
 		}
 	},
                               
@@ -4527,7 +4457,7 @@ var Arbiter = {
                 } else {
                     Arbiter.AddMediaEntry(index,li);
                 }
-            });
+		});
     },
 	
 	/*
