@@ -1830,30 +1830,34 @@ var Arbiter = {
             });
     },
     
-    DownloadMedia: function(media) {
+    DownloadMedia: function(url,media,mediaDownloadCallback) {
         for(var i = 0; i < media.length;i++) {
-            Arbiter.DownloadMediaEntry(media[i]);
+            Arbiter.DownloadMediaEntry(url,media[i],mediaDownloadCallback);
         }
     },
     
-    DownloadMediaEntry: function(entry) {
+    DownloadMediaEntry: function(url,entry,mediaDownloadCallback) {
         //only download if we don't have it
         window.requestFileSystem(LocalFileSystem.PERSISTENT, 0,
             function(fileSys) {
                 Arbiter.fileSystem.root.getFile("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media/" + entry, {create: false, exclusive: false},
-                    function(fileEntry) {/*do nothing*/}, function(error) {
+                    function(fileEntry) {
+                        mediaDownloadCallback(true);
+                    }, function(error) {
                         // download
                         Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media", {create: true, exclusive: false},
                             function(dir) {
                                 var fileTransfer = new FileTransfer();
-                                var uri = encodeURI("http://geoserver.rogue.lmnsolutions.com/file-service/services/document/download?blobKey=" + entry);
+                                var uri = encodeURI(url + entry);
                                 fileTransfer.download(uri,dir.fullPath + "/" + entry,
                                     function(result) {
                                         console.log("download complete: " + result.fullPath);
+                                        mediaDownloadCallback(true);
                                     }, function(transferError) {
                                         console.log("download error source " + transferError.source);
                                         console.log("download error target " + transferError.target);
                                         console.log("upload error code" + transferError.code);
+                                        mediaDownloadCallback(false);
                                     });
                             }, Arbiter.error);
                     });
@@ -3431,10 +3435,40 @@ var Arbiter = {
                         if(res.rows.item(i).name == "media") {
                             mediaColumn = true;
                         }
-					}
+                    }
 					
+					// count number of media items
+                    var numMedia = 0;
+                    if(mediaColumn === true) {
+                        for(i = 0; i < features.length;i++){
+                            var mediaAttribute = features[i].attributes["media"];
+                            if(mediaAttribute != null) {
+                                var featureMedia = JSON.parse(mediaAttribute);
+                                numMedia += featureMedia.length;
+                            }
+                        }
+                    }
 					
-					console.log("dtAttributes: ", dtAttributes);
+                    var numFinished = 0;
+                    var numFailed = 0;
+                    var mediaDownloadCallback = function(success) {
+                        numFinished++;
+                        if(success === false) {
+                            numFailed++;
+                        }
+                        if(numMedia === numFinished) {
+                            if(numFailed > 0) {
+                                alert(numFailed + " media items failed to download.");
+                            }
+                        }
+                    }
+                    
+                    var mediaURL = serverUrl + "/wfs";
+                    var index = mediaURL.indexOf("geoserver/wfs");
+                    mediaURL = mediaURL.substring(0,index) + "file-service/services/document/download?blobKey=";
+                                    console.log("media url: " + mediaURL);
+                    
+                    console.log("dtAttributes: ", dtAttributes);
 					for(i = 0; i < features.length;i++){
                         //GeoServer doesn't include the 'Z' when storing the dateTime, so add it manually
 						for(var j = 0; j < dtAttributes.length;j++){
@@ -3448,7 +3482,7 @@ var Arbiter = {
                             var mediaAttribute = features[i].attributes["media"];
                             if(mediaAttribute != null) {
                                 var featureMedia = JSON.parse(mediaAttribute);
-                                Arbiter.DownloadMedia(featureMedia);
+                                Arbiter.DownloadMedia(mediaURL,featureMedia,mediaDownloadCallback);
                             }
                         }
 					}
