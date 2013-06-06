@@ -1,5 +1,5 @@
 .ui-icon-glyphish-refresh  { border-radius: 0px !important; background:  url(images/glyphish/01-refresh.png) 50% 50% no-repeat !important;  width: 24px !important; height: 26px !important; }
-.ui-icon-glyphish-redo  { border-radius: 0px !important; background:  url(images/glyphish/02-redo.png) 50% 50% no-repeat !important;  width: 30px !important; height: 26px !important; }
+.ui-icon-glyphish-redo  { border-radius: 0px !important; background:  url(images/glyphish/02-redo.png) 50% 50% no-repeat !important;  width: 44px !important; height: 36px !important; }
 .ui-icon-glyphish-loopback  { border-radius: 0px !important; background:  url(images/glyphish/03-loopback.png) 50% 50% no-repeat !important;  width: 32px !important; height: 22px !important; }
 .ui-icon-glyphish-squiggle  { border-radius: 0px !important; background:  url(images/glyphish/04-squiggle.png) 50% 50% no-repeat !important;  width: 33px !important; height: 16px !important; }
 .ui-icon-glyphish-shuffle  { border-radius: 0px !important; background:  url(images/glyphish/05-shuffle.png) 50% 50% no-repeat !important;  width: 28px !important; height: 20px !important; }
@@ -11,7 +11,7 @@
 .ui-icon-glyphish-coffee  { border-radius: 0px !important; background:  url(images/glyphish/100-coffee.png) 50% 50% no-repeat !important;  width: 20px !important; height: 24px !important; }
 .ui-icon-glyphish-gameplan  { border-radius: 0px !important; background:  url(images/glyphish/101-gameplan.png) 50% 50% no-repeat !important;  width: 28px !important; height: 28px !important; }
 .ui-icon-glyphish-walk  { border-radius: 0px !important; background:  url(images/glyphish/102-walk.png) 50% 50% no-repeat !important;  width: 14px !important; height: 27px !important; }
-.ui-icon-glyphish-map  { border-radius: 0px !important; background:  url(images/glyphish/103-map.png) 50% 50% no-repeat !important;  width: 26px !important; height: 21px !important; }
+.ui-icon-glyphish-map  { border-radius: 0px !important; background:  url(images/glyphish/103-map.png) 50% 50% no-repeat !important;  width: 32px !important; height: 28px !important; }
 .ui-icon-glyphish-index-cards  { border-radius: 0px !important; background:  url(images/glyphish/104-index-cards.png) 50% 50% no-repeat !important;  width: 26px !important; height: 17px !important; }
 .ui-icon-glyphish-piano  { border-radius: 0px !important; background:  url(images/glyphish/105-piano.png) 50% 50% no-repeat !important;  width: 23px !important; height: 22px !important; }
 .ui-icon-glyphish-sliders  { border-radius: 0px !important; background:  url(images/glyphish/106-sliders.png) 50% 50% no-repeat !important;  width: 24px !important; height: 24px !important; }
@@ -31,7 +31,7 @@
 .ui-icon-glyphish-piggy-bank  { border-radius: 0px !important; background:  url(images/glyphish/119-piggy-bank.png) 50% 50% no-repeat !important;  width: 27px !important; height: 20px !important; }
 .ui-icon-glyphish-eye  { border-radius: 0px !important; background:  url(images/glyphish/12-eye.png) 50% 50% no-repeat !important;  width: 24px !important; height: 16px !important; }
 .ui-icon-glyphish-headphones  { border-radius: 0px !important; background:  url(images/glyphish/120-headphones.png) 50% 50% no-repeat !important;  width: 22px !important; height: 21px !important; }
-.ui-icon-glyphish-landscape  { border-radius: 0px !important; background:  url(images/glyphish/121-landscape.png) 50% 50% no-repeat !important;  width: 24px !important; height: 18px !important; }
+.ui-icon-glyphish-landscape  { border-radius: 0px !important; background:  url(images/glyphish/121-landscape.png) 50% 50% no-repeat !important;  width: 32px !important; height: 24px !important; }
 .ui-icon-glyphish-stats  { border-radius: 0px !important; background:  url(images/glyphish/122-stats.png) 50% 50% no-repeat !important;  width: 27px !important; height: 19px !important; }
 .ui-icon-glyphish-id-card  { border-radius: 0px !important; background:  url(images/glyphish/123-id-card.png) 50% 50% no-repeat !important;  width: 24px !important; height: 17px !important; }
 .ui-icon-glyphish-bullhorn  { border-radius: 0px !important; background:  url(images/glyphish/124-bullhorn.png) 50% 50% no-repeat !important;  width: 24px !important; height: 17px !important; }
@@ -103,7 +103,7 @@
 .ui-icon-glyphish-warning  { border-radius: 0px !important; background:  url(images/glyphish/184-warning.png) 50% 50% no-repeat !important;  width: 24px !important; height: 19px !important; }
 .ui-icon-glyphish-printer  { border-radius: 0px !important; background:  url(images/glyphish/185-printer.png) 50% 50% no-repeat !important;  width: 24px !important; height: 21px !important; }
 .ui-icon-glyphish-ruler  { border-radius: 0px !important; background:  url(images/glyphish/186-ruler.png) 50% 50% no-repeat !important;  width: 23px !important; height: 23px !important; }
-.ui-icon-glyphish-pencil  { border-radius: 0px !important; background:  url(images/glyphish/187-pencil.png) 50% 50% no-repeat !important;  width: 23px !important; height: 23px !important; }
+.ui-icon-glyphish-pencil  { border-radius: 0px !important; background:  url(images/glyphish/187-pencil.png) 50% 50% no-repeat !important;  width: 32px !important; height: 32px !important; }
 .ui-icon-glyphish-paint-roller  { border-radius: 0px !important; background:  url(images/glyphish/188-paint-roller.png) 50% 50% no-repeat !important;  width: 24px !important; height: 24px !important; }
 .ui-icon-glyphish-plant  { border-radius: 0px !important; background:  url(images/glyphish/189-plant.png) 50% 50% no-repeat !important;  width: 26px !important; height: 25px !important; }
 .ui-icon-glyphish-gear  { border-radius: 0px !important; background:  url(images/glyphish/19-gear.png) 50% 50% no-repeat !important;  width: 26px !important; height: 26px !important; }
@@ -170,9 +170,9 @@
 .ui-icon-glyphish-display  { border-radius: 0px !important; background:  url(images/glyphish/69-display.png) 50% 50% no-repeat !important;  width: 22px !important; height: 20px !important; }
 .ui-icon-glyphish-tv  { border-radius: 0px !important; background:  url(images/glyphish/70-tv.png) 50% 50% no-repeat !important;  width: 24px !important; height: 24px !important; }
 .ui-icon-glyphish-compass  { border-radius: 0px !important; background:  url(images/glyphish/71-compass.png) 50% 50% no-repeat !important;  width: 24px !important; height: 24px !important; }
-.ui-icon-glyphish-pin  { border-radius: 0px !important; background:  url(images/glyphish/72-pin.png) 50% 50% no-repeat !important;  width: 10px !important; height: 20px !important; }
+.ui-icon-glyphish-pin  { border-radius: 0px !important; background:  url(images/glyphish/72-pin.png) 50% 50% no-repeat !important;  width: 16px !important; height: 32px !important; }
 .ui-icon-glyphish-radar  { border-radius: 0px !important; background:  url(images/glyphish/73-radar.png) 50% 50% no-repeat !important;  width: 27px !important; height: 27px !important; }
-.ui-icon-glyphish-location  { border-radius: 0px !important; background:  url(images/glyphish/74-location.png) 50% 50% no-repeat !important;  width: 20px !important; height: 20px !important; }
+.ui-icon-glyphish-location  { border-radius: 0px !important; background:  url(images/glyphish/74-location.png) 50% 50% no-repeat !important;  width: 32px !important; height: 32px !important; }
 .ui-icon-glyphish-phone  { border-radius: 0px !important; background:  url(images/glyphish/75-phone.png) 50% 50% no-repeat !important;  width: 24px !important; height: 24px !important; }
 .ui-icon-glyphish-baby  { border-radius: 0px !important; background:  url(images/glyphish/76-baby.png) 50% 50% no-repeat !important;  width: 18px !important; height: 26px !important; }
 .ui-icon-glyphish-ekg  { border-radius: 0px !important; background:  url(images/glyphish/77-ekg.png) 50% 50% no-repeat !important;  width: 26px !important; height: 22px !important; }

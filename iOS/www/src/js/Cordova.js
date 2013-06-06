@@ -217,6 +217,7 @@ var Cordova = {
 		document.addEventListener("resume",				this.onResume,			false);
 		document.addEventListener("online",				this.onOnline,			false);
 		document.addEventListener("offline",			this.onOffline,			false);
+		document.addEventListener("backbutton",			this.onBackButton,		false);
 		  window.addEventListener("batterycritical",	this.onBatteryCritical,	false);
 		  window.addEventListener("batterylow",			this.onBatteryLow,		false);
 		  window.addEventListener("batterystatus",		this.onBatteryStatus,	false);
@@ -281,6 +282,12 @@ var Cordova = {
 	onBatteryStatus: function(info) {
 		if(application) {
 			//application.onBatteryStatus();
+		}
+	},
+	
+	onBackButton: function(info) {
+		if(application) {
+			application.onBackButton();
 		}
 	}
 };

@@ -4966,5 +4966,62 @@ var Arbiter = {
 	
 	onBatteryStatus: function(info) {
 		console.log("Arbiter: Battery Level " + info.level + "% isPlugged: " + info.isPlugged);
+	},
+	onBackButton: function(info) {
+		//this is going to get messy...
+		console.log("$.mobile.activePage.attr('id')", $.mobile.activePage.attr('id'));
+		switch($.mobile.activePage.attr('id')) {
+			case "idWelcomePage":
+				//Do nothing because theres no back button here
+				break;
+			case "idProjectsPage":
+				//Again, not really anywhere to go back to
+				break;
+			case "idNewProjectPage":
+				Arbiter.changePage_Pop("#idProjectsPage");
+				break;
+			case "idServersPage":
+				Arbiter.onBackFromServers();
+				break;
+			case "idLayersPage":
+				Arbiter.onBackFromLayers();
+				break;
+			case "idAreaOfInterestPage":
+				Arbiter.onClick_AOIBack();
+				break;
+			case "idMapPage":
+				Arbiter.changePage_Pop("#idProjectsPage");
+				break;
+			case "idArbiterSettingsPage":
+				if(awayFromMap == false) {
+					Arbiter.changePage_Pop("#idProjectsPage");
+				} else {
+					Arbiter.changePage_Pop("#idMapPage");
+				}
+				break;
+			case "idProjectSettingsPage":
+				Arbiter.onBackFromSettings();
+				break;
+			case "idServerSettingsPage":
+				Arbiter.onBackFromSettings();
+				break;
+			case "idLayerSettingsPage":
+				//Arbiter.changePage_Pop("#idProjectSettingsPage");
+				break;
+			case "idAddServerPage":
+				Arbiter.onClick_AddServerBack();
+				Arbiter.changePage_Pop("#idServerSettingsPage");
+				break;
+			case "idEditServerPage":
+				Arbiter.onClick_EditServerBack();
+				Arbiter.changePage_Pop("#idServerSettingsPage");
+				break;
+			case "idAddLayerPage":
+				Arbiter.changePage_Pop("#idLayersPage");
+				break;
+			case "idLanguagePage":
+				Arbiter.changePage_Pop("#idArbiterSettingsPage");
+				break;
+		}
 	}
 };
