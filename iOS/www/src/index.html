@@ -177,7 +177,7 @@
 			
 			<!-- Content -->
 			<div data-role="content" class="ServersPageContent" id='idServersPageContent' style="overflow:scroll;">
-				<a id="idAddServerButton" onClick="Arbiter.populateAddServerDialog()"><input type="submit" value="Add a Server" data-mini="true"></a>
+				<a id="idAddServerButton" onClick="Arbiter.populateAddServerDialog()"><input type="submit" value="Add a Server" data-mini="true" data-localize="button.addServer"></a>
 				<div id="idServersList"></div>
 			</div>
 			<!-- /Content -->
@@ -216,7 +216,7 @@
 			
 			<!-- Content -->
 			<div data-role="content" class="LayerSettingsPageContent" id='idLayerSettingsPageContent'>
-				<a onClick="Arbiter.onAddLayerPage()" id="idLayerSettingsAddLayer"><input type="submit" value="Add a layer" data-mini="true"></a>
+				<a onClick="Arbiter.onAddLayerPage()" id="idLayerSettingsAddLayer"><input type="submit" value="Add a layer" data-mini="true" data-localize="button.addLayer"></a>
 				
 				<div id="idLayerListContainer">
 					<ul data-role="listview" id="layerList" data-id="dataID_layerList">
@@ -224,7 +224,7 @@
 				</div>
 				
 				<div data-role="fieldcontain">
-					<label for="baselayerselect" style="text-align: center;">Choose base layer</label>
+					<label for="baselayerselect" style="text-align: center;" data-localize="label.chooseABaseLayer">Choose base layer</label>
 					<select name="baselayerselect" id="baselayerselect">
 					</select>
 				</div>				
@@ -304,7 +304,7 @@
 				<div id="idEditorMenu" style="position:absolute;z-index:2000;">
 					<div data-role="content" style="padding: 5px">
 						<ul id="editor-layer-list" data-role="listview" data-mini="true" style="padding:20px;"></ul>
-						<div data-role="button" onClick="Arbiter.ToggleEditorMenu()">Done</div>
+						<div data-role="button" onClick="Arbiter.ToggleEditorMenu()" data-localize="button.done">Done</div>
 					</div>
 				</div>
 				
@@ -312,8 +312,8 @@
 					<div data-role="content" id="attributeMenuContent">
 						<ul id="attribute-list" data-role="listview" data-mini="true" style="padding:20px;"></ul>
 					</div>
-					<input id="idAttrSave" type="submit" value="Save" data-mini="true" onClick="Arbiter.SubmitAttributes()">
-					<input type="submit" value="Cancel" data-mini="true" onClick="Arbiter.ToggleAttributeMenu()">
+					<input id="idAttrSave" type="submit" value="Save" data-mini="true" data-localize="button.save" onClick="Arbiter.SubmitAttributes()">
+					<input type="submit" value="Cancel" data-mini="true" data-localize="button.cancel" onClick="Arbiter.ToggleAttributeMenu()">
 				</div>
                 
                 <div id="idMediaPanel" style="position:absolute;z-index:2002;">
@@ -321,10 +321,10 @@
                         <ul id="media-list" data-role="listview" data-mini="true" style="padding:5px;"></ul>
                     </div>
                     <div id="mediaPanelControls">
-                        <input type="submit" value="Add Media From Camera" data-mini="true" onClick="Arbiter.CameraPicker()">
-                        <input type="submit" value="Add Media From Library" data-mini="true" onClick="Arbiter.LibraryPicker()">
-                        <input id="idMediaSave" type="submit" value="Accept" data-mini="true" onClick="Arbiter.SubmitMedia()">
-                        <input type="submit" value="Cancel" data-mini="true" onClick="Arbiter.ToggleMediaPanel()">
+                        <input type="submit" value="Add Media From Camera" data-mini="true" data-localize="button.addMediaCamera" onClick="Arbiter.CameraPicker()">
+                        <input type="submit" value="Add Media From Library" data-mini="true" data-localize="button.addMediaLibrary" onClick="Arbiter.LibraryPicker()">
+                        <input id="idMediaSave" type="submit" value="Accept" data-mini="true" data-localize="button.accept" onClick="Arbiter.SubmitMedia()">
+                        <input type="submit" value="Cancel" data-mini="true" data-localize="button.cancel" onClick="Arbiter.ToggleMediaPanel()">
                     </div>
                 </div>
                 
@@ -332,8 +332,8 @@
                     <div data-role="content" id="mediaViewerContent">
                     </div>
                     <div id="mediaViewerControls">
-                        <a id="idDeleteMediaButton" type="submit" data-mini="true" onClick="Arbiter.RemoveMedia()">Delete</a>
-                        <a type="submit" data-mini="true" onClick="Arbiter.ToggleMediaViewer()">Cancel</a>
+                        <a id="idDeleteMediaButton" type="submit" data-mini="true" data-localize="button.delete" onClick="Arbiter.RemoveMedia()">Delete</a>
+                        <a type="submit" data-mini="true" data-localize="button.cancel" onClick="Arbiter.ToggleMediaViewer()">Cancel</a>
                     </div>
                 </div>
 				
@@ -408,8 +408,8 @@
 			
 			<!-- Content -->
 			<div data-role="content" class="ProjectSettingsPageContent" id='idProjectSettingsPageContent'>
-				<a onClick="Arbiter.gotoPageIfOnline('#idAreaOfInterestPage')"><input type="submit" value="Area Of Interest" data-mini="true"></a>
-				<a onClick="Arbiter.gotoPageIfOnline('#idLayersPage')"><input type="submit" value="Layers" data-mini="true"></a>
+				<a onClick="Arbiter.gotoPageIfOnline('#idAreaOfInterestPage')"><input type="submit" value="Area Of Interest" data-localize="page.area" data-mini="true"></a>
+				<a onClick="Arbiter.gotoPageIfOnline('#idLayersPage')"><input type="submit" value="Layers" data-localize="page.layers" data-mini="true"></a>
 				<!--
 				<a href="#idAreaOfInterestPage" data-icon="gear"><div data-localize="footer.arbiter">Area Of Interest</div></a>
 				-->
@@ -472,7 +472,7 @@
 			
 			<!-- Content -->
 			<div data-role="content" class="LayerSettingsPageContent" id='idLayerSettingsPageContent'>
-				<a href="#idAddLayerPage" id="idLayerSettingsAddLayer"><input type="submit" value="Add a layer" data-mini="true"></a>
+				<a href="#idAddLayerPage" id="idLayerSettingsAddLayer"><input type="submit" value="Add a layer" data-localize="button.addLayer" data-mini="true"></a>
 				<div id="idLayerSettingsList"></div>		
 			</div>
 		</div>
@@ -598,7 +598,7 @@
 				</div>
 				
 				<div id="idDeleteLayer" data-role="fieldcontain">
-					<a id="idDeleteLayerButton" data-role="button">DELETE</a>
+					<a id="idDeleteLayerButton" data-role="button" data-localize="button.delete">DELETE</a>
 				</div>
 			</div>
 			
@@ -648,7 +648,7 @@
                 </ul>
             </div>
 			<div data-role="content" style="padding: 15px">
-				<input type="submit" value="Save" data-mini="true" onClick="Arbiter.SubmitAttributes()">
+				<input type="submit" value="Save" data-mini="true" data-localize="button.save" onClick="Arbiter.SubmitAttributes()">
 			</div>
         </div>
 		

@@ -22,8 +22,16 @@
 		"edit": "Edit",
 		"add" : "Add",
 		"done" : "Done",
-	       "map" : "Map",
-               "projects" : "Projects"
+        "cancel" : "Cancel",
+        "map" : "Map",
+        "save" : "Save",
+        "delete" : "Delete",
+        "accept" : "Accept",
+        "projects" : "Projects",
+        "addServer" : "Add a Server",
+        "addLayer" : "Add a Layer",
+        "addMediaCamera" : "Add Media From Camera",
+        "addMediaLibrary" : "Add Media From Library"
 	},
 	"label" : {
 		"name": "Name your Project *",
@@ -35,7 +43,7 @@
 		"chooseAServer": "Choose a server...",
 		"chooseALayer": "Choose a layer...",
 		"chooseABaseLayer": "Choose a base layer...",
-		"noProjects": "There are currently no projects. You can created a new project by clicking the button at the bottom of the page.",
+		"noProjects": "There are currently no projects. You can create a new project by clicking the button at the bottom of the page.",
 		"selectProject": "Select a project to begin working",
 		"selectAOI": "Pinch and Drag the map to show the area that you want to work in."
 	},
@@ -62,5 +70,22 @@
 	"feature": {
 		"name": "Name",
 		"location": "Location"
-	}
+	},
+    "alert": {
+        "serverInUse": "This server is in use by one or more projects.",
+        "locationNotAvailable": "Location not available... Please check that Location Services are on for Arbiter.",
+        "mediaFailed": "Vector data synchronized, but failed to send {0} media item(s).  Check connection and try again.",
+        "layersFailed": "{0} layer(s) failed to synchronize.",
+        "mediaNotFound": "Unable to transfer '{0}': File not found locally.",
+        "mediaFileSystem": "Unable to transfer '{0}': Could not acquire file system.",
+        "noCamera": "Unable to use the camera for this device.",
+        "noLibrary": "Unable to access the photo library on this device.",
+        "unableToCopy": "Unable to copy media to the project directory.",
+        "onlyAvailableOnline": "This functionality is only available when the device has network connectivity indicated by a green sync button on the lower left corner of the map",
+        "serverNotResponding": "Could not connect\nServer not responding",
+        "checkURL": "Could not connect\nEnsure URL was entered correctly and server is online",
+        "performFullSync": "Please perform a full sync by pressing and holding the sync botton to pull down the new tiles.",
+        "serverNotFound": "Could not find server",
+        "mediaDownloadFailed": "{0} media items failed to download."
+    }
 }

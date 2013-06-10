@@ -109,6 +109,19 @@ var LanguageType = {
 	PORTUGUESE:	{locale: "pt", name: "Portuguese", welcome: "Bem-vindo"}
 };
 
+//first, checks if it isn't implemented yet
+if (!String.prototype.format) {
+    String.prototype.format = function() {
+        var args = arguments;
+        return this.replace(/{(\d+)}/g, function(match, number) {
+                            return typeof args[number] != 'undefined'
+                            ? args[number]
+                            : match
+                            ;
+                            });
+    };
+}
+
 var isFirstTime = true;
 var CurrentLanguage = LanguageType.ENGLISH;
 
@@ -294,7 +307,7 @@ var Arbiter = {
 																	serverInUse = false;
 																} else {
 																	serverInUse = true;
-																	alert("This server is in use by one or more projects");
+																	alert(Arbiter.localizeAlert("This server is in use by one or more projects","serverInUse"));
 																}
 															}
 														
@@ -736,7 +749,7 @@ var Arbiter = {
 				map.setCenter(center);
 				
 			}, function(error){
-				alert("Location not available... Please check that Location Services are on for Arbiter");
+				alert(Arbiter.localizeAlert("Location not available... Please check that Location Services are on for Arbiter.","locationNotAvailable"));
 			});
 		});
 		
@@ -754,7 +767,7 @@ var Arbiter = {
 				aoiMap.setCenter(center);
 				
 			}, function(error){
-				alert("Location not available... Please check that Location Services are on for Arbiter");
+				alert(Arbiter.localizeAlert("Location not available... Please check that Location Services are on for Arbiter.","locationNotAvailable"));
 			});
 		});
 		
@@ -813,7 +826,7 @@ var Arbiter = {
                             console.log("UPDATING MEDIA: map:",mediaMap);
                             Arbiter.UpdateNewMediaProperty(mediaMap);
                             if(totalFailed > 0) {
-                                alert("Vector data synchronized, but failed to send " + totalFailed + " media item(s).  Check connection and try again.");
+                                alert(Arbiter.localizeAlert("Vector data synchronized, but failed to send {0} media item(s).  Check connection and try again.","mediaFailed").format(totalFailed));
                             }
                         }
                     };
@@ -833,12 +846,12 @@ var Arbiter = {
                                         layers[i].strategies.length &&
                                         layers[i].strategies[0] &&
                                         layers[i].strategies[0].save){
-                                    
+                            
                                         Arbiter.SyncMedia(layers[i],layerCallback);
                                     }
                                 }
                             } else {
-                                alert(failedLayers + " layer(s) failed to synchronize.");
+                                alert(Arbiter.localizeAlert("{0} layer(s) failed to synchronize.","layersFailed").format(failedLayers));
                             }
                         }
                     }
@@ -1828,13 +1841,13 @@ var Arbiter = {
                             }
                         }, options);
                     }, function(error) {
-                        alert("Unable to transfer '" + media + "': File not found locally.");
+                        alert(Arbiter.localizeAlert("Unable to transfer '{0}': File not found locally.","mediaNotFound").format(media));
                         if(mediaCallback) {
                             mediaCallback(false,media);
                         }
                     });
             }, function(error) {
-                alert("Unable to transfer '" + media + "': Could not acquire file system.");
+                alert(Arbiter.localizeAlert("Unable to transfer '{0}': Could not acquire file system.","mediaFileSystem").format(media));
                 if(mediaCallback) {
                     mediaCallback(false,media);
                 }
@@ -1992,7 +2005,7 @@ var Arbiter = {
     onCameraFail: function(message) {
         if(message != "no image selected") {
             setTimeout(function() {
-                   alert("Unable to use the camera for this device.");
+                   alert(Arbiter.localizeAlert("Unable to use the camera for this device.","noCamera"));
             }, 0);
         }
     },
@@ -2030,7 +2043,7 @@ var Arbiter = {
     onLibraryFail: function(message) {
         if(message != "no image selected") {
             setTimeout(function() {
-                   alert("Unable to access the photo library on this device.");
+                   alert(Arbiter.localizeAlert("Unable to access the photo library on this device.","noLibrary"));
             }, 0);
         }
     },
@@ -2085,7 +2098,7 @@ var Arbiter = {
     },
     
     copyFail: function(error) {
-        alert("Unable to copy media to the project directory.");
+        alert(Arbiter.localizeAlert("Unable to copy media to the project directory.","unableToCopy"));
     },
 	
 	showMessageOverlay: function(title, message) {
@@ -2155,7 +2168,7 @@ var Arbiter = {
 		if (Arbiter.isOnline) {
 			Arbiter.changePage_Pop(pageId);
 		} else {
-			alert('This functionality is only available when the device has network connectivity indicated by a green sync button on the lower left corner of the map');
+			alert(Arbiter.localizeAlert("This functionality is only available when the device has network connectivity indicated by a green sync button on the lower left corner of the map","onlyAvailableOnline"));
 		}
 	},
 	
@@ -2207,6 +2220,21 @@ var Arbiter = {
 
 		Arbiter.changePage_Pop(jqAddServerPage);
 	},
+    
+    localizeAlert: function(defaultValue,localizationKey) {
+        if(localizationKey) {
+            if($.localize.data) {
+                if($.localize.data["locale/Arbiter"]) {
+                    if($.localize.data["locale/Arbiter"].alert) {
+                        if($.localize.data["locale/Arbiter"].alert[localizationKey]) {
+                            return $.localize.data["locale/Arbiter"].alert[localizationKey];
+                        }
+                    }
+                }
+            }
+        }
+        return defaultValue;
+    },
 	
 	PopulateServersList: function() {
 		//Fill the servers list (id=idServersList) with the ones that are available.
@@ -2833,19 +2861,19 @@ var Arbiter = {
             timeout: 5000,
             error: function(jqXHR, textStatus, errorThrown) {
                if(errorThrown == "timeout") {
-                    alert("Could not connect\nServer not responding");
+                    alert(Arbiter.localizeAlert("Could not connect\nServer not responding","serverNotResponding"));
                }
                if(errorThrown == "Not Found") {
                     $.ajax({type: "POST", url: url + "/j_spring_security_check", data: {username: username, password: password},
                         timeout: 5000, success: function(data, textStatus, jqXHR) {
                            	Arbiter.checkCacheControl(jqXHR, args);},
                            	error: function(jqXHR, textStatus, errorThrown) {
-                            	alert("Could not find server");
+                            	alert(Arbiter.localizeAlert("Could not find server","serverNotFound"));
                            	}
                     });
                }
                else {
-                    alert("Could not connect\nEnsure URL was entered correctly and server is online");
+                    alert(Arbiter.localizeAlert("Could not connect\nEnsure URL was entered correctly and server is online","checkURL"));
                }
             },
             success: function(data, textStatus, jqXHR) {
@@ -3324,7 +3352,7 @@ var Arbiter = {
 					baseLayer = Arbiter.createBaseLayer(Arbiter.currentProject.baseLayerInfo.servername, Arbiter.currentProject.baseLayerInfo.layernickname, true);
 					map.addLayer(baseLayer);
 					
-					alert('please perform a full sync by pressing and holding the sync botton to pull down the new tiles');
+					alert(Arbiter.localizeAlert("Please perform a full sync by pressing and holding the sync botton to pull down the new tiles.","performFullSync"));
 				}
 				
 				Arbiter.changePage_Pop(div_ProjectSettingsPage);
@@ -3494,7 +3522,7 @@ var Arbiter = {
                         }
                         if(numMedia === numFinished) {
                             if(numFailed > 0) {
-                                alert(numFailed + " media items failed to download.");
+                                alert(Arbiter.localizeAlert("{0} media items failed to download.","mediaDownloadFailed").format(numFailed));
                             }
                         }
                     }
