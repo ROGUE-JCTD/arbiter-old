@@ -86,7 +86,7 @@ startCachingTiles: function(successCallback) {
 		return;
 	}
 	
-	Arbiter.setMessageOverlay("Caching Tiles", "Queuing Request");
+	Arbiter.setMessageOverlay(Arbiter.localizeString("Caching Tiles","label","cachingTiles"), Arbiter.localizeString("Queuing Request","label","queuingRequest"));
 	
 	var layer = map.baseLayer;
 
@@ -111,7 +111,7 @@ startCachingTiles: function(successCallback) {
 
 	map.zoomToExtent(caching.extent, true);
 	
-	Arbiter.setMessageOverlay("Caching Tiles", "Will Download " + caching.counterMax + " Tiles");
+	Arbiter.setMessageOverlay(Arbiter.localizeString("Caching Tiles","label","cachingTiles"), Arbiter.localizeString("Will Download {0} Tiles","label","willDownloadTiles").format(caching.counterMax));
 	TileUtil.serviceCacheRequests();
 },
 
@@ -132,7 +132,7 @@ cachingComplete: function(){
     console.log(caching);
 	
     if (caching.counterDownloadFailed > 0){
-    	var msg = "Tile caching completed but " + caching.counterDownloadFailed + " of " + caching.counterMax + " tiles failed to download. Recache if possible."; 
+    	var msg = Arbiter.localizeString("Tile caching completed but {0} of {1} tiles failed to download. Recache if possible.","label","tilesFailed").format(caching.counterDownloadFailed, caching.counterMax);
 		alert(msg);
 		Arbiter.warning(msg);
 	}
@@ -195,16 +195,16 @@ serviceCacheRequests: function(){
 cacheTiles: function(successCallback, errorCallback){
 	
 	if (typeof caching !== 'undefined') {
-		Arbiter.warning("Tile Caching already in progress. Aborting new request");
+		Arbiter.warning(Arbiter.localizeString("Tile Caching already in progress. Aborting new request.","label","cachingInProgress"));
 		return;
 	} 
 	
-	Arbiter.showMessageOverlay("Caching Tiles");
+	Arbiter.showMessageOverlay(Arbiter.localizeString("Caching Tiles","label","cachingTiles"));
 
 	//-- make sure user wants to clear cache and then download tiles after 
 	//   telling them how many tiles will be downloaded 
 	var count = TileUtil.queueCacheRequests(Arbiter.currentProject.aoi, true /* only count the tiles do not queue yet */);
-	var okay = confirm("Clear cache and download " + count + " tiles?");
+	var okay = confirm(Arbiter.localizeString("Clear cache and download {0} tiles?","label","clearCache").format(count));
 	
 	if (!okay) {
 		console.log("-- cache cancelled by user");
@@ -461,7 +461,7 @@ onUpdateCachingDownloadProgress: function(){
 	*/
 
 	var percent = Math.round(caching.counterDownloaded/caching.counterMax * 100);
-	Arbiter.setMessageOverlay("Caching Tiles", "Downloaded " + percent + "%");
+	Arbiter.setMessageOverlay(Arbiter.localizeString("Caching Tiles","label","cachingTiles"), Arbiter.localizeString("Downloaded: ","label","downloaded") + percent + "%");
 
 	if (TileUtil.debugProgress) {
 		console.log("onUpdateCachingDownloadProgress: " + percent + ". counterDownloaded: " + caching.counterDownloaded + ", counterMax: " + caching.counterMax);
@@ -935,7 +935,7 @@ clearCache : function(tileset, successCallback, vDb) {
 		console.log("---- TileUtil.clearCache");
 	}	
 	
-	Arbiter.setMessageOverlay("Caching Tiles", "Removing Tiles");
+	Arbiter.setMessageOverlay(Arbiter.localizeString("Caching Tiles","label","cachingTiles"), Arbiter.localizeString("Removing Tiles","label","removingTiles"));
 
 	
 	var op = function(tx){
@@ -949,7 +949,7 @@ clearCache : function(tileset, successCallback, vDb) {
 				var removeCounterCallback = function() {
 					removeCounter += 1;
 					var percent = Math.round(removeCounter/res.rows.length * 100);
-					Arbiter.setMessageOverlay("Caching Tiles", "Removed " + percent + "%");
+					Arbiter.setMessageOverlay(Arbiter.localizeString("Caching Tiles","label","cachingTiles"), Arbiter.localizeString("Removed: ","label","removed") + percent + "%");
 
 					if (TileUtil.debug) {
 						console.log("removeCounter: " + removeCounter + ", percent cleared: " + percent);

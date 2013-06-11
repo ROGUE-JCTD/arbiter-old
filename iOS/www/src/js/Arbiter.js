@@ -508,10 +508,10 @@ var Arbiter = {
 			
 			var currentText = $(this).find('.ui-btn-text');
 			
-			if(currentText.text() == "Edit"){
-				currentText.text('Done');
+			if(currentText.text() == Arbiter.localizeString("Edit","button","edit")){
+				currentText.text(Arbiter.localizeString("Done","button","done"));
 			}else{
-				currentText.text('Edit');
+				currentText.text(Arbiter.localizeString("Edit","button","edit"));
 			}
 		});
 		
@@ -662,7 +662,7 @@ var Arbiter = {
 				Arbiter.addLayersOnServerToLayerDropdown(serverName);
 				Arbiter.enableLayerSelectAndNickname();
 			}else{
-				jqLayerSelect.html('<option value="" data-localize="label.chooseALayer">Choose a layer...</option>');
+				jqLayerSelect.html("<option value=\"\" data-localize=\"label.chooseALayer\">" + Arbiter.localizeString("Choose a layer...","label","chooseALayer") + "</option>");
 				jqLayerSelect.selectmenu('refresh', true);
 				jqLayerNickname.val('');
 				Arbiter.disableLayerSelectAndNickname();
@@ -2145,14 +2145,14 @@ var Arbiter = {
 		//transitions are funny with current layout
 		if(!projectDeleteButtons.is(':visible')){
 			projectDeleteButtons.css('display', 'block');
-			editButton.text('Done');
+			editButton.text(Arbiter.localizeString("Done","button","done"));
 		}else{
 			$('.edit-project-name').each(function(index){
 				Arbiter.cancelEditProject(false, $(this).prev());
 			});
 			
 			projectDeleteButtons.css('display', 'none');
-			editButton.text('Edit');
+			editButton.text(Arbiter.localizeString("Edit","button","edit"));
 		}
 	},
 	
@@ -2228,6 +2228,21 @@ var Arbiter = {
                     if($.localize.data["locale/Arbiter"].alert) {
                         if($.localize.data["locale/Arbiter"].alert[localizationKey]) {
                             return $.localize.data["locale/Arbiter"].alert[localizationKey];
+                        }
+                    }
+                }
+            }
+        }
+        return defaultValue;
+    },
+    
+    localizeString: function(defaultValue,section,key) {
+        if(section && key) {
+            if($.localize.data) {
+                if($.localize.data["locale/Arbiter"]) {
+                    if($.localize.data["locale/Arbiter"][section]) {
+                        if($.localize.data["locale/Arbiter"][section][key]) {
+                            return $.localize.data["locale/Arbiter"][section][key];
                         }
                     }
                 }
@@ -2417,7 +2432,7 @@ var Arbiter = {
 			}
 			
 			if(html){
-				var instructions = '<div data-localize="label.selectProject" style="text-align:center;margin-bottom:15px;font-weight:bold;">Select a project to begin working</div>';	
+				var instructions = "<div data-localize=\"label.selectProject\" style=\"text-align:center;margin-bottom:15px;font-weight:bold;\">" + Arbiter.localizeString("Select a project to begin working","label","selectProject") + "</div>";
 				$("#idProjectPageContent").html(instructions + html);
 			}
 		};
@@ -2978,7 +2993,7 @@ var Arbiter = {
 		jqServerSelect.empty();
 		
 		//Choose your server option
-		var option = '<option value="" data-localize="label.chooseAServer">Choose a server...</option>';
+		var option = "<option value=\"\" data-localize=\"label.chooseAServer\">" + Arbiter.localizeString("Choose a server...","label","chooseAServer") + "</option>";
 		jqServerSelect.append(option);
 
 		//Add all the servers to the list
@@ -3574,7 +3589,7 @@ var Arbiter = {
 		jqLayerSelect.empty();
 		
 		//Choose your server option
-		var option = '<option value="" data-localize="label.chooseALayer">Choose a layer...</option>';
+		var option = "<option value=\"\" data-localize=\"label.chooseALayer\">" + Arbiter.localizeString("Choose a Layer...","label","chooseALayer") + "</option>";
 		jqLayerSelect.append(option);
 		
 		//jqLayerSelect.parent().addClass('ui-disabled').attr('aria-disabled', 'true');
@@ -3607,7 +3622,7 @@ var Arbiter = {
 			callback: function(response){
 				console.log('addLayersOnServerToLayerDropdown success');
 				var capes = capabilitiesFormatter.read(response.responseText);
-				var options = '<option value="" data-localize="label.chooseALayer">Choose a Layer...</option>';
+				var options = "<option value=\"\" data-localize=\"label.chooseALayer\">" + Arbiter.localizeString("Choose a Layer...","label","chooseALayer") + "</option>";
 				
 				if(capes && capes.capability && capes.capability.layers){
 					var layer;
@@ -3668,6 +3683,7 @@ var Arbiter = {
 			isFirstTime = false;
 		}
 		CurrentLanguage = LanguageType[language];
+        console.log("CURRENT LANGUAGE: ", CurrentLanguage);
 		
 		console.log("Language selected: " + CurrentLanguage.name);
 		Arbiter.UpdateLocale();
@@ -4431,7 +4447,7 @@ var Arbiter = {
 			}
             if(hasMedia){
                 li += "<li style='padding:5px; border-radius: 4px;'>";
-                li += "<input style='width=100%' type='submit' value='Media' type='media' onClick='Arbiter.ToggleMediaPanel()'>";
+                li += "<input style='width=100%' type='submit' value='Media' type='media' data-localize='button.media' onClick='Arbiter.ToggleMediaPanel()'>";
                 li += "</li>";
             }
 			
@@ -4441,6 +4457,8 @@ var Arbiter = {
 											  	'<span style="color:red;font-size:24px;">&#x2716;</span>' +
 												'<span style="color:red;">Save Failed</span>' +
 											'</div>');
+                              
+            Arbiter.UpdateLocale();
 		}
 	},
                               
