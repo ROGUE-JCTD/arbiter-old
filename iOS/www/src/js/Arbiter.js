@@ -2618,7 +2618,6 @@ var Arbiter = {
 			feature.layer.destroyFeatures([ feature ]);
 			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM '" + f_table_name + "' WHERE id=?;", [feature.rowid], function(tx, res){
 				console.log("local feature successfully deleted");
-				//Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 			});
 		}else{
 			feature.state = OpenLayers.State.DELETE;
@@ -2633,7 +2632,6 @@ var Arbiter = {
 			console.log(insertDirtySql);
 			Cordova.transaction(Arbiter.currentProject.variablesDatabase, insertDirtySql, [f_table_name, feature.fid, 0], function(tx, res){
 				console.log("insert dirty success delete");
-				//Arbiter.currentProject.modifyControls[Arbiter.currentProject.activeLayer].modifyControl.activate();
 			}, function(e){
 				console.log("insert dirty fail delete: ", e);
 			});
@@ -5056,11 +5054,11 @@ var Arbiter = {
 				break;
 			case "idAddServerPage":
 				Arbiter.onClick_AddServerBack();
-				Arbiter.changePage_Pop("#idServerSettingsPage");
+				Arbiter.changePage_Pop("#idServersPage");
 				break;
 			case "idEditServerPage":
 				Arbiter.onClick_EditServerBack();
-				Arbiter.changePage_Pop("#idServerSettingsPage");
+				Arbiter.changePage_Pop("#idServersPage");
 				break;
 			case "idAddLayerPage":
 				Arbiter.changePage_Pop("#idLayersPage");
