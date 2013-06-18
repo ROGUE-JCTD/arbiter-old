@@ -3397,8 +3397,8 @@ var Arbiter = {
 			$("#idDeleteLayer").hide();
 			
 			$("#serverselect").removeClass("ui-disabled");
-			$("#layerselect").removeClass("ui-disabled");
-			$("#layernickname").removeClass("ui-disabled");
+			
+			Arbiter.disableLayerSelectAndNickname();
 			
 			layerBeingEdited = null;
 			
@@ -3406,10 +3406,9 @@ var Arbiter = {
 			var severListKeys = Object.keys(Arbiter.currentProject.serverList);
 			if (severListKeys.length === 1){
 				Arbiter.enableLayerSelectAndNickname();
+				
 				jqServerSelect.val(severListKeys[0]).change();
-			} else {
-				Arbiter.disableLayerSelectAndNickname();
-			}
+			} 
 		} else {
 			// if this is editing an existing layer
 			console.log("onAddLayerPage.Edit layer");
@@ -3422,8 +3421,6 @@ var Arbiter = {
 			};
 			
 			$("#serverselect").addClass("ui-disabled");
-			$("#layerselect").addClass("ui-disabled");
-			$("#layernickname").addClass("ui-disabled");
 
 			//Arbiter.enableLayerSelectAndNickname();
 
@@ -3438,6 +3435,9 @@ var Arbiter = {
 			Arbiter.addLayersOnServerToLayerDropdown(_serverName, _layerNickName, function(){
 				jqLayerSelect.val(_layerTypeName);
 				jqLayerSelect.selectmenu('refresh', true);
+				$("#serverselect").addClass("ui-disabled");
+				jqLayerSelect.addClass("ui-disabled");
+				jqLayerNickname.addClass("ui-disabled");
 			});
 		}
 		
@@ -3577,9 +3577,11 @@ var Arbiter = {
 	},
 		
 	enableLayerSelectAndNickname: function(){
+		jqLayerSelect.removeClass('ui-disabled');
 		jqLayerSelect.parent().removeClass('ui-disabled').removeAttr('aria-disabled');
 		jqLayerSelect.removeAttr('aria-disabled disabled').removeClass('mobile-selectmenu-disabled ui-state-disabled');
 		jqLayerNickname.removeAttr('disabled');
+		jqLayerNickname.removeClass('ui-disabled');
 	},
 	
 	disableLayerSelectAndNickname: function(){
@@ -3590,10 +3592,12 @@ var Arbiter = {
 		var option = "<option value=\"\" data-localize=\"label.chooseALayer\">" + Arbiter.localizeString("Choose a Layer...","label","chooseALayer") + "</option>";
 		jqLayerSelect.append(option);
 		
+		jqLayerSelect.addClass("ui-disabled");
 		//jqLayerSelect.parent().addClass('ui-disabled').attr('aria-disabled', 'true');
 		//jqLayerSelect.attr('disabled', 'disabled').attr('aria-disabled', 'true').addClass('mobile-selectmenu-disabled ui-state-disabled');
 		
 		jqLayerNickname.val("");
+		jqLayerNickname.addClass("ui-disabled");
 		//jqLayerNickname.attr('disabled', 'disabled');
 		
 		if(jqLayerSelect.parent().parent().hasClass('ui-select')) {
