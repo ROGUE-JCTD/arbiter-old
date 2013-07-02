@@ -102,6 +102,9 @@
         "checkURL": "No se ha podido establecer la conexión\nVerifique que la URL es correcta y el servidor está disponible",
         "performFullSync": "Por favor, sincronice los datos presionando en boton de sincronización para obtener los nuevos tiles.",
         "serverNotFound": "No se ha encontrado el servidor",
-        "mediaDownloadFailed": "No se han podido descargar {0} elementos de medios."
+        "mediaDownloadFailed": "No se han podido descargar {0} elementos de medios.",
+		"noLayerSync": "(ES) No layers to sync",
+		"noLayerAddFeature": "(ES) At least one non-base layer is required to add features",
+		"noLayerSwitchLayer": "(ES) There are no layers in this project"
     }
 }

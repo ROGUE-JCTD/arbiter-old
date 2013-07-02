@@ -687,20 +687,27 @@ var Arbiter = {
 
 		jqAddFeature.click(function(event){
 			console.log("Add Feature");
-			if(Arbiter.currentProject.activeLayer){
-				var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
-				if(addFeatureControl.active){
-					addFeatureControl.deactivate();
-					$(this).removeClass("active-color");
-				}else{
-					addFeatureControl.activate();
-					$(this).addClass("active-color");
-				}
+			//If there aren't any layers, this shouldn't do anything
+			if(!Arbiter.currentProject.activeLayer) {
+				alert(Arbiter.localizeAlert("At least one non-base layer is required to add features","noLayerAddFeature"));
+				return;
+			}
+			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
+			if(addFeatureControl.active){
+				addFeatureControl.deactivate();
+				$(this).removeClass("active-color");
+			}else{
+				addFeatureControl.activate();
+				$(this).addClass("active-color");
 			}
 		});
 		
 		jqDeleteFeatureButton.click(function(){
 			console.log("Delete Feature Button Click");
+			
+			if(!Arbiter.currentProject.activeLayer) {
+				return;
+			}
 			
 			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
 			if(addFeatureControl.active){
@@ -708,26 +715,24 @@ var Arbiter = {
 				jqAddFeature.removeClass("active-color");
 			}
 			
-			if(Arbiter.currentProject.activeLayer){
-				var ans = confirm("Are you sure you want to delete this feature?");
+			var ans = confirm("Are you sure you want to delete this feature?");
+			
+			if(ans){
+				var controls = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
+				var modifyControl = controls.modifyControl;
 				
-				if(ans){
-					var controls = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
-					var modifyControl = controls.modifyControl;
-					
-					var savedSelectedFeature = selectedFeature;
-					
-					selectControl.unselect(savedSelectedFeature);
-					//modifyControl.deactivate();
-					Arbiter.deleteFeature(savedSelectedFeature);
-					//modifyControl.activate();
-				}
+				var savedSelectedFeature = selectedFeature;
+				
+				selectControl.unselect(savedSelectedFeature);
+				//modifyControl.deactivate();
+				Arbiter.deleteFeature(savedSelectedFeature);
+				//modifyControl.activate();
 			}
 		});
 		
 		jqGoToAOI.click(function(event){
 			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
-			if(addFeatureControl.active){
+			if(addFeatureControl && addFeatureControl.active){
 				addFeatureControl.deactivate();
 				jqAddFeature.removeClass("active-color");
 			}
@@ -737,7 +742,7 @@ var Arbiter = {
 		
 		jqFindMeButton.click(function(event){
 			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
-			if(addFeatureControl.active){
+			if(addFeatureControl && addFeatureControl.active){
 				addFeatureControl.deactivate();
 				jqAddFeature.removeClass("active-color");
 			}
@@ -755,7 +760,7 @@ var Arbiter = {
 		
 		jqAOIFindMeButton.click(function(event){
 			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
-			if(addFeatureControl.active){
+			if(addFeatureControl && addFeatureControl.active){
 				addFeatureControl.deactivate();
 				jqAddFeature.removeClass("active-color");
 			}
@@ -772,6 +777,12 @@ var Arbiter = {
 		});
 		
 		jqSyncUpdates.click(function(event){
+			//If there aren't any layers, this shouldn't do anything
+			if(!Arbiter.currentProject.activeLayer) {
+				alert(Arbiter.localizeAlert("No layers to sync","noLayerSync"));
+				return;
+			}
+			
 			if(selectedFeature) {
 				selectControl.unselect(selectedFeature);
 			}
@@ -889,6 +900,12 @@ var Arbiter = {
 		});
 				
 		jqEditorTab.click(function(event){
+			//If there aren't any layers, this shouldn't do anything
+			if(!Arbiter.currentProject.activeLayer) {
+				alert(Arbiter.localizeAlert("There are no layers in this project", "noLayerSwitchLayer"));
+				return;
+			}
+			
 			var addFeatureControl = Arbiter.currentProject.insertControls[Arbiter.currentProject.activeLayer];
 			if(addFeatureControl.active){
 				addFeatureControl.deactivate();
