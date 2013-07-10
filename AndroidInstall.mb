@@ -6,8 +6,18 @@ Supported Devices
 
 Installation Steps
 
- * If you have an older version of Arbiter on your device, you will first need to uninstall the outdated version.  If this is the first time you are putting Arbiter on this device you can skip to the second step.  To uninstall Arbiter go to the 'Apps' section (also called the 'Application Manager' on some devices) of the device's settings menu.  This should bring up a list of applications installed on the device.  Select Arbiter from the list, then hit the 'Uninstall' button.
+ * If you have an older version of Arbiter on your device, you will first need to uninstall the outdated version.  
+ If this is the first time you are putting Arbiter on this device you can skip to the second step.  
+ To uninstall Arbiter go to the 'Apps' section(also called the 'Application Manager' on some devices) of the 
+ device's settings menu.  This should bring up a list of applications installed on the device.  
+ Select Arbiter from the list, then hit the 'Uninstall' button.
 
- * To install Arbiter, you will need to transfer the Arbiter.apk file to the device.  If you are using a Mac, you will first need to download the Android File Transfer application(which you can get here: http://www.android.com/filetransfer/); a Windows machine won't require any other software.  Connect the device to your computer and use Android File Transfer or Windows Explorer to move the apk file to the device.
+ * To install Arbiter, you will need to transfer the Arbiter.apk file to the device.  
+ If you are using a Mac, you will first need to download the Android File Transfer 
+ application(which you can get here: http://www.android.com/filetransfer/); 
+ a Windows machine won't require any other software.  
+ Connect the device to your computer and use Android File Transfer or Windows Explorer to move 
+ the apk file to the device.
 
- * Once the apk is on the device, use a file browser to navigate to it and tap on it to open the installer.  Follow the prompts to finnish installing Arbiter.
+ * Once the apk is on the device, use a file browser to navigate to it and tap on it to open the installer.  
+ Follow the prompts to finnish installing Arbiter.
