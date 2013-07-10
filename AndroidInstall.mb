@@ -1,10 +1,10 @@
-# Installing Arbiter on Android devices
+Installing Arbiter on Android devices
 
-## Supported Devices
+Supported Devices
 
  * Arbiter is compatible with any device running Android version 2.2, 2.3, 4.0, 4.1, or 4.2
 
-## Installation Steps
+Installation Steps
 
  * If you have an older version of Arbiter on your device, you will first need to uninstall the outdated version.  If this is the first time you are putting Arbiter on this device you can skip to the second step.  To uninstall Arbiter go to the 'Apps' section (also called the 'Application Manager' on some devices) of the device's settings menu.  This should bring up a list of applications installed on the device.  Select Arbiter from the list, then hit the 'Uninstall' button.
 
