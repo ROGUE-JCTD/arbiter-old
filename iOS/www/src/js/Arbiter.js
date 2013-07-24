@@ -980,6 +980,8 @@ var Arbiter = {
     	var insertGeometryColumnRowSql = "INSERT INTO geometry_columns (f_table_name, " +
 		"f_geometry_column, geometry_type, srid, enumeration) VALUES (?,?,?,?,?)";
 		
+		console.log("insert into geometry column table, layer", layer);
+		
 		var enumString = "";
 		for(var type in layer.attributeTypes) {
 			if(layer.attributeTypes[type].restrictions) {
@@ -988,8 +990,10 @@ var Arbiter = {
 			}
 		}
     
+		console.log("insert into geometry column table, srsName", layer.srsName);
+		
     	Cordova.transaction(Arbiter.currentProject.dataDatabase, insertGeometryColumnRowSql, [layer.featureType, layer.geomName, layer.geometryType, layer.srsName, enumString],
-				function(tx, res){ 
+				function(tx, res){
 					console.log("INSERT INTO geometry_columns"); 
 				}, function(e){
 					console.log("Failed to INSERT INTO geometry_columns"); 
@@ -1002,7 +1006,7 @@ var Arbiter = {
 		console.log("createFeatureTable");
     	var server = Arbiter.currentProject.serverList[serverName];
     	
-    	var attributeSql = "id integer primary key, fid text, " + layer.geomName + " text not null";
+    	var attributeSql = "arbiter_id integer primary key, arbiter_fid text, " + layer.geomName + " text not null";
 		
 		for(var i = 0; i < layer.attributes.length; i++){
 			
@@ -1159,6 +1163,7 @@ var Arbiter = {
 		
 		var error = function(error){
 			console.log("error creating directory");
+			alert("error creating directory");
 		};
 					
 		Arbiter.fileSystem.root.getDirectory("Arbiter/Projects/" + Arbiter.currentProject.name, {create: true, exclusive: false}, writeToDatabases, error);
@@ -1242,6 +1247,7 @@ var Arbiter = {
 	
     onOpenProject: function(projectName){
 		console.log("---- onOpenProject: " + projectName + ".");
+		//alert("---- onOpenProject: " + projectName + ". step 1");
 
 		if (projectName == null || projectName === ""){
     		alert("onOpenProject projectName not valid: " + projectName)
@@ -1251,6 +1257,7 @@ var Arbiter = {
     	if (Arbiter.currentProject){
     		Arbiter.onCloseCurrentProject();
     	}
+		//alert("---- onOpenProject: " + projectName + ". step 2");
 
 		
 		Arbiter.currentProject = {};
@@ -1259,22 +1266,33 @@ var Arbiter = {
 		Arbiter.currentProject.deletedServers = { length: 0 };
 		Arbiter.currentProject.insertControls = {};
 		
+		//alert("---- onOpenProject: " + projectName + ". step 3");
 		// set dataDatabase and variablesDatabase
 		Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
+		
+		console.log("variables database: ", Arbiter.currentProject.variablesDatabase);
+		
 		Arbiter.currentProject.dataDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/data", "1.0", "Data Database", 1000000);
+		
+		console.log("data database: ", Arbiter.currentProject.dataDatabase);
+		
+		//alert("---- onOpenProject: " + projectName + ". step 4");
 		
 		console.log("Project Name: " + Arbiter.currentProject.name);
 		//get the project id
 		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects WHERE name=?;", [Arbiter.currentProject.name], function(tx, res){
+			//alert("---- onOpenProject: " + projectName + ". callback 1");
 			if(res.rows.length){
 				Arbiter.currentProject.projectId = res.rows.item(0).id;
 			}else{
 				console.log(res.rows.item(0));
 			}
 		}, Arbiter.error);
+		//alert("---- onOpenProject: " + projectName + ". step 5");
 		
 		// select servers and add to the project
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM servers;", [], function(tx, res){
+			//alert("---- onOpenProject: " + projectName + ". callback 2");
 			var serverObj;
 			for(var i = 0; i < res.rows.length; i++){
 				serverObj = res.rows.item(i);
@@ -1285,9 +1303,11 @@ var Arbiter = {
 				Arbiter.addServersToProject(serverObj);
 			}
 		});
+		//alert("---- onOpenProject: " + projectName + ". step 6");
 														 
 		//select area of interest and add to the project
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM settings;", [], function(tx, res){
+			//alert("---- onOpenProject: " + projectName + ". callback 3");
 			//should only be 1 row
 			if(res.rows.length){
 				var settings = res.rows.item(0);
@@ -1296,13 +1316,15 @@ var Arbiter = {
 				);
 			}
 		});
+		//alert("---- onOpenProject: " + projectName + ". step 7");
 		
 		Arbiter.getProjectProperty("baseLayerInfo", function(key, value){
 			Arbiter.currentProject.baseLayerInfo = { servername: value.servername, layernickname: value.layernickname};
 		}, function(key){
 			Arbiter.error("did not find project property baseLayerInfo");
 		}, true);
-
+		
+		//alert("---- onOpenProject: " + projectName + ". step final");
     },
 	
     onCloseCurrentProject: function(){
@@ -2404,7 +2426,6 @@ var Arbiter = {
 	},
 	
 	InitializeProjectList: function(dirEntry){
-		
 		var directoryReader = dirEntry.createReader();
 		
 		
@@ -2456,6 +2477,7 @@ var Arbiter = {
 		
 		var fail = function(error){
 			console.log("Failed to list directory contents: " + error.code);
+			alert("Failed to list directory contents: " + error.code);
 		};
 		
 		directoryReader.readEntries(success, fail);
@@ -2561,7 +2583,7 @@ var Arbiter = {
 					for ( var h = 0; h < res.rows.length; h++) {
 						attr = res.rows.item(h);
 
-						if (attr.name != 'fid' && attr.name != geomName && attr.name != 'id'){
+						if (attr.name != 'arbiter_fid' && attr.name != geomName && attr.name != 'arbiter_id'){
 							var valueRestrictions = null;
 					
 							if(enumData) {
@@ -2633,7 +2655,7 @@ var Arbiter = {
 		var f_table_name = feature.layer.protocol.featureType;
 		if(feature.fid == undefined || feature.fid == ''){
 			feature.layer.destroyFeatures([ feature ]);
-			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM '" + f_table_name + "' WHERE id=?;", [feature.rowid], function(tx, res){
+			Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM '" + f_table_name + "' WHERE arbiter_id=?;", [feature.rowid], function(tx, res){
 				console.log("local feature successfully deleted");
 			});
 		}else{
@@ -3262,10 +3284,11 @@ var Arbiter = {
 					Authorization : 'Basic ' + encodedCredentials
 				},
 				callback: function(response){
+				console.log("request url", serverInfo.url + "/wfs?service=wfs&version=1.0.0&request=DescribeFeatureType&typeName=" + typeName);
 					console.log('response for get info on wms: ', response);
 					var obj = describeFeatureTypeReader.read(response.responseText);
 					
-					console.log('obj.featureTypes: ', obj.featureTypes);
+					console.log('wms response obj: ', obj);
 					
 					if(obj.featureTypes && obj.featureTypes.length){
 						var layerattributes = [];
@@ -3830,6 +3853,24 @@ var Arbiter = {
 		return "'" + str + "'";
 	},
 	
+	dumpTableAttributes: function(tableName) {
+		console.log("---- TileUtil.dumpTableAttributes");
+
+		// get the attributes of the layer
+		var sql = "PRAGMA table_info (" + tableName + ");";
+
+		Cordova.transaction(Arbiter.currentProject.dataDatabase, sql, [], function(tx, res) {
+			var str = 'attribute count: ' + res.rows.length + '\n';
+			for (var i=0; i<res.rows.length; i++) {
+				var attr = res.rows.item(i);
+				str += 'name: ' + attr.name + ', type: ' + attr.type + ', notnull: ' + attr.notnull + '\n';
+			}
+		
+			console.log(str);
+		
+		}, Arbiter.error);
+	},
+	
 	// returns an object with 2 lists like the following:
 	// "prop1, prop2, prop3" and "val1, val2, val3"
 	getCommaDelimitedLists: function(object){
@@ -3866,8 +3907,8 @@ var Arbiter = {
 		feature.geometry.transform(new OpenLayers.Projection(srsName), WGS84_Google_Mercator);
 		
 		for(var x in obj){
-			if(x != "geometry" && x != "id"){
-				if(x == "fid")
+			if(x != "geometry" && x != "arbiter_id"){
+				if(x == "arbiter_fid")
 					feature.fid = obj[x];
 				else
 					feature.attributes[x] = obj[x];
@@ -3889,7 +3930,9 @@ var Arbiter = {
 					feature.attributes = {};
 						  
 					for(var x in row){
-						if(x != "id" && x != "fid" && x != geomName){
+						console.log("readlayer x", x);
+						if(x != "arbiter_id" && x != "arbiter_fid" && x != geomName){
+							console.log("attr " + x + " added");
 							feature.attributes[x] = row[x];
 						}
 					}
@@ -3981,9 +4024,9 @@ var Arbiter = {
 		var params = [];
 		
 		if(feature.fid){
-			names += "fid,";
+			names += "arbiter_fid,";
 			values += "?,";
-			updateSql += "fid=?,";
+			updateSql += "arbiter_fid=?,";
 			params.push(feature.fid);
 		}
 		
@@ -4050,7 +4093,7 @@ var Arbiter = {
 	
 	insertFeature: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, featuresLength){
 //		console.log('insertFeature: layername: ', layername, 'feature: ', feature, 'f_table_name: ', f_table_name, 'geomName: ', geomName, 'isEdit: ', isEdit );
-		
+				
 		var selectSql;
 		var selectParams;
 							  
@@ -4058,10 +4101,12 @@ var Arbiter = {
 							  
 		if(feature.fid || feature.rowid){
 			if(feature.fid){
-				selectSql = "SELECT * FROM '" + f_table_name + "' WHERE fid=?";
+				
+				selectSql = "SELECT * FROM '" + f_table_name + "' WHERE arbiter_fid=?";
 				selectParams = [feature.fid];
 			}else{
-				selectSql = "SELECT * FROM '" + f_table_name + "' WHERE id=?";
+				
+				selectSql = "SELECT * FROM '" + f_table_name + "' WHERE arbiter_id=?";
 				selectParams = [feature.rowid];
 			}
 							  
@@ -4073,10 +4118,10 @@ var Arbiter = {
 				//If this exists, then its an update, else its an insert
 				if(res.rows.length){
 //					console.log("UPDATE", res.rows.item(0));
-					var updateSql = sqlObject.updateSql.substring(0, sqlObject.updateSql.length - 1) + " WHERE id=?";
+					var updateSql = sqlObject.updateSql.substring(0, sqlObject.updateSql.length - 1) + " WHERE arbiter_id=?";
 //					console.log("update sql: " + updateSql, sqlObject);
 					sqlObject.params.push(res.rows.item(0).id);
-												  
+					
 					Cordova.transaction(Arbiter.currentProject.dataDatabase, updateSql, sqlObject.params, function(tx, res){
 //						console.log("update success");
 						$("#saveAttributesSucceeded").fadeIn(1000, function(){
@@ -4409,6 +4454,9 @@ var Arbiter = {
             var hasMedia = false;
             mediaEntries = null;
 			for(var type in selectedFeature.layer.attributeTypes){
+				if(type == "arbiter_id" || type == "arbiter_fid") {
+					continue;
+				}
 				var typeInfo = Arbiter.getInputType(type);
 				var attrData = '';
 			
@@ -4418,7 +4466,7 @@ var Arbiter = {
 				} else {
 					currentAttrValue = '';
 				}
-                              
+				
                 if(type=="media"){
                     hasMedia = true;
                     if(currentAttrValue == '') {

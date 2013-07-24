@@ -153,6 +153,9 @@ var Cordova = {
 				if(_success)
 					_success(tx, res);
 			}, function(tx, err){
+			//log stringified err
+				var errText = JSON.stringify(err);
+				alert(errText);
 				Arbiter.error("Cordova.transaction: sql execution failed!", tx, err, _sql, _variables);
 				if(_error){
 					_error(tx, err);
