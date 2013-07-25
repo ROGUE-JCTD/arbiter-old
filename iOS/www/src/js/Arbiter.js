@@ -799,7 +799,9 @@ var Arbiter = {
 				
 				var layers = map.getLayersByClass('OpenLayers.Layer.Vector');
 			
-				console.log("got layers by class");
+				console.log("got layers by class", layers);
+				
+				console.log("layers[1].features.length", layers[1].features.length);
 				
 				var ans = true;
 				if(Arbiter.currentProject.deletedServers.length){
@@ -3532,6 +3534,9 @@ var Arbiter = {
 				
 				var features = gmlReader.read(response.responseText);
 				
+				//returns dubs, meaning that the wfs request aparently doubled features
+				console.log("pullFeatures initial: ", features);
+				
 				//var vectorLayer = map.getLayersByName(layerName + '-wfs')[0];
 					
 				//vectorLayer.destroyFeatures();
@@ -3908,10 +3913,13 @@ var Arbiter = {
 		
 		for(var x in obj){
 			if(x != "geometry" && x != "arbiter_id"){
-				if(x == "arbiter_fid")
+				if(x == "arbiter_fid") {
 					feature.fid = obj[x];
-				else
+					console.log("createFeature feature.fid set to:", feature.fid);
+				}
+				else {
 					feature.attributes[x] = obj[x];
+				}
 			}
 		}
 
@@ -4063,9 +4071,9 @@ var Arbiter = {
 	},
 	
 	insertFeaturesIntoTable: function(features, f_table_name, geomName, srsName, isEdit, addProjectCallback, layername){
-//		console.log("insertFeaturesIntoTable: ", features);
-//		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
-//		console.log("layer features.length: " + features.length);
+		console.log("insertFeaturesIntoTable: ", features);
+		console.log("other params: " + f_table_name + geomName + srsName + isEdit);
+		console.log("layer features.length: " + features.length);
 		
 		//Arbiter.tempDeleteCountFeatures = 0;
 		
@@ -4089,6 +4097,7 @@ var Arbiter = {
 			var feature = features[i];
 			Arbiter.insertFeature(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, features.length);
 		}
+		TileUtil.dumpTableRows(Arbiter.currentProject.dataDatabase, f_table_name);
 	},
 	
 	insertFeature: function(f_table_name, feature, geomName, isEdit, srsName, addProjectCallback, layername, featuresLength){
@@ -4693,8 +4702,19 @@ var Arbiter = {
 					}else{
 						Cordova.transaction(Arbiter.currentProject.dataDatabase, "DELETE FROM '" + featureType + "';", [], function(tx, res) {
 							// pull everything down
+							
+							console.log("wfslayer pre-destroy", wfsLayer.features.length);
 							wfsLayer.destroyFeatures();
+							
+							TileUtil.dumpTableRows(Arbiter.currentProject.dataDatabase, serverLayer.featureType);
+							
+							console.log("wfslayer post-destroy", wfsLayer.features.length);
+							//these both return the expected amounts
+							
 							console.log("pull after delete");
+							
+							console.log("save strategy serverlayer", serverLayer);
+							
 							console.log("pullFeatures after delete: ", serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url, server.username, server.password);
 
 							Arbiter.pullFeatures(serverLayer.typeName, serverLayer.geomName, serverLayer.featureType, serverLayer.srsName, server.url,
