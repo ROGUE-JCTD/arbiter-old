@@ -106,6 +106,7 @@
         "mediaDownloadFailed": "{0} media items failed to download.",
 		"noLayerSync": "No layers to sync",
 		"noLayerAddFeature": "At least one non-base layer is required to add features",
-		"noLayerSwitchLayer": "There are no layers in this project"
+		"noLayerSwitchLayer": "There are no layers in this project",
+		"noServer": "You must add at least one server to continue"
     }
 }

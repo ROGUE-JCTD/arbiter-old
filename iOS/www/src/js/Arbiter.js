@@ -164,6 +164,8 @@ var Arbiter = {
 	
 	serversList: null,
 	
+	numCheckedServers: 0,
+	
 	//if this isn't null, then the save callback will call at the end
 //	tempDeleteLayerFromProject: null,
 	
@@ -363,11 +365,15 @@ var Arbiter = {
 																	serverId: row.id
 																};
 															}
+															
+															++Arbiter.numCheckedServers;
 														});
 													},
 													checkbox_unchecked: function(itemInfo){
 														console.log("checkbox_unchecked: ", itemInfo);
 														delete Arbiter.currentProject.serverList[itemInfo.servername];
+														
+														--Arbiter.numCheckedServers;
 													},
 													onContentClicked: function(itemInfo){ //TODO : FIX THIS SHIAT
 														console.log("server list content clicked!", itemInfo);
@@ -2203,6 +2209,14 @@ var Arbiter = {
 		}
 	},
 	
+	onClick_ServerPage_Next: function() {
+		if(Arbiter.numCheckedServers === 0) {
+			alert(Arbiter.localizeAlert("You must add at least one server to continue", "noServer"));
+		} else {
+			Arbiter.changePage_Pop("#idLayersPage");
+		}
+	},
+	
 	gotoPageIfOnline: function(pageId){
 		if (Arbiter.isOnline) {
 			Arbiter.changePage_Pop(pageId);
@@ -2975,6 +2989,8 @@ var Arbiter = {
 			var url = jqNewServerURL.val();
 			var username = jqNewUsername.val();
 			var password = jqNewPassword.val();
+			
+			++Arbiter.numCheckedServers;
 			
 			//It's a new server so add it to the global servers table
 			var insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES (?, ?, ?, ?);";

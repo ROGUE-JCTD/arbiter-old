@@ -105,6 +105,7 @@
         "mediaDownloadFailed": "No se han podido descargar {0} elementos de medios.",
 		"noLayerSync": "(ES) No layers to sync",
 		"noLayerAddFeature": "(ES) At least one non-base layer is required to add features",
-		"noLayerSwitchLayer": "(ES) There are no layers in this project"
+		"noLayerSwitchLayer": "(ES) There are no layers in this project",
+		"noServer": "(ES) You must add at least one server to continue"
     }
 }
