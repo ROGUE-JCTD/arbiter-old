@@ -1111,14 +1111,12 @@ var Arbiter = {
     // gets called once we have collected all the information about the new project
 	onCreateProject: function() {
 		console.log("---- onCreateProject");
-
+		
 		var insertCurrentProject = function(projectId){
 			Arbiter.layerCount = 0;
 			Arbiter.currentProject.projectId = projectId;
 
 			Arbiter.saveAreaOfInterest(true);
-
-			console.log("insert current project baselayer set", Arbiter.currentProject.baseLayerInfo);
 			
 			var serverList = Arbiter.currentProject.serverList;		
 			for(var x in serverList){
@@ -1132,15 +1130,6 @@ var Arbiter = {
 					//var addedLayers = 0;
 					
 					//this should put an end to all the 'layer-less projects won't open' silliness
-					if(!layerList.length) {
-						if(usingDefaultProject) {
-							Arbiter.setProjectProperty("baseLayerInfo", Arbiter.currentProject.baseLayerInfo, function() {
-								Arbiter.onOpenProject(Arbiter.currentProject.name);
-							});
-						} else {
-							Arbiter.onOpenProject(Arbiter.currentProject.name);
-						}
-					}
 					
 		    		for(var layerKey in layerList){
 		    			var layer = layerList[layerKey];
@@ -1152,6 +1141,13 @@ var Arbiter = {
 		    		Arbiter.insertServerUsage(projectId, serverId, function(tx, res){
 						console.log("insert server usage success");
 					});
+					
+					console.log("layerlist length ", layerList.length);
+					if(!layerList.length) {
+						Arbiter.setProjectProperty("baseLayerInfo", Arbiter.currentProject.baseLayerInfo, function() {
+							Arbiter.onOpenProject(Arbiter.currentProject.name);
+						});
+					}
 				});
 			}
 		};
@@ -1175,12 +1171,13 @@ var Arbiter = {
 				
 				console.log("Project " + projectId + ": " + Arbiter.squote(Arbiter.currentProject.name) + " added to projects table.");
 				
-				var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
-					'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';
-								
-				Arbiter.appendToListView("project", res.insertId, Arbiter.currentProject.name, leftplaceholder);		   
-				Arbiter.changePage_Pop(div_ProjectsPage);
-			
+				//this stops the default project from being added to the projects screen, at least for the first time
+				if(name !== "default") {
+					var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
+						'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';
+									
+					Arbiter.appendToListView("project", res.insertId, Arbiter.currentProject.name, leftplaceholder);
+				}
 			}, function(e){
 				console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " NOT added to projects table - " + e);
 			});
@@ -1272,17 +1269,19 @@ var Arbiter = {
 	
     onOpenProject: function(projectName){
 		console.log("---- onOpenProject: " + projectName + ".");
-		//alert("---- onOpenProject: " + projectName + ". step 1");
 
 		if (projectName == null || projectName === ""){
     		alert("onOpenProject projectName not valid: " + projectName)
     	}
+		
+		if(projectName !== "default") {
+			usingDefaultProject = false;
+		}
 
 		// if a project is currently open, close it first
     	if (Arbiter.currentProject){
     		Arbiter.onCloseCurrentProject();
     	}
-		//alert("---- onOpenProject: " + projectName + ". step 2");
 
 		
 		Arbiter.currentProject = {};
@@ -1291,7 +1290,6 @@ var Arbiter = {
 		Arbiter.currentProject.deletedServers = { length: 0 };
 		Arbiter.currentProject.insertControls = {};
 		
-		//alert("---- onOpenProject: " + projectName + ". step 3");
 		// set dataDatabase and variablesDatabase
 		Arbiter.currentProject.variablesDatabase = Cordova.openDatabase("Arbiter/Projects/" + Arbiter.currentProject.name + "/variables", "1.0", "Variable Database", 1000000);
 		
@@ -1301,23 +1299,19 @@ var Arbiter = {
 		
 		console.log("data database: ", Arbiter.currentProject.dataDatabase);
 		
-		//alert("---- onOpenProject: " + projectName + ". step 4");
 		
 		console.log("Project Name: " + Arbiter.currentProject.name);
 		//get the project id
 		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects WHERE name=?;", [Arbiter.currentProject.name], function(tx, res){
-			//alert("---- onOpenProject: " + projectName + ". callback 1");
 			if(res.rows.length){
 				Arbiter.currentProject.projectId = res.rows.item(0).id;
 			}else{
 				console.log(res.rows.item(0));
 			}
 		}, Arbiter.error);
-//		alert("---- onOpenProject: " + projectName + ". step 5");
 		
 		// select servers and add to the project
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM servers;", [], function(tx, res){
-//			alert("---- onOpenProject: " + projectName + ". callback 2");
 			var serverObj;
 			for(var i = 0; i < res.rows.length; i++){
 				serverObj = res.rows.item(i);
@@ -1327,12 +1321,10 @@ var Arbiter = {
 				//query the global server table to get the server info
 				Arbiter.addServersToProject(serverObj);
 			}
-		});
-//		alert("---- onOpenProject: " + projectName + ". step 6");
+		}, function() {alert("transaction failed, no servers");});
 								
 		//select area of interest and add to the project
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM settings;", [], function(tx, res){
-//			alert("---- onOpenProject: " + projectName + ". callback 3");
 			//should only be 1 row
 			if(res.rows.length){
 				var settings = res.rows.item(0);
@@ -1341,15 +1333,12 @@ var Arbiter = {
 				);
 			}
 		});
-//		alert("---- onOpenProject: " + projectName + ". step 7");
 		
 		Arbiter.getProjectProperty("baseLayerInfo", function(key, value){
 			Arbiter.currentProject.baseLayerInfo = { servername: value.servername, layernickname: value.layernickname};
 		}, function(key){
-			Arbiter.error("did not find project property baseLayerInfo");
+			Arbiter.error("[onOpenProject] did not find project property baseLayerInfo");
 		}, true);
-		
-//		alert("---- onOpenProject: " + projectName + ". step final");
     },
 	
     onCloseCurrentProject: function(){
@@ -1473,9 +1462,7 @@ var Arbiter = {
 			// we have a map, lets zoom and center based on the aoi
 			if (map && Arbiter.currentProject.aoi) {
 				//---- add the aoi layer so that users can see the aoi
-				if(!usingDefaultProject) {
-					Arbiter.addAOIToMap();
-				}
+				Arbiter.addAOIToMap();
 				
 				map.zoomToExtent(Arbiter.currentProject.aoi, true);
 	    	}else{
@@ -1558,7 +1545,11 @@ var Arbiter = {
 		});
 		
 		if (Arbiter.currentProject && Arbiter.currentProject.aoi) {
-			aoiMap.zoomToExtent(Arbiter.currentProject.aoi, true);
+			if(usingDefaultProject) {
+				aoiMap.setCenter(map.center, map.zoom);
+			} else {
+				aoiMap.zoomToExtent(Arbiter.currentProject.aoi, true);
+			}
 		} else {
 			//aoiMap.setCenter(new OpenLayers.LonLat(-13676174.875874922, 5211037.111034083),12);
 			Cordova.getGeolocation(function(position){
@@ -1698,13 +1689,13 @@ var Arbiter = {
 		var statement = "";
 		
 		if (insertNotUpdate) {
-			statement = "INSERT INTO settings (aoi_left, aoi_bottom, aoi_right, aoi_top) VALUES (?, ?, ?, ?);";
+			statement = "INSERT INTO settings (aoi_left, aoi_bottom, aoi_right, aoi_top, last_open_proj) VALUES (?, ?, ?, ?, ?);";
 		} else {
 			 //fake where clause. change table to key value json pair!
-			statement = "UPDATE settings SET aoi_left=?, aoi_bottom=?, aoi_right=?, aoi_top=? WHERE aoi_left <> '';"; 
+			statement = "UPDATE settings SET aoi_left=?, aoi_bottom=?, aoi_right=?, aoi_top=?, last_open_proj=? WHERE aoi_left <> '';";
 		}
 		
-		Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top], 
+		Cordova.transaction(Arbiter.currentProject.variablesDatabase, statement, [Arbiter.currentProject.aoi.left, Arbiter.currentProject.aoi.bottom, Arbiter.currentProject.aoi.right, Arbiter.currentProject.aoi.top, Arbiter.currentProject.name],
 				successCallback, Arbiter.error);
 	},
 	
@@ -2250,7 +2241,7 @@ var Arbiter = {
 	
 	addAOIToMap: function() {
 		
-		if (Arbiter.currentProject && Arbiter.currentProject.aoi && map) {
+		if (Arbiter.currentProject && Arbiter.currentProject.aoi && map && !usingDefaultProject) {
 	    	var geometry = Arbiter.currentProject.aoi.toGeometry();
 	    	var attributes = {name: "Area of Interest"};
 	    	var feature = new OpenLayers.Feature.Vector(geometry, attributes);
@@ -2418,6 +2409,11 @@ var Arbiter = {
 		_listview.children(':first-child').addClass('ui-corner-top');
 		_listview.children(':last-child').addClass('ui-corner-bottom');*/
 		
+		//make sure the default doesnt show up in the list
+		if(name === "default") {
+			return;
+		}
+		
 		//remove the bottom class from the previously last row
 		$('.' + listname + '-bottom-left').removeClass(listname + '-bottom-left');
 		$('.' + listname + '-bottom-right').removeClass(listname + '-bottom-right');
@@ -2474,6 +2470,11 @@ var Arbiter = {
 			
 			for(var i = 0;i < entries.length;i++){
 				entry = entries[i];
+				
+				if(entry.name === "default") {
+					continue;
+				}
+				
 				contentClass = 'project-contentColumn';
 				leftClass = 'project-leftColumn';
 				leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + entry.name +
@@ -3214,7 +3215,7 @@ var Arbiter = {
 			function(tx, res){ console.log("createDirtyTableSql win!"); }, function(e){ console.log("Error createDirtyTableSql - " + e); });
 		
 		var createSettingsTableSql = "CREATE TABLE IF NOT EXISTS settings (id integer primary key, aoi_left text not null, " +
-		"aoi_bottom text not null, aoi_right text not null, aoi_top text not null);";
+		"aoi_bottom text not null, aoi_right text not null, aoi_top text not null, last_open_proj text not null);";
 		Cordova.transaction(Arbiter.currentProject.variablesDatabase, createSettingsTableSql, [],
 			function(tx, res){ console.log("createSettingsTableSql win!"); }, function(e){ console.log("Error createSettingsTableSql - " + e); });
 		
@@ -3449,7 +3450,7 @@ var Arbiter = {
 				Arbiter.changePage_Pop(div_ProjectSettingsPage);
 				
 			}, function(key){
-				Arbiter.error("did not find project property baseLayerInfo");
+				Arbiter.error("[onLayersPageDone] did not find project property baseLayerInfo");
 			}, true);			
 		} else {
 			Arbiter.changePage_Pop(div_ProjectSettingsPage);
@@ -3826,7 +3827,7 @@ var Arbiter = {
 						Cordova.getGeolocation(function(position){
 							var center = new OpenLayers.LonLat(position.coords.longitude, position.coords.latitude).transform(WGS84, WGS84_Google_Mercator);
 							
-							aoiMap.setCenter(center, 13);
+							aoiMap.setCenter(center, 11);
 							
 							Arbiter.onCreateProject();
 							
@@ -3836,14 +3837,33 @@ var Arbiter = {
 							//if we can't get the devices location for whatever reason, we'll just default to Tegucigalpa
 							var center = new OpenLayers.LonLat(-9707368.8260663, 1583717.8980771);
 							
-							aoiMap.setCenter(center, 13);
+							aoiMap.setCenter(center, 11);
 							
 							Arbiter.onCreateProject();
 							
 							console.log("current project, should be done now...", Arbiter.currentProject);
 						});
 					}, Arbiter.error);
-				} else {
+				} else if(res.rows.item(0).name === "default"){
+					console.log("opening the default project");
+					Arbiter.onOpenProject("default");
+				} else{
+					//this code will open the last project the user was working in (theoretically)
+					
+//					Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM settings;", [], function(tx, res){
+//						//should only be 1 row
+//						console.log("got stuff from settings ", res);
+//						if(res.rows.length){
+//							var settings = res.rows.item(0);
+//							console.log("last_open_proj ", settings.last_open_proj);
+//						}
+//						
+//						usingDefaultProject = false;
+//						Arbiter.changePage_Pop(div_ProjectsPage);
+//						
+//					}, Arbiter.error);
+
+					//just in case
 					usingDefaultProject = false;
 					Arbiter.changePage_Pop(div_ProjectsPage);
 				}
