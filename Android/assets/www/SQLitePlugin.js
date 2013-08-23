@@ -2,7 +2,7 @@
   var SQLitePlugin, SQLitePluginCallback, SQLitePluginTransaction, get_unique_id, pcb, root, transaction_callback_queue, transaction_queue;
   root = this;
   SQLitePlugin = function(dbPath, openSuccess, openError) {
-    console.log("SQLitePlugin");
+    //console.log("SQLitePlugin");
     this.dbPath = dbPath;
     this.openSuccess = openSuccess;
     this.openError = openError;
@@ -26,7 +26,7 @@
   };
   SQLitePlugin.prototype.open = function(success, error) {
     var opts;
-    console.log("SQLitePlugin.prototype.open");
+    //console.log("SQLitePlugin.prototype.open");
     opts = void 0;
     if (!(this.dbPath in this.openDBs)) {
       this.openDBs[this.dbPath] = true;
@@ -35,7 +35,7 @@
   };
   SQLitePlugin.prototype.close = function(success, error) {
     var opts;
-    console.log("SQLitePlugin.prototype.close");
+    //console.log("SQLitePlugin.prototype.close");
     opts = void 0;
     if (this.dbPath in this.openDBs) {
       delete this.openDBs[this.dbPath];
@@ -46,7 +46,7 @@
     return 1;
   };
   SQLitePlugin.prototype.executePragmaStatement = function(statement, success, error) {
-    console.log("SQLitePlugin::executePragmaStatement");
+    //console.log("SQLitePlugin::executePragmaStatement");
     pcb = success;
     cordova.exec((function() {
       return 1;
@@ -55,7 +55,7 @@
   SQLitePluginCallback = {
     p1: function(id, result) {
       var mycb;
-      console.log("PRAGMA CB");
+      //console.log("PRAGMA CB");
       mycb = pcb;
       pcb = function() {
         return 1;
@@ -81,13 +81,13 @@
     this.__completed = false;
     this.__submitted = false;
     this.optimization_no_nested_callbacks = false;
-    console.log("SQLitePluginTransaction - this.trans_id:" + this.trans_id);
+    //console.log("SQLitePluginTransaction - this.trans_id:" + this.trans_id);
     transaction_queue[this.trans_id] = [];
     transaction_callback_queue[this.trans_id] = new Object();
   };
   SQLitePluginTransaction.queryCompleteCallback = function(transId, queryId, result) {
     var query, x;
-    console.log("SQLitePluginTransaction.queryCompleteCallback");
+    //console.log("SQLitePluginTransaction.queryCompleteCallback");
     query = null;
     for (x in transaction_queue[transId]) {
       if (transaction_queue[transId][x]["query_id"] === queryId) {
@@ -129,7 +129,7 @@
   };
   SQLitePluginTransaction.txErrorCallback = function(transId, error) {
     if (typeof transId !== "undefined") {
-      console.log("SQLitePluginTransaction.txErrorCallback---transId:" + transId);
+      //console.log("SQLitePluginTransaction.txErrorCallback---transId:" + transId);
       if (transId && transaction_callback_queue[transId]["error"]) {
         transaction_callback_queue[transId]["error"](error);
       }
@@ -161,17 +161,17 @@
   };
   SQLitePluginTransaction.prototype.executeSql = function(sql, values, success, error) {
     var errorcb, successcb, txself;
-    console.log("SQLitePluginTransaction.prototype.executeSql");
+    //console.log("SQLitePluginTransaction.prototype.executeSql");
     errorcb = void 0;
     successcb = void 0;
     txself = void 0;
     txself = this;
     successcb = null;
     if (success) {
-      console.log("success not null:" + sql);
+      //console.log("success not null:" + sql);
       successcb = function(execres) {
         var res, saveres;
-        console.log("executeSql callback:" + JSON.stringify(execres));
+        //console.log("executeSql callback:" + JSON.stringify(execres));
         res = void 0;
         saveres = void 0;
         saveres = execres;
@@ -188,7 +188,7 @@
         return success(txself, res);
       };
     } else {
-      console.log("success NULL:" + sql);
+      //console.log("success NULL:" + sql);
     }
     errorcb = null;
     if (error) {
@@ -201,7 +201,7 @@
   };
   SQLitePluginTransaction.prototype.complete = function(success, error) {
     var begin_opts, commit_opts, errorcb, executes, opts, successcb, txself;
-    console.log("SQLitePluginTransaction.prototype.complete");
+    //console.log("SQLitePluginTransaction.prototype.complete");
     begin_opts = void 0;
     commit_opts = void 0;
     errorcb = void 0;

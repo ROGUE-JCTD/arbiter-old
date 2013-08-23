@@ -103,9 +103,9 @@
         "performFullSync": "Por favor, sincronice los datos presionando en boton de sincronización para obtener los nuevos tiles.",
         "serverNotFound": "No se ha encontrado el servidor",
         "mediaDownloadFailed": "No se han podido descargar {0} elementos de medios.",
-		"noLayerSync": "(ES) No layers to sync",
-		"noLayerAddFeature": "(ES) At least one non-base layer is required to add features",
-		"noLayerSwitchLayer": "(ES) There are no layers in this project",
-		"noServer": "(ES) You must add at least one server to continue"
+		"noLayerSync": "No hay capas para sincronizar (tmp)",
+		"noLayerAddFeature": "Se requiere al menos una capa no-base para agregar características (tmp)",
+		"noLayerSwitchLayer": "No hay capas en este proyecto (tmp)",
+		"noServer": "Debe añadir al menos un servidor de continuar (tmp)"
     }
 }

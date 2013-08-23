@@ -429,7 +429,7 @@ var Arbiter = {
 			//Open/Create Arbiter/Projects directory.
 			Arbiter.fileSystem.root.getDirectory("Arbiter/Projects", {create: true}, function(dir){
 				console.log("Arbiter.fileSystem: 'Arbiter/Projects' directory created/exists.");
-				Arbiter.InitializeProjectList(dir);
+				Arbiter.InitializeProjectList();
 			}, function(error){
 				console.log("Arbiter.fileSystem: Couldn't create 'Arbiter/Projects' directory.");
 			});	
@@ -959,16 +959,22 @@ var Arbiter = {
 		});
 		
 		$('.project-checkbox').live('click', function(event){
-				console.log("delete");
+			console.log("delete");
+			
+			var ans = confirm("Are you sure you want to delete this project?!");
+			
+			if(ans){
+				var name = $(this).attr('name');
 				
-				var ans = confirm("Are you sure you want to delete this project?!");
-				
-				if(ans){
-					var name = $(this).attr('name');
-					$('#' + name + '-row').remove();
-					Arbiter.setProjectRoundedCorners();
-					Arbiter.onDeleteProject(name);
-				}
+				//get the project id
+				Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects WHERE name=?;", [name], function(tx, res){
+					if(res.rows.length){
+						$('#proj' + res.rows.item(0).id + '-row').remove();
+						Arbiter.setProjectRoundedCorners();
+						Arbiter.onDeleteProject(name);
+					}
+				}, Arbiter.error);
+			}
 		});
 		//this.GetFeatures("SELECT * FROM \"Feature\"");
 		console.log("Now go spartan, I shall remain here.");
@@ -1222,14 +1228,13 @@ var Arbiter = {
 							});
 						}
 					});
-
 				}, function(){
 					Arbiter.error("error removing project: ", projectName);
 				});									 
 			});
 		};
 		
-		// clear tiles related to this db, then perform otehr operations
+		// clear tiles related to this db, then perform other operations
 		TileUtil.clearCache("osm", op, vDb);
 	},
     
@@ -1345,7 +1350,7 @@ var Arbiter = {
     	console.log("---- onCloseCurrentProject");
     	Arbiter.currentProject = null;
     	
-		//---- reset all menus so that when we create anotehr project, we do not carry any setting from the
+		//---- reset all menus so that when we create another project, we do not carry any setting from the
     	//     current project that is being closed. 
 		
 		jqNewProjectName.val('');
@@ -2408,6 +2413,9 @@ var Arbiter = {
 		
 		_listview.children(':first-child').addClass('ui-corner-top');
 		_listview.children(':last-child').addClass('ui-corner-bottom');*/
+		console.log("name: ", name);
+		console.log("id: ", id);
+		console.log("listname: ", listname);
 		
 		//make sure the default doesnt show up in the list
 		if(name === "default") {
@@ -2436,7 +2444,7 @@ var Arbiter = {
 			aElement = '<a class="' + listname + '-name" id="' + listname + '-' + id + '"><span style="position:absolute;top:10px;left:10px;font-weight:bold;">' + name + '</span></a>';
 		//var leftPositioning = -1 * (((name.length * 16) / 2) - 40);
 		
-		var html = '<div class="' + listname + '-row" id="' + name + '-row">' +
+		var html = '<div class="' + listname + '-row" id="proj' + id + '-row">' +
 		'<div class="' + listname + '-contentWrapper">' +
 		'<div class="' + contentClass + '">' +
 		aElement +
@@ -2457,67 +2465,58 @@ var Arbiter = {
 		}
 	},
 	
-	InitializeProjectList: function(dirEntry){
-		var directoryReader = dirEntry.createReader();
+	InitializeProjectList: function(){
+		var html = '';
+		var contentClass;
+		var leftClass;
+		var leftplaceholder;
 		
-		
-		var success = function(entries){
-			var entry;
-			var html = '';
-			var contentClass;
-			var leftClass;
-			var leftplaceholder;
-			
-			for(var i = 0;i < entries.length;i++){
-				entry = entries[i];
+		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects;", [], function(tx, res){
+			if(res.rows.length){
+				for(var i = 0; i < res.rows.length; ++i) {
+					if(res.rows.item(i).name === "default") {
+						continue;
+					}
+					
+					//alert("res.rows[" + i + "] .name: " + res.rows.item(i).name + " .id:" + res.rows.item(i).id);
 				
-				if(entry.name === "default") {
-					continue;
+					contentClass = 'project-contentColumn';
+					leftClass = 'project-leftColumn';
+					leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + res.rows.item(i).name +
+						'" id="project-checkbox-' + res.rows.item(i).name + '"></div>';
+					
+					//checking against 1 rather than 0 so the default project doesnt throw off the count
+					if(i == 1){
+						contentClass += ' project-top-right';
+						leftClass += ' project-top-left';
+					}
+					
+					if(i == (res.rows.length - 1)){
+						contentClass += ' project-bottom-right';
+						leftClass += ' project-bottom-left';
+					}
+					
+					//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
+					html += '<div class="project-row" id="proj' + res.rows.item(i).id +'-row">' +
+					'<div class="project-contentWrapper">' +
+					'<div class="' + contentClass + '">' +
+					'<a class="project-name" id="project-' + res.rows.item(i).name + '"><span style="position:absolute;top:10px;left:10px;font-weight:bold;">' + res.rows.item(i).name + '</span></a>' +
+					'</div>' +
+					'</div>' +
+					'<div class="' + leftClass + '">' +
+					'<div class="project-checkbox-container">' +
+					leftplaceholder +
+					'</div>' +
+					'</div>' +
+					'</div>';
 				}
 				
-				contentClass = 'project-contentColumn';
-				leftClass = 'project-leftColumn';
-				leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + entry.name +
-					'" id="project-checkbox-' + entry.name + '"></div>';
-				
-				if(i == 0){
-					contentClass += ' project-top-right';
-					leftClass += ' project-top-left';
+				if(html){
+					var instructions = "<div data-localize=\"label.selectProject\" style=\"text-align:center;margin-bottom:15px;font-weight:bold;\">" + Arbiter.localizeString("Select a project to begin working","label","selectProject") + "</div>";
+					$("#idProjectPageContent").html(instructions + html);
 				}
-				
-				if(i == (entries.length - 1)){
-					contentClass += ' project-bottom-right';
-					leftClass += ' project-bottom-left';
-				}
-				
-				//leftPositioning = -1 * (((row.name.length * 16) / 2) - 40);
-				
-				html += '<div class="project-row" id="' + entry.name +'-row">' +
-				'<div class="project-contentWrapper">' +
-				'<div class="' + contentClass + '">' +
-				'<a class="project-name" id="project-' + entry.name + '"><span style="position:absolute;top:10px;left:10px;font-weight:bold;">' + entry.name + '</span></a>' +
-				'</div>' +
-				'</div>' +
-				'<div class="' + leftClass + '">' +
-				'<div class="project-checkbox-container">' +
-				leftplaceholder +
-				'</div>' +
-				'</div>' +
-				'</div>';
 			}
-			
-			if(html){
-				var instructions = "<div data-localize=\"label.selectProject\" style=\"text-align:center;margin-bottom:15px;font-weight:bold;\">" + Arbiter.localizeString("Select a project to begin working","label","selectProject") + "</div>";
-				$("#idProjectPageContent").html(instructions + html);
-			}
-		};
-		
-		var fail = function(error){
-			console.log("Failed to list directory contents: " + error.code);
-			alert("Failed to list directory contents: " + error.code);
-		};
-		
-		directoryReader.readEntries(success, fail);
+		}, Arbiter.error);
 	},
 	
 	readLayer: function(server, layer, serverName, layerName, addedInProject){
@@ -3621,8 +3620,9 @@ var Arbiter = {
                     
                     var mediaURL = serverUrl + "/wfs";
                     var index = mediaURL.indexOf("geoserver/wfs");
-                    mediaURL = mediaURL.substring(0,index) + "file-service/services/document/download?blobKey=";
-                                    console.log("media url: " + mediaURL);
+                    //mediaURL = mediaURL.substring(0,index) + "file-service/services/document/download?blobKey=";
+					mediaURL = "http://admin:admin@192.168.10.168:8000/file-service/";
+					console.log("media url: " + mediaURL);
                     
                     console.log("dtAttributes: ", dtAttributes);
 					for(i = 0; i < features.length;i++){
@@ -3773,10 +3773,10 @@ var Arbiter = {
 		
 			Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects;", [], function(tx, res){
 				if(!res.rows.length){
+					console.log("creating default project");
+					
 					//create a default project so we can jump straight to the map
 					Arbiter.currentProject = Arbiter.initializeCurrentProject();
-					
-					console.log("current project, just initialized", Arbiter.currentProject);
 					
 					//first we need a server.  We'll just use our outward-facing server as admin for now
 					var name = "LMN GeoServer";
