@@ -1849,7 +1849,8 @@ var Arbiter = {
     SyncMedia: function(layer,layerCallback) {
         var url = layer.protocol.url;
         var index = url.indexOf("geoserver/wfs");
-        url = url.substring(0,index) + "file-service/services/document/upload";
+        url = url.substring(0,index) + "file-service/upload";
+        var header = layer.protocol.headers;
         Arbiter.getProjectProperty("mediaToSend", function(key, value){
             var mediaLayer = value.layer[layer.name];
             if(mediaLayer != null && mediaLayer.length > 0) {
@@ -1868,13 +1869,13 @@ var Arbiter = {
                     }
                 };
                 for(var i = 0; i < mediaLayer.length;i++) {
-                    Arbiter.SendMedia(url,mediaLayer[i],mediaCallback);
+                    Arbiter.SendMedia(url, header['Authorization'], mediaLayer[i],mediaCallback);
                 }
             }
         }, function(key){}, true);
     },
     
-    SendMedia: function(url,media,mediaCallback) {
+    SendMedia: function(url, header, media,mediaCallback) {
         window.requestFileSystem(LocalFileSystem.PERSISTENT, 0,
             function(fileSys) {
                 Arbiter.fileSystem.root.getFile("Arbiter/Projects/" + Arbiter.currentProject.name + "/Media/" + media, {create: false, exclusive: false},
@@ -1883,7 +1884,10 @@ var Arbiter = {
                         options.fileKey="file";
                         options.fileName=fileEntry.name;
                         options.mimeType="image/jpeg";
-                        
+                        options.headers= {
+                        	'Authorization': header
+                        };
+                                                
                         var params = {};
                         
                         options.params = params;
@@ -1917,13 +1921,13 @@ var Arbiter = {
             });
     },
     
-    DownloadMedia: function(url,media,mediaDownloadCallback) {
+    DownloadMedia: function(url,encodedCredentials, media,mediaDownloadCallback) {
         for(var i = 0; i < media.length;i++) {
-            Arbiter.DownloadMediaEntry(url,media[i],mediaDownloadCallback);
+            Arbiter.DownloadMediaEntry(url, encodedCredentials, media[i],mediaDownloadCallback);
         }
     },
     
-    DownloadMediaEntry: function(url,entry,mediaDownloadCallback) {
+    DownloadMediaEntry: function(url,encodedCredentials, entry,mediaDownloadCallback) {
         //only download if we don't have it
         window.requestFileSystem(LocalFileSystem.PERSISTENT, 0,
             function(fileSys) {
@@ -1945,7 +1949,11 @@ var Arbiter = {
                                         console.log("download error target " + transferError.target);
                                         console.log("upload error code" + transferError.code);
                                         mediaDownloadCallback(false);
-                                    });
+                                                      }, undefined, {
+                                                      headers: {
+                                                      	'Authorization': 'Basic ' + encodedCredentials
+                                                      }
+                                                      });
                             }, Arbiter.error);
                     });
             }, Arbiter.error);
@@ -3621,8 +3629,7 @@ var Arbiter = {
                     
                     var mediaURL = serverUrl + "/wfs";
                     var index = mediaURL.indexOf("geoserver/wfs");
-                    //mediaURL = mediaURL.substring(0,index) + "file-service/services/document/download?blobKey=";
-					mediaURL = "http://admin:admin@192.168.10.168:8000/file-service/";
+                    mediaURL = mediaURL.substring(0,index) + "file-service/";
 					console.log("media url: " + mediaURL);
                     
                     console.log("dtAttributes: ", dtAttributes);
@@ -3639,7 +3646,7 @@ var Arbiter = {
                             var mediaAttribute = features[i].attributes["media"];
                             if(mediaAttribute != null) {
                                 var featureMedia = JSON.parse(mediaAttribute);
-                                Arbiter.DownloadMedia(mediaURL,featureMedia,mediaDownloadCallback);
+                                Arbiter.DownloadMedia(mediaURL, encodedCredentials, featureMedia,mediaDownloadCallback);
                             }
                         }
 					}
