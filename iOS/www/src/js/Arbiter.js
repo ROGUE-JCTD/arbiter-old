@@ -2470,6 +2470,7 @@ var Arbiter = {
 		var contentClass;
 		var leftClass;
 		var leftplaceholder;
+		console.log("initializing da project list");
 		
 		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects;", [], function(tx, res){
 			if(res.rows.length){
