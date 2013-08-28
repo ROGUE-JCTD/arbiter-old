@@ -273,6 +273,8 @@ var Arbiter = {
 								[], function(tx, res){
 								console.log("global.db: 'projects' table created.");
 								
+								Arbiter.InitializeProjectList();
+								
 								//Create projects table
 								Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS server_usage (id integer primary key, server_id integer, project_id integer, " +
 									"FOREIGN KEY(server_id) REFERENCES servers(id), FOREIGN KEY(project_id) REFERENCES projects(id));",
@@ -429,7 +431,6 @@ var Arbiter = {
 			//Open/Create Arbiter/Projects directory.
 			Arbiter.fileSystem.root.getDirectory("Arbiter/Projects", {create: true}, function(dir){
 				console.log("Arbiter.fileSystem: 'Arbiter/Projects' directory created/exists.");
-				Arbiter.InitializeProjectList();
 			}, function(error){
 				console.log("Arbiter.fileSystem: Couldn't create 'Arbiter/Projects' directory.");
 			});	
