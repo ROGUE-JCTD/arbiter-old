@@ -1949,11 +1949,11 @@ var Arbiter = {
                                         console.log("download error target " + transferError.target);
                                         console.log("upload error code" + transferError.code);
                                         mediaDownloadCallback(false);
-                                                      }, undefined, {
-                                                      headers: {
-                                                      	'Authorization': 'Basic ' + encodedCredentials
-                                                      }
-                                                      });
+                                    }, undefined, {
+                                    	headers: {
+                                        	'Authorization': 'Basic ' + encodedCredentials
+                                        }
+                                    });
                             }, Arbiter.error);
                     });
             }, Arbiter.error);
