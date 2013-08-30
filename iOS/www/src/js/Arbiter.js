@@ -3589,6 +3589,7 @@ var Arbiter = {
 					var i;
 					var value;
                     var mediaColumn = false;
+					var mediaColName;
 					
 					//handle special columns
 					console.log("number of columns: " + res.rows.length);
@@ -3596,8 +3597,9 @@ var Arbiter = {
                         if(res.rows.item(i).type == "dateTime") {
                             dtAttributes.push(res.rows.item(i).name);
                         }
-                        if(res.rows.item(i).name == "media") {
+                        if(res.rows.item(i).name == "media" || res.rows.item(i).name == "fotos") {
                             mediaColumn = true;
+							mediaColName = res.rows.item(i).name;
                         }
                     }
 					
@@ -3605,7 +3607,7 @@ var Arbiter = {
                     var numMedia = 0;
                     if(mediaColumn === true) {
                         for(i = 0; i < features.length;i++){
-                            var mediaAttribute = features[i].attributes["media"];
+                            var mediaAttribute = features[i].attributes[mediaColName];
                             if(mediaAttribute != null) {
                                 var featureMedia = JSON.parse(mediaAttribute);
                                 numMedia += featureMedia.length;
@@ -3643,7 +3645,7 @@ var Arbiter = {
 						}
                         //download media
                         if(mediaColumn === true) {
-                            var mediaAttribute = features[i].attributes["media"];
+                            var mediaAttribute = features[i].attributes[mediaColName];
                             if(mediaAttribute != null) {
                                 var featureMedia = JSON.parse(mediaAttribute);
                                 Arbiter.DownloadMedia(mediaURL, encodedCredentials, featureMedia,mediaDownloadCallback);
@@ -4469,7 +4471,7 @@ var Arbiter = {
                         
                     var attrValue;
                               
-                    if(type == "media"){
+                    if(type == "media" || type == "fotos"){
                         attrValue = JSON.stringify(originalMediaEntries);
                         if(newMediaEntries != null && newMediaEntries.length > 0) {
                             var mediaMap = {layer:{},};
@@ -4604,7 +4606,7 @@ var Arbiter = {
 			}
 			
 			var activeLayer = Arbiter.metaLayersList[layerIndex];
-            var hasMedia = false;
+            var mediaType = null;
             mediaEntries = null;
 			for(var type in selectedFeature.layer.attributeTypes){
 				if(type == "arbiter_id" || type == "arbiter_fid") {
@@ -4620,8 +4622,8 @@ var Arbiter = {
 					currentAttrValue = '';
 				}
 				
-                if(type=="media"){
-                    hasMedia = true;
+                if(type == "media" || type == "fotos"){
+                    mediaType = type;
                     if(currentAttrValue == '') {
                         mediaEntries = new Array();
                     } else {
@@ -4665,9 +4667,9 @@ var Arbiter = {
 					li += "' type='" + typeInfo.type + "'></div></li>";
 				}
 			}
-            if(hasMedia){
+            if(mediaType !== null){
                 li += "<li style='padding:5px; border-radius: 4px;'>";
-                li += "<input style='width=100%' type='submit' value='Media' type='media' data-localize='button.media' onClick='Arbiter.ToggleMediaPanel()'>";
+                li += "<input style='width=100%' type='submit' value='" + mediaType + "' type='" + mediaType + "' data-localize='button.media' onClick='Arbiter.ToggleMediaPanel()'>";
                 li += "</li>";
             }
 			

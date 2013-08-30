@@ -32,6 +32,7 @@
         "projects" : "Proyectos",
         "addServer" : "Añadir un Servidor",
         "addLayer" : "Añadir una Capa",
+        "media" : "Fotos",
         "addMediaCamera" : "Tomar una Imagen",
         "addMediaLibrary" : "Añadir una Imagen de la Galeria"
 	},
