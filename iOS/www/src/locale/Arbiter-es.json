@@ -107,6 +107,7 @@
 		"noLayerSync": "No hay capas para sincronizar (tmp)",
 		"noLayerAddFeature": "Se requiere al menos una capa no-base para agregar características (tmp)",
 		"noLayerSwitchLayer": "No hay capas en este proyecto (tmp)",
-		"noServer": "Debe añadir al menos un servidor de continuar (tmp)"
+		"noServer": "Debe añadir al menos un servidor de continuar (tmp)",
+		"deleteDefaultProj": "No se puede eliminar el proyecto predeterminado (tmp)"
     }
 }

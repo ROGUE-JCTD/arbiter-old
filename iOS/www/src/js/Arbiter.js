@@ -962,11 +962,16 @@ var Arbiter = {
 		$('.project-checkbox').live('click', function(event){
 			console.log("delete");
 			
+			var name = $(this).attr('name');
+			
+			if(name === "default") {
+				alert(Arbiter.localizeAlert("You cannot delete the default project","deleteDefaultProj"));
+				return;
+			}
+			
 			var ans = confirm("Are you sure you want to delete this project?!");
 			
 			if(ans){
-				var name = $(this).attr('name');
-				
 				//get the project id
 				Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects WHERE name=?;", [name], function(tx, res){
 					if(res.rows.length){
@@ -1179,12 +1184,12 @@ var Arbiter = {
 				console.log("Project " + projectId + ": " + Arbiter.squote(Arbiter.currentProject.name) + " added to projects table.");
 				
 				//this stops the default project from being added to the projects screen, at least for the first time
-				if(name !== "default") {
+				//if(name !== "default") {
 					var leftplaceholder = '<div class="project-checkbox ui-icon ui-icon-minus" name="' + Arbiter.currentProject.name +
 						'" id="project-checkbox-' + Arbiter.currentProject.name + '" style="margin-left:2px;margin-top:3px;"></div>';
 									
 					Arbiter.appendToListView("project", res.insertId, Arbiter.currentProject.name, leftplaceholder);
-				}
+				//}
 			}, function(e){
 				console.log("Project " + Arbiter.squote(Arbiter.currentProject.name) + " NOT added to projects table - " + e);
 			});
@@ -1282,6 +1287,8 @@ var Arbiter = {
 		
 		if(projectName !== "default") {
 			usingDefaultProject = false;
+		} else {
+			usingDefaultProject = true;
 		}
 
 		// if a project is currently open, close it first
@@ -1399,6 +1406,7 @@ var Arbiter = {
     	console.log("---- onShowMap");
 		var selectControlLayers;
 		
+		usingDefaultProject == true ? $("#idMapSettingsButton").hide() : $("#idMapSettingsButton").show();
 		
     	if (awayFromMap === true) {
     		console.log("---- onShowMap.awayFromMap");
@@ -2428,7 +2436,7 @@ var Arbiter = {
 		
 		//make sure the default doesnt show up in the list
 		if(name === "default") {
-			return;
+			//return;
 		}
 		
 		//remove the bottom class from the previously last row
@@ -2484,7 +2492,7 @@ var Arbiter = {
 			if(res.rows.length){
 				for(var i = 0; i < res.rows.length; ++i) {
 					if(res.rows.item(i).name === "default") {
-						continue;
+						//continue;
 					}
 					
 					//alert("res.rows[" + i + "] .name: " + res.rows.item(i).name + " .id:" + res.rows.item(i).id);
@@ -2495,7 +2503,8 @@ var Arbiter = {
 						'" id="project-checkbox-' + res.rows.item(i).name + '"></div>';
 					
 					//checking against 1 rather than 0 so the default project doesnt throw off the count
-					if(i == 1){
+					//if(i == 1){
+					if(i == 0){
 						contentClass += ' project-top-right';
 						leftClass += ' project-top-left';
 					}

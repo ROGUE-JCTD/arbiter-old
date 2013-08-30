@@ -107,6 +107,7 @@
 		"noLayerSync": "No layers to sync",
 		"noLayerAddFeature": "At least one non-base layer is required to add features",
 		"noLayerSwitchLayer": "There are no layers in this project",
-		"noServer": "You must add at least one server to continue"
+		"noServer": "You must add at least one server to continue",
+		"deleteDefaultProj": "You cannot delete the default project"
     }
 }
