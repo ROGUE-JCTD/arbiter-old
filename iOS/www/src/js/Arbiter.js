@@ -4283,7 +4283,7 @@ var Arbiter = {
 //					console.log("UPDATE", res.rows.item(0));
 					var updateSql = sqlObject.updateSql.substring(0, sqlObject.updateSql.length - 1) + " WHERE arbiter_id=?";
 //					console.log("update sql: " + updateSql, sqlObject);
-					sqlObject.params.push(res.rows.item(0).id);
+					sqlObject.params.push(res.rows.item(0).arbiter_id);
 					
 					Cordova.transaction(Arbiter.currentProject.dataDatabase, updateSql, sqlObject.params, function(tx, res){
 //						console.log("update success");
