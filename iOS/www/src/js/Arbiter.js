@@ -4621,7 +4621,8 @@ var Arbiter = {
 				if(type == "arbiter_id" || type == "arbiter_fid") {
 					continue;
 				}
-				var typeInfo = Arbiter.getInputType(type);
+                              
+				
 				var attrData = '';
 			
 				attrData = selectedFeature.layer.attributeTypes[type];
@@ -4630,6 +4631,7 @@ var Arbiter = {
 				} else {
 					currentAttrValue = '';
 				}
+                var typeInfo = Arbiter.getInputType(attrData.type);
 				
                 if(type == "media" || type == "fotos"){
                     mediaType = type;
