@@ -943,19 +943,19 @@ var Arbiter = {
 			if(!$('.project-checkbox').is(':visible'))
 				Arbiter.onOpenProject($(this).text());
 			else{
-				var oldname = $(this).text();
-				var editProjectNameInput = '<div data-role="fieldcontain" class="ui-hide-label edit-project-name" style="top:-5px;width:100%;position:absolute;">' +
-												'<label for="' + oldname + '-edit-name"></label>' +
-												'<input name="' + oldname + '-edit-name" id="' + 
-													oldname + '-edit-name" autocomplete="off" autocapitalize="off" placeholder="' + oldname + '"/>' +
-											'</div>';
-				
-				$(this).before('<div class="ui-icon ui-icon-delete" edit-name="' + oldname + '" ' +
-							   'onclick="Arbiter.cancelEditProject(true, this);" style="position:absolute;right:5px;top:15px;z-index:20;"></div>');
-				$(this).replaceWith(editProjectNameInput);
-										 
-				$('#idProjectPageContent input').textinput();
-				$('#' + oldname + '-edit-name').focus();
+//				var oldname = $(this).text();
+//				var editProjectNameInput = '<div data-role="fieldcontain" class="ui-hide-label edit-project-name" style="top:-5px;width:100%;position:absolute;">' +
+//												'<label for="' + oldname + '-edit-name"></label>' +
+//												'<input name="' + oldname + '-edit-name" id="' + 
+//													oldname + '-edit-name" autocomplete="off" autocapitalize="off" placeholder="' + oldname + '"/>' +
+//											'</div>';
+//				
+//				$(this).before('<div class="ui-icon ui-icon-delete" edit-name="' + oldname + '" ' +
+//							   'onclick="Arbiter.cancelEditProject(true, this);" style="position:absolute;right:5px;top:15px;z-index:20;"></div>');
+//				$(this).replaceWith(editProjectNameInput);
+//										 
+//				$('#idProjectPageContent input').textinput();
+//				$('#' + oldname + '-edit-name').focus();
 			}
 		});
 		
