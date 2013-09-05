@@ -4428,10 +4428,20 @@ var Arbiter = {
                     var times = String(value).split(/[\s:-]+/);
                     if(times.length !== 6){
                         valid = false;
-                        attrValid = false;
+					}else{
+                        var date = new Date(times[0], times[1], times[2], times[3], times[4], times[5]);
+                    
+                        if ( Object.prototype.toString.call(date) !== "[object Date]" || isNaN(date.getTime()) ) {
+                            valid = false;
+                        }
+                    }
+                    
+                    if(!valid){
                         $(this).addClass('invalid-field');
                         $(this).val('');
-					}
+                        $(this).attr("placeholder", "yyyy-mm-dd hh:mm:ss");
+                        attrValid = false;
+                    }
                 }
 				//these are being handled by using html5 date,time, and datetime inputs	
 				/*else if(type == "date"){
@@ -4447,7 +4457,7 @@ var Arbiter = {
 				$(this).removeClass('invalid-field');
 		});
 		
-		return true;
+		return valid;
 	},
                               
     AddNewMediaItems: function(array) {
