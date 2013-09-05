@@ -943,6 +943,7 @@ var Arbiter = {
 			if(!$('.project-checkbox').is(':visible'))
 				Arbiter.onOpenProject($(this).text());
 			else{
+				//This code is for renaming projects. It doesn't work.
 //				var oldname = $(this).text();
 //				var editProjectNameInput = '<div data-role="fieldcontain" class="ui-hide-label edit-project-name" style="top:-5px;width:100%;position:absolute;">' +
 //												'<label for="' + oldname + '-edit-name"></label>' +
@@ -1368,6 +1369,9 @@ var Arbiter = {
 		$("ul#layer-list").empty();
 		
 		$("ul#editor-layer-list").empty();
+
+		//make sure the attribute button isn't shown when the next project is opened
+		jqAttributeTab.hide();
 
 		Arbiter.CloseAttributesMenu();
 
@@ -3797,11 +3801,11 @@ var Arbiter = {
 					//create a default project so we can jump straight to the map
 					Arbiter.currentProject = Arbiter.initializeCurrentProject();
 					
-					//first we need a server.  We'll just use our outward-facing server as admin for now
+					//first we need a server.  We'll just use our outward-facing server as the arbiter guest account
 					var name = "LMN GeoServer";
 					var url = "http://geoserver.rogue.lmnsolutions.com/geoserver";
-					var username = "admin";
-					var password = "admin";
+					var username = "arbiter";
+					var password = "arbiter";
 					
 					var insertServerSql = "INSERT INTO servers (name, url, username, password) VALUES (?, ?, ?, ?);";
 
@@ -5326,7 +5330,18 @@ var Arbiter = {
 				Arbiter.onClick_AOIBack();
 				break;
 			case "idMapPage":
-				Arbiter.changePage_Pop("#idProjectsPage");
+				//close attr panel
+				if(mediaPanelOpen) {
+					Arbiter.CloseMediaPanel();
+				} else if(editorTabOpen) {
+					//close editor tab
+					Arbiter.CloseAttributesMenu();
+				} else if(attributeTab) {
+					//close attribute tab
+					Arbiter.ToggleAttributeMenu();
+				} else {
+					Arbiter.changePage_Pop("#idProjectsPage");
+				}
 				break;
 			case "idArbiterSettingsPage":
 				if(awayFromMap == false) {
