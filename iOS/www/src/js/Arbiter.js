@@ -4424,7 +4424,15 @@ var Arbiter = {
 						$(this).addClass('invalid-field');
 						$(this).val('');
 					}
-				}
+                }else if(type == "dateTime"){
+                    var times = String(value).split(/[\s:-]+/);
+                    if(times.length !== 6){
+                        valid = false;
+                        attrValid = false;
+                        $(this).addClass('invalid-field');
+                        $(this).val('');
+					}
+                }
 				//these are being handled by using html5 date,time, and datetime inputs	
 				/*else if(type == "date"){
 					
@@ -4480,6 +4488,8 @@ var Arbiter = {
                         
                     var attrValue;
                               
+                    var attrData = selectedFeature.layer.attributeTypes[type];
+                              
                     if(type == "media" || type == "fotos"){
                         attrValue = JSON.stringify(originalMediaEntries);
                         if(newMediaEntries != null && newMediaEntries.length > 0) {
@@ -4501,6 +4511,16 @@ var Arbiter = {
                         }
                     }else{
                         attrValue = $(Arbiter.idToJQuerySelectorSafe(type+"-input")).val();
+                    }
+                              
+                    if(attrData.type == "dateTime") {
+                        if(attrValue && attrValue.length > 0) {                              
+                            var times = attrValue.split(/[\s:-]+/);
+                            var currentdate = new Date(times[0],times[1]-1,times[2],times[3],times[4],times[5]);
+                              
+                            attrValue = currentdate.toISOString();
+                        }
+
                     }
 					
 					console.log('======== attrValue: ', attrValue, ', type: ', type);
@@ -4579,10 +4599,10 @@ var Arbiter = {
 			obj.type = 'date';
 			obj.placeholder = 'ex. 2012-11-01';
 		}else if(type == "time"){
-			obj.type = 'time';
+			obj.type = 'text';
 			obj.placeholder = 'ex. 08:15';
 		}else if(type == "dateTime"){
-			obj.type = 'datetime';
+			obj.type = 'text';
 			obj.placeholder = 'ex. 2012-11-01 08:15 AM';
 		}else if(type == "boolean"){
 			obj.type = 'text';
@@ -4643,6 +4663,28 @@ var Arbiter = {
                     originalMediaEntries = mediaEntries.slice(0);
                     console.log("Media Entries: " + mediaEntries);
                     continue;
+                }
+                
+                if(attrData.type == "dateTime") {
+                    var currentdate = null;
+                    if(currentAttrValue == '') {
+                        currentdate = new Date();
+                    } else {
+                        currentdate = new Date(currentAttrValue);
+                    }
+                    var pad = function (val, len) {
+                        val = String(val);
+                        len = len || 2;
+                        while (val.length < len) val = "0" + val;
+                        return val;
+                    };
+
+                    currentAttrValue = currentdate.getFullYear() + "-" +
+                                       pad(currentdate.getMonth()  + 1) + "-" +
+                                       pad(currentdate.getDate()) + " " +
+                                       pad(currentdate.getHours()) + ":" +
+                                       pad(currentdate.getMinutes()) + ":" +
+                                       pad(currentdate.getSeconds());
                 }
 				
 				console.log("attrData: ", attrData);
