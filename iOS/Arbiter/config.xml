@@ -30,9 +30,12 @@
     <preference name="ShowSplashScreenSpinner" value="true" />
     <preference name="FadeSplashScreen" value="true" />
     <preference name="FadeSplashScreenDuration" value="2" />
+    <preference name="KeyboardShrinksView" value="true" />
     <preference name="MediaPlaybackRequiresUserAction" value="false" />
     <preference name="AllowInlineMediaPlayback" value="false" />
     <preference name="BackupWebStorage" value="cloud" />
+	<preference name="DisallowOverscroll" value="false" />
+	<preference name="HideKeyboardFormAccessoryBar" value="false" />
 
     <content src="src/index.html" />
 
