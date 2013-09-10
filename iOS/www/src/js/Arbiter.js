@@ -2984,21 +2984,22 @@ var Arbiter = {
             type: "POST", 
             url: url + "/j_spring_security_check", 
             data: {username: username, password: password},
-            timeout: 5000,
+            timeout: 20000,
             error: function(jqXHR, textStatus, errorThrown) {
                if(errorThrown == "timeout") {
-                    alert(Arbiter.localizeAlert("Could not connect\nServer not responding","serverNotResponding"));
-               }
-               if(errorThrown == "Not Found") {
+                    alert(Arbiter.localizeAlert("Could not connect\nConnection timed out as server did not respond","serverNotResponding"));
+               } else if(errorThrown == "Not Found") {
                     $.ajax({type: "POST", url: url + "/j_spring_security_check", data: {username: username, password: password},
-                        timeout: 5000, success: function(data, textStatus, jqXHR) {
+                        timeout: 20000, success: function(data, textStatus, jqXHR) {
                            	Arbiter.checkCacheControl(jqXHR, args);},
                            	error: function(jqXHR, textStatus, errorThrown) {
-                            	alert(Arbiter.localizeAlert("Could not find server","serverNotFound"));
-                           	}
-                    });
-               }
-               else {
+                                if(errorThrown == "timeout") {
+                                    alert(Arbiter.localizeAlert("Could not authenticate\nAuthentication timed out as server did not respond","authenticationNotResponding"));
+                                } else
+                            	    alert(Arbiter.localizeAlert("Could not find server","serverNotFound"));
+                           	    }
+                           	});
+               } else {
                     alert(Arbiter.localizeAlert("Could not connect\nEnsure URL was entered correctly and server is online","checkURL"));
                }
             },
