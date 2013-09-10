@@ -265,7 +265,7 @@ var Arbiter = {
 				Arbiter.globalDatabase = Cordova.openDatabase("Arbiter/global", "1.0", "Global Database", 1000000);
 				
 					//Create settings table
-					Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null);", [], function(tx, res){
+					Cordova.transaction(Arbiter.globalDatabase, "CREATE TABLE IF NOT EXISTS settings (id integer primary key, language text not null, last_open_proj text);", [], function(tx, res){
 						console.log("global.db: 'settings' table created.");
 							
 							//Create server_usage table
@@ -1346,6 +1346,22 @@ var Arbiter = {
 					settings.aoi_left, settings.aoi_bottom, settings.aoi_right, settings.aoi_top
 				);
 			}
+		});
+		
+		//save this as the last opened project
+		Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM settings", [], function(tx, res){
+			var statement = "";
+			//if there's nothing in here we'll do an insert, or an update if there is something
+			if(res.rows.length == 0) {
+				statement = "INSERT INTO settings (id, language, last_open_proj) VALUES(?, ?, ?);";
+			} else {
+				statement = "UPDATE settings SET id=?, language=?, last_open_proj=?;";
+			}
+			
+			//I'm setting id to one because it can't be null... nothing uses it, but I'm afraid removing it will destroy everything
+			Cordova.transaction(Arbiter.globalDatabase, statement, [1, CurrentLanguage.name, Arbiter.currentProject.name], function(tx, res){
+				console.log("last_open_proj saved");
+			});
 		});
 		
 		Arbiter.getProjectProperty("baseLayerInfo", function(key, value){
@@ -3867,28 +3883,43 @@ var Arbiter = {
 							console.log("current project, should be done now...", Arbiter.currentProject);
 						});
 					}, Arbiter.error);
-				} else if(res.rows.item(0).name === "default"){
-					console.log("opening the default project");
-					Arbiter.onOpenProject("default");
+//				} else if(res.rows.item(0).name === "default"){
+//					console.log("opening the default project");
+//					Arbiter.onOpenProject("default");
 				} else{
 					//this code will open the last project the user was working in (theoretically)
+					console.log("sending request from settings");
 					
-//					Cordova.transaction(Arbiter.currentProject.variablesDatabase, "SELECT * FROM settings;", [], function(tx, res){
-//						//should only be 1 row
-//						console.log("got stuff from settings ", res);
-//						if(res.rows.length){
-//							var settings = res.rows.item(0);
-//							console.log("last_open_proj ", settings.last_open_proj);
-//						}
-//						
-//						usingDefaultProject = false;
-//						Arbiter.changePage_Pop(div_ProjectsPage);
-//						
-//					}, Arbiter.error);
-
-					//just in case
-					usingDefaultProject = false;
-					Arbiter.changePage_Pop(div_ProjectsPage);
+					Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM settings;", [], function(tx, res){
+						//should only be 1 row
+						console.log("got stuff from settings ");
+						for(var i = 0; i < res.rows.length; ++i) {
+							console.log(res.rows.item(i));
+						}
+						
+						if(res.rows.length){
+							var settings = res.rows.item(0);
+							console.log("last_open_proj ", settings.last_open_proj);
+							
+							if(settings.last_open_proj === "default") {
+								usingDefaultProject = true;
+							} else {
+								usingDefaultProject = false;
+							}
+							
+							Cordova.transaction(Arbiter.globalDatabase, "SELECT * FROM projects WHERE name=?", [settings.last_open_proj], function(tx, res) {
+								if(res.rows.length == 0) {
+									console.log("The last opened project is no more.  It was probably deleted");
+									usingDefaultProject = true;
+									Arbiter.onOpenProject("default");
+								} else {
+									usingDefaultProject = false;
+									Arbiter.onOpenProject(settings.last_open_proj);
+								}
+							});
+						}
+						
+					}, Arbiter.error);
 				}
 			}, function(e) {
 					usingDefaultProject = false;
