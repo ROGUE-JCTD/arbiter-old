@@ -219,7 +219,7 @@ cacheTiles: function(successCallback, errorCallback){
 	
 	
 	//-- continue with clearing cache and then re downloading tiles 
-	TileUtil.clearCache("osm", function(){
+	TileUtil.clearCache("Arbiter/osm", function(){
 		
 		if (TileUtil.cacheTilesTest1Couter > 0) {
 			console.log("~~~~ cacheTiles. done clear cache. starting testTilesTableIsEmpty MAKE sure there is only one project in arbiter!");
@@ -363,11 +363,11 @@ downloadTile: function(_url, _numTimes, _success, _error) {
 				}
 			};
 				
-			TileUtil.saveTile(_url, "osm", "15", "5199", "12123", "png", saveTileSuccessTest, saveTileErrorTest);
+			TileUtil.saveTile(_url, "Arbiter/osm", "15", "5199", "12123", "png", saveTileSuccessTest, saveTileErrorTest);
 		};
 		
 		//Update databases
-		TileUtil.addTile(_url, "osm", "15", "5199", "12123", "png", addTileCallbackTest, 1, 1000);	
+		TileUtil.addTile(_url, "Arbiter/osm", "15", "5199", "12123", "png", addTileCallbackTest, 1, 1000);
 },
 
 testTileDownload: function(_url, _numTimes) {
@@ -473,7 +473,7 @@ getURL: function(bounds) {
     var ext = TileUtil.getLayerFormatExtension(this);
     
     // use the info we have to derive were the tile would be stored on the device
-    var path = Arbiter.fileSystem.root.fullPath + "/" + "osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + "." + ext;
+    var path = Arbiter.fileSystem.root.fullPath + "/" + "Arbiter/osm" +"/" + xyz.z + "/" + xyz.x + "/" + xyz.y + "." + ext;
  	return path;
 },
 
@@ -778,14 +778,14 @@ cacheTile: function(bounds, zoom){
 				};
 				
 				// write the tile to device
-				TileUtil.saveTile(url, "osm", xyz.z, xyz.x, xyz.y, ext, saveTileSuccess, saveTileError);
+				TileUtil.saveTile(url, "Arbiter/osm", xyz.z, xyz.x, xyz.y, ext, saveTileSuccess, saveTileError);
 			};
 
 			//TODO: get rid of tile ids in general and just store it as a json array in projectKeyValueDatabase?
 			
 			// add the tile to databases immediately so that if multiple getURL calls come in for a given tile, 
 			// we do not download the tile multiple times
-    		TileUtil.addTile(url, "osm", xyz.z, xyz.x, xyz.y, ext, addTileCallback, tileNewRefCounter, tileId);				
+    		TileUtil.addTile(url, "Arbiter/osm", xyz.z, xyz.x, xyz.y, ext, addTileCallback, tileNewRefCounter, tileId);
 		}, function(e1, e2) {
 			Arbiter.error("chk27", e1, e2);
 		});	
