@@ -3640,7 +3640,9 @@ var Arbiter = {
                             var mediaAttribute = features[i].attributes[mediaColName];
                             if(mediaAttribute != null) {
                                 var featureMedia = JSON.parse(mediaAttribute);
-                                numMedia += featureMedia.length;
+                                if(featureMedia != null) {
+                                    numMedia += featureMedia.length;
+                                }
                             }
                         }
                     }
@@ -3678,7 +3680,9 @@ var Arbiter = {
                             var mediaAttribute = features[i].attributes[mediaColName];
                             if(mediaAttribute != null) {
                                 var featureMedia = JSON.parse(mediaAttribute);
-                                Arbiter.DownloadMedia(mediaURL, encodedCredentials, featureMedia,mediaDownloadCallback);
+                                if(featureMedia != null) {
+                                    Arbiter.DownloadMedia(mediaURL, encodedCredentials, featureMedia,mediaDownloadCallback);
+                                }
                             }
                         }
 					}
@@ -4705,6 +4709,9 @@ var Arbiter = {
                         mediaEntries = new Array();
                     } else {
                         mediaEntries = JSON.parse(currentAttrValue);
+                        if(mediaEntries == null) {
+                            mediaEntries = new Array();
+                        }
                     }
                     originalMediaEntries = mediaEntries.slice(0);
                     console.log("Media Entries: " + mediaEntries);
