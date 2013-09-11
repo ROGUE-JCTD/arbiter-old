@@ -5186,7 +5186,12 @@ var Arbiter = {
 			console.log("opening tab");
 			jqAddFeature.click();
 			
-			Arbiter.ToggleAttributeMenu();
+			//HACK: sync does funny things if the feature isnt saved first
+			$("#idAttrSave").click();
+			
+			//don't need this since the line above ends up calling SubmitAttributes, which toggles the attr menu
+			//Arbiter.ToggleAttributeMenu();
+
 		});
 		
 		map.addControl(addFeatureControl);
