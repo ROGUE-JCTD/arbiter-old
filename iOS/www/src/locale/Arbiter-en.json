@@ -99,7 +99,7 @@
         "noLibrary": "Unable to access the photo library on this device.",
         "unableToCopy": "Unable to copy media to the project directory.",
         "onlyAvailableOnline": "This functionality is only available when the device has network connectivity indicated by a green sync button on the lower left corner of the map",
-        "serverNotResponding": "Could not connect\nConnection timed out as server did not respond.",
+        "serverNotResponding": "Could not connect\nConnection timed out as server did not respond.  If the server information is correct, check your credentials.",
         "authenticationNotResponding": "Could not authenticate\nAuthentication timed out as server did not respond",
         "checkURL": "Could not connect\nEnsure URL was entered correctly and server is online",
         "performFullSync": "Please perform a full sync by pressing and holding the sync botton to pull down the new tiles.",

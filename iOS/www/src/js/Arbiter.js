@@ -2937,11 +2937,11 @@ var Arbiter = {
 	 */
 	checkCacheControl: function(_jqXHR, args){
 		console.log("checkCacheControl()");
-	
+
 		var loggedIn = false;
 		var responseText = _jqXHR.responseText;
 		var cacheControl = _jqXHR.getResponseHeader("cache-control");
-	
+
 		 //Authenticated
 		if(responseText.indexOf("<title>GeoServer: Welcome</title>") !== -1) {
 			loggedIn = true;
@@ -2954,7 +2954,7 @@ var Arbiter = {
 				}
 			}
 		}
-		
+
 		if(loggedIn) {
 			console.log("And suddenly it was Christmas!");
 			args.func.call(Arbiter);
@@ -2965,7 +2965,7 @@ var Arbiter = {
 			args.jqpassword.val("");
 		}
 	},
-	
+
 	/*
 	 * args: {
 	 *		jqusername,
@@ -2979,17 +2979,19 @@ var Arbiter = {
 		var username = args.jqusername.val();
 		var password = args.jqpassword.val();
 		var url = args.jqurl.val();
+        var restUrl = url + '/rest';
         
         $.ajax({
-            type: "POST", 
-            url: url + "/j_spring_security_check", 
-            data: {username: username, password: password},
+            type: "GET", 
+            url: restUrl,
+            password: password,
+            username: username,
             timeout: 20000,
             error: function(jqXHR, textStatus, errorThrown) {
                if(errorThrown == "timeout") {
-                    alert(Arbiter.localizeAlert("Could not connect\nConnection timed out as server did not respond","serverNotResponding"));
+                    alert(Arbiter.localizeAlert("Could not connect\nConnection timed out as server did not respond.  If the server information is correct, check your credentials.","serverNotResponding"));
                } else if(errorThrown == "Not Found") {
-                    $.ajax({type: "POST", url: url + "/j_spring_security_check", data: {username: username, password: password},
+               $.ajax({type: "GET", url: restUrl, username: username, password: password,
                         timeout: 20000, success: function(data, textStatus, jqXHR) {
                            	Arbiter.checkCacheControl(jqXHR, args);},
                            	error: function(jqXHR, textStatus, errorThrown) {
@@ -3004,7 +3006,8 @@ var Arbiter = {
                }
             },
             success: function(data, textStatus, jqXHR) {
-                Arbiter.checkCacheControl(jqXHR, args);
+               //Successfully logged into /rest with credentials. 
+               args.func.call(Arbiter);
             },
             complete: function() {
                 //alert("post completed");
