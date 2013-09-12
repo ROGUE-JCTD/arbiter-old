@@ -3640,7 +3640,7 @@ var Arbiter = {
                             var mediaAttribute = features[i].attributes[mediaColName];
                             if(mediaAttribute != null) {
                                 var featureMedia = JSON.parse(mediaAttribute);
-                                if(featureMedia != null) {
+                                if(featureMedia != null && featureMedia.length != undefined) {
                                     numMedia += featureMedia.length;
                                 }
                             }
@@ -3680,7 +3680,7 @@ var Arbiter = {
                             var mediaAttribute = features[i].attributes[mediaColName];
                             if(mediaAttribute != null) {
                                 var featureMedia = JSON.parse(mediaAttribute);
-                                if(featureMedia != null) {
+                                if(featureMedia != null && featureMedia.length != undefined) {
                                     Arbiter.DownloadMedia(mediaURL, encodedCredentials, featureMedia,mediaDownloadCallback);
                                 }
                             }
@@ -4737,7 +4737,7 @@ var Arbiter = {
                         mediaEntries = new Array();
                     } else {
                         mediaEntries = JSON.parse(currentAttrValue);
-                        if(mediaEntries == null) {
+                        if(mediaEntries == null || mediaEntries.length == undefined) {
                             mediaEntries = new Array();
                         }
                     }
