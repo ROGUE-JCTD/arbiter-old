@@ -2980,18 +2980,20 @@ var Arbiter = {
 		var password = args.jqpassword.val();
 		var url = args.jqurl.val();
         var restUrl = url + '/rest';
+        var encodedCredentials = $.base64.encode(username + ':' + password);
+        
+        var header = {Authorization : 'Basic ' + encodedCredentials};
         
         $.ajax({
             type: "GET", 
             url: restUrl,
-            password: password,
-            username: username,
+            headers: header,
             timeout: 20000,
             error: function(jqXHR, textStatus, errorThrown) {
                if(errorThrown == "timeout") {
                     alert(Arbiter.localizeAlert("Could not connect\nConnection timed out as server did not respond.  If the server information is correct, check your credentials.","serverNotResponding"));
                } else if(errorThrown == "Not Found") {
-               $.ajax({type: "GET", url: restUrl, username: username, password: password,
+               $.ajax({type: "GET", url: restUrl, headers: header,
                         timeout: 20000, success: function(data, textStatus, jqXHR) {
                            	Arbiter.checkCacheControl(jqXHR, args);},
                            	error: function(jqXHR, textStatus, errorThrown) {
