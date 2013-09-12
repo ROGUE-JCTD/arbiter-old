@@ -4520,6 +4520,34 @@ var Arbiter = {
             Arbiter.setProjectProperty("mediaToSend",updates);
         }, true);
     },
+    
+    CancelAttributes: function(){
+    	
+    	Arbiter.ToggleAttributeMenu();
+
+    	// did the user create a feature and cancel out of the attribute menu and basically not want to save the 
+    	// feature at all? if so, remove the feature form the map:
+    	if(selectedFeature){
+			var isEmpty = true;
+
+			for(var attrib in selectedFeature.attributes){				
+				var val = selectedFeature.attributes[attrib];
+				// Note: "null" check and "[]" is for fotos. did it really have to be null as a string?
+				if (val && val !== "null" && val !== "[]") {
+					isEmpty = false;
+				}
+			}
+			
+			console.log('==== CancelAttributes.selectedFeature.isEmpty: ', isEmpty, ', selectedFeature: ', selectedFeature);
+			
+			if (isEmpty) {
+				// remove feature all together
+				var savedSelectedFeature = selectedFeature;
+				selectControl.unselect(savedSelectedFeature);
+				Arbiter.deleteFeature(savedSelectedFeature);			
+			}		
+		}
+    },
 							  
 	SubmitAttributes: function(){
 		if(selectedFeature){
@@ -4977,7 +5005,14 @@ var Arbiter = {
 		
 		strategies[0].events.register("fail", '', function(event) {
 			console.log('layer save failed. event: ', event);
-			Arbiter.error('Layer save failed. event: ', event);
+			
+			var info = event;
+			
+			if ( event && event.object && event.object.layer) {
+				info = event.object.layer.name;
+			}
+			
+			Arbiter.error('Layer save failed. event: ', info);
 		});
 		
 		//TODO: not used?
