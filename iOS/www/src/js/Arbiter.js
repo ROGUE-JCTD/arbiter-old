@@ -130,6 +130,7 @@ var editorTabOpen = false;
 var attributeTab = false;
 var mediaPanelOpen = false;
 var mediaViewerOpen = false;
+var theNewFeature = false;
 
 var layerBeingEdited= null;
 
@@ -1997,9 +1998,9 @@ var Arbiter = {
 		}
 	},
 	
-	ToggleAttributeMenu: function() {
+	ToggleAttributeMenu: function(newFeature) {
 		if(!attributeTab) {
-			Arbiter.OpenAttributesMenu();
+			Arbiter.OpenAttributesMenu(newFeature);
 		} else {
 			Arbiter.CloseAttributesMenu();
 		}
@@ -2036,8 +2037,10 @@ var Arbiter = {
 		$("#idEditorMenu").animate({ "left": "100%" }, 50);
 	},
 	
-	OpenAttributesMenu: function() {
+	OpenAttributesMenu: function(newFeature) {
 		attributeTab = true;
+        
+        theNewFeature = (newFeature != undefined && newFeature != null ? newFeature : null);
         
         if(editorTabOpen === true) {
             Arbiter.CloseEditorMenu();
@@ -4532,24 +4535,24 @@ var Arbiter = {
 
     	// did the user create a feature and cancel out of the attribute menu and basically not want to save the 
     	// feature at all? if so, remove the feature form the map:
-    	if(selectedFeature){
+    	if(theNewFeature != null && theNewFeature != undefined){
 			var isEmpty = true;
 
-			for(var attrib in selectedFeature.attributes){				
-				var val = selectedFeature.attributes[attrib];
+			for(var attrib in theNewFeature.attributes){				
+				var val = theNewFeature.attributes[attrib];
 				// Note: "null" check and "[]" is for fotos. did it really have to be null as a string?
 				if (val && val !== "null" && val !== "[]") {
 					isEmpty = false;
 				}
 			}
 			
-			console.log('==== CancelAttributes.selectedFeature.isEmpty: ', isEmpty, ', selectedFeature: ', selectedFeature);
+			console.log('==== CancelAttributes.selectedFeature.isEmpty: ', isEmpty, ', selectedFeature: ', theNewFeature);
 			
 			if (isEmpty) {
 				// remove feature all together
-				var savedSelectedFeature = selectedFeature;
+				var savedSelectedFeature = theNewFeature;
 				selectControl.unselect(savedSelectedFeature);
-				Arbiter.deleteFeature(savedSelectedFeature);			
+				Arbiter.deleteFeature(theNewFeature);			
 			}		
 		}
     },
@@ -5169,7 +5172,9 @@ var Arbiter = {
 			selectedFeature = null;
 			oldSelectedFID = null;
 			
-			Arbiter.CloseAttributesMenu();
+			if(attributeTab) {
+			    Arbiter.CancelAttributes();
+			}
 
 			if (jqAttributeTab.is(':visible')) {
 				jqAttributeTab.toggle();
@@ -5226,7 +5231,7 @@ var Arbiter = {
 			console.log("opening tab");
 			jqAddFeature.click();
 			
-			Arbiter.ToggleAttributeMenu();
+			Arbiter.ToggleAttributeMenu(event.feature);
 		});
 		
 		map.addControl(addFeatureControl);
