@@ -1489,8 +1489,7 @@ var Arbiter = {
 					dragPanOptions: {
 						enableKinetic: true
 					}
-				}),
-				new OpenLayers.Control.Zoom()
+				})
 				]
 			});
 						

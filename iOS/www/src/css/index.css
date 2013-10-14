@@ -221,12 +221,6 @@ html, body {
 	//margin: 5px !important;
 }
 
-.olControlZoom{
-	left:0px !important;
-	border-top-left-radius: 0px !important;
-	border-bottom-left-radius: 0px !important;
-}
-
 #optionsPopup {
 	position:absolute;
 	z-index: 1005;
@@ -263,19 +257,19 @@ html, body {
 }
 
 .first-map-tool {
-	top:84px;
+	top:14px;
 }
 
 .second-map-tool{
-	top:130px;
+	top:60px;
 }
 
 .third-map-tool {
-	top:176px;		
+	top:106px;
 }
 
 .fourth-map-tool {
-	top:222px;
+	top:152px;
 }
 
 #goToAreaOfInterest:active{
