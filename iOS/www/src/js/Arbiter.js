@@ -501,7 +501,8 @@ var Arbiter = {
 			edit_button_id: "layersSettingsEditButton",
 			onContentClicked: function(itemInfo){
 				console.log("layers list content clicked!", itemInfo);
-				Arbiter.onAddLayerPage(itemInfo.layernickname, itemInfo.layertypename, itemInfo.servername);
+				//commenting this out because nothing in the edit layers page works properly
+				//Arbiter.onAddLayerPage(itemInfo.layernickname, itemInfo.layertypename, itemInfo.servername);
 			}
 		});
 		
@@ -562,11 +563,7 @@ var Arbiter = {
 						var layerTypeName	= serverList[serverKey].layers[layerKey].typeName;
 						
 						//Create the layer button.
-						var li  = "<li class='classLayerListItem' server='" + serverName + "' data-li-id=\"" + layerTypeName + "\"><a data-role='button' onClick=\"Arbiter.onAddLayerPage(";
-							li += "'" + LayerNickname + "', ";
-							li += "'" + layerTypeName + "', ";
-							li += "'" + serverName + "'";
-							li += ")\">" + LayerNickname + "</a></li>";
+						var li  = "<li class='classLayerListItem' server='" + serverName + "' data-li-id=\"" + layerTypeName + "\"><a>" + LayerNickname + "</a></li>";
 						
 						$("ul#layerList").append(li).listview("refresh");
 					}
@@ -1573,8 +1570,7 @@ var Arbiter = {
 					dragPanOptions: {
 						enableKinetic: true
 					}
-				}),
-				new OpenLayers.Control.Zoom()
+				})
 			]
 		});
 		
@@ -3535,6 +3531,7 @@ var Arbiter = {
 			} 
 		} else {
 			// if this is editing an existing layer
+			//this shouldnt be hit since editing layers is currently disabled
 			console.log("onAddLayerPage.Edit layer");
 			
 			$("#idDeleteLayer").show();
@@ -3870,8 +3867,7 @@ var Arbiter = {
 									dragPanOptions: {
 										enableKinetic: true
 									}
-								}),
-								new OpenLayers.Control.Zoom()
+								})
 							]
 						});
 						
