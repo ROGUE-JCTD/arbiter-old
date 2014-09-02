@@ -1,3 +1,9 @@
+# NOTE
+
+this application was our first version of arbiter and is no longer maintained. Please go to the following link for the latest version of Arbiter currently only supported on Android:
+https://github.com/ROGUE-JCTD/arbiter-android	
+
+
 # Arbiter
 
 Arbiter is a mobile app for geospatial data collection in both connected and disconnected environments.  It supports editing geometry for point features (add/modify/delete) and attributes for point, line, and polygon features.  It organizes collection into projects so you can have several different collection efforts saved on the device.  
